@@ -9,6 +9,7 @@ from pathlib import Path
 from .catalog import (
     ASSET_ROOTS,
     GENDERS,
+    PROTECTED_ARMOR_DONOR_RANKS,
     PROTECTED_ARMOR_RANK,
     WEAPON_EFFECTS,
     safe_protected_path,
@@ -142,16 +143,31 @@ def create_baseline(
     if armor_ranks:
         for root in ASSET_ROOTS:
             for gender in GENDERS:
-                pattern = f"{gender}_body_effect_{PROTECTED_ARMOR_RANK:04d}*"
-                protected = _effect_files(client_root, root, pattern)
-                if not protected:
-                    raise RankEffectError(f"Protected AR9 files are missing: {root}/{pattern}")
-                for path in protected:
-                    _add_file(files, client_root, path, "protected AR9 asset")
+                protected_jcs: list[Path] = []
+                for donor_rank in PROTECTED_ARMOR_DONOR_RANKS:
+                    pattern = f"{gender}_body_effect_{donor_rank:04d}*"
+                    protected = _effect_files(client_root, root, pattern)
+                    if not protected:
+                        raise RankEffectError(
+                            "Protected armor donor files are missing: "
+                            f"{root}/{pattern}"
+                        )
+                    for path in protected:
+                        _add_file(
+                            files,
+                            client_root,
+                            path,
+                            f"protected native AR{donor_rank} armor donor",
+                        )
+                    protected_jcs.extend(
+                        path
+                        for path in protected
+                        if path.suffix.lower() == ".jcs"
+                    )
                 _add_jcs_dependencies(
                     files,
                     client_root,
-                    [path for path in protected if path.suffix.lower() == ".jcs"],
+                    protected_jcs,
                     unresolved,
                 )
 
@@ -316,7 +332,7 @@ def verify_baseline(
             mismatches.append(relative.as_posix())
     if mismatches:
         raise RankEffectError(
-            "Protected AR9/WR1-9 assets differ from the package baseline: "
+            "Protected armor-donor/WR1-9 assets differ from the package baseline: "
             + ", ".join(sorted(mismatches))
         )
 

@@ -33,6 +33,11 @@ from .safety import require_plain_path
 
 PACKAGE_FORMAT = "reborn-rank-effect-package-v1"
 PACKAGE_SHARD_FORMAT = "reborn-rank-effect-package-shard-v1"
+AR10_PROTECTED_CLONE_POLICY = {
+    "mode": "protected_rank_clone",
+    "source_rank": 9,
+    "require_distinct_palette": True,
+}
 MAX_INSTALL_FILES = 256
 MAX_ASSET_BYTES = 64 * 1024 * 1024
 _HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -143,6 +148,22 @@ def _coverage(manifest: dict[str, object]) -> tuple[tuple[int, ...], tuple[str, 
     if not armor_set and not weapon_set:
         raise RankEffectError("Package coverage cannot be empty")
     return armor_set, weapon_set
+
+
+def uses_protected_ar9_clone(manifest: dict[str, object]) -> bool:
+    """Return whether the package explicitly requests the reviewed AR10 clone."""
+
+    return manifest.get("armor_rank_10_structure") == AR10_PROTECTED_CLONE_POLICY
+
+
+def _validate_ar10_structure_policy(
+    manifest: dict[str, object], armor_ranks: tuple[int, ...]
+) -> None:
+    value = manifest.get("armor_rank_10_structure")
+    if value is None:
+        return
+    if 10 not in armor_ranks or value != AR10_PROTECTED_CLONE_POLICY:
+        raise RankEffectError("AR10 protected-clone policy is invalid")
 
 
 def _load_assets(root: Path, manifest: dict[str, object]) -> dict[Path, bytes]:
@@ -352,6 +373,7 @@ def load_package(root: Path) -> LoadedPackage:
     if not isinstance(package_id, str) or not _PACKAGE_ID.fullmatch(package_id):
         raise RankEffectError("Package ID is invalid")
     armor_ranks, weapon_classes = _coverage(manifest)
+    _validate_ar10_structure_policy(manifest, armor_ranks)
     _validate_compatibility(manifest, bool(armor_ranks))
     expanded = _expand_manifest(root, manifest)
     assets = _load_assets(root, expanded)

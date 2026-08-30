@@ -1,49 +1,165 @@
-"""Author all five role-aware armor ranks from one coherent native family."""
+"""Build AR10 and coordinate focused AR11-AR14 authoring."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from rank_effect_packages.baseline import sha256_bytes
 from rank_effect_packages.catalog import ASSET_ROOTS, GENDERS
 from rank_effect_packages.errors import RankEffectError
 from rank_effect_packages.formats import structural_fingerprint
-from erebus_lion.model_codec import expand_xof_mszip
-from xmodel_sculpt.binary_x import parse_tokens
-from xmodel_sculpt.mesh import discover_meshes
-from xmodel_sculpt.sculpt import sculpt_xof_mszip
 
 from .armor_ranks import (
+    ARMOR_CLONE_SOURCE_RANK,
     ARMOR_RANK_DESIGNS,
-    ARMOR_SOURCE_RANK,
-    SLOT_ROLES,
-    ArmorMantleTransform,
-    validate_silhouette,
+    CAPSTONE_ARMOR_RANKS,
+    AtlasPalette,
+    slot_roles_for_rank,
 )
-from .atlas import Region, recolour_luminance
-from .models import audit_model
+from .ar11_builder import build_ar11_bridge
+from .ar12_builder import build_ar12_aether
+from .armor_contracts import record_atlas as _record_atlas
+from .armor_contracts import record_model as _record_model
+from .atlas import RecolourResult, Region, recolour_luminance
+from .capstone_builder import build_capstone
 from .package_io import PackageShard, regular
 
 
-def _audit_dict(value) -> dict[str, object]:
-    return {
-        "vertices": value.vertices,
-        "faces": value.faces,
-        "material_face_counts": list(value.material_face_counts),
-        "uv_bounds": [round(number, 6) for number in value.uv_bounds],
-        "animation_keys": value.animation_keys,
-        "texture_references": list(value.texture_references),
-        "bounds": [[round(number, 7) for number in vector] for vector in value.bounds],
-        "centroid": [round(number, 7) for number in value.centroid],
-    }
+def _recolour(
+    source: bytes,
+    rank: int,
+    *,
+    additive_glow: bool,
+    preserve_luma: bool,
+    palette: AtlasPalette | None = None,
+    luma_gain: float = 1.0,
+    maximum_channel: int = 255,
+) -> RecolourResult:
+    selected = palette or ARMOR_RANK_DESIGNS[rank].palette
+    result = recolour_luminance(
+        source,
+        Region(*selected.region),
+        selected.shadow,
+        selected.middle,
+        selected.highlight,
+        strength=selected.strength,
+        additive_glow=additive_glow,
+        preserve_luma=preserve_luma,
+        luma_gain=luma_gain,
+        maximum_channel=maximum_channel,
+    )
+    if (
+        result.changed_pixels <= 0
+        or result.alpha_changes != 0
+        or result.outside_region_changes != 0
+    ):
+        raise RankEffectError(f"AR{rank} atlas did not preserve alpha/detail")
+    return result
 
 
-def _single_mesh(encoded: bytes, label: str):
-    expanded = expand_xof_mszip(encoded, label)
-    meshes = discover_meshes(expanded, parse_tokens(expanded))
-    if len(meshes) != 1:
-        raise RankEffectError(f"Role-aware armor JCS must contain one mesh: {label}")
-    return meshes[0]
+def _build_ar9_clone(
+    client: Path,
+    shard: PackageShard,
+    asset_root: str,
+    contracts: list[dict[str, object]],
+    rewrite,
+) -> None:
+    rank = 10
+    directory = client / asset_root / "effect"
+    mapping: dict[bytes, bytes] = {}
+    private: list[Path] = []
+    bindings = (
+        ("animated-core", b"female_body_effect_0010.tga", "ar9_core"),
+        ("animated-butterfly", b"female_body_effect_0011.tga", "ar9_butterfly"),
+        ("declared-unused", b"11.tga", "ar9_declared"),
+    )
+    for role, reference, suffix in bindings:
+        source_path = directory / reference.decode("ascii")
+        source = regular(source_path, f"native AR9 {role} atlas")
+        result = _recolour(
+            source, rank, additive_glow=False, preserve_luma=True
+        )
+        target = Path(asset_root) / "effect" / (
+            f"reborn_body_effect_{rank:04d}_v2_{suffix}.tga"
+        )
+        shard.add(target, result.encoded)
+        mapping[reference] = target.name.encode("ascii")
+        private.append(target)
+        _record_atlas(
+            contracts,
+            rank=rank,
+            asset_root=asset_root,
+            role=role,
+            source_rank=ARMOR_CLONE_SOURCE_RANK,
+            source=source,
+            result=result,
+            target=target,
+            additive_glow=False,
+            preserve_luma=True,
+        )
+
+    for gender in GENDERS:
+        source_stem = f"{gender}_body_effect_{ARMOR_CLONE_SOURCE_RANK:04d}"
+        target_stem = f"{gender}_body_effect_{rank:04d}"
+        canonical_source_path = directory / f"{source_stem}.gwo"
+        canonical_source = regular(canonical_source_path, "native AR9 canonical atlas")
+        canonical_result = _recolour(
+            canonical_source, rank, additive_glow=False, preserve_luma=True
+        )
+        canonical = Path(asset_root) / "effect" / f"{target_stem}.gwo"
+        shard.add(canonical, canonical_result.encoded)
+        _record_atlas(
+            contracts,
+            rank=rank,
+            asset_root=asset_root,
+            gender=gender,
+            role="canonical",
+            source_rank=ARMOR_CLONE_SOURCE_RANK,
+            source=canonical_source,
+            result=canonical_result,
+            target=canonical,
+            additive_glow=False,
+            preserve_luma=True,
+        )
+
+        models: list[Path] = []
+        for slot, role in enumerate(slot_roles_for_rank(rank)):
+            source_path = directory / f"{source_stem}_{slot}.jcs"
+            source = regular(source_path, "protected native AR9 JCS clone source")
+            output = rewrite(source, mapping, str(source_path))
+            target = Path(asset_root) / "effect" / f"{target_stem}_{slot}.jcs"
+            if structural_fingerprint(source, str(source_path)) != structural_fingerprint(
+                output, str(target)
+            ):
+                raise RankEffectError(f"AR10 clone changed protected AR9 structure: {target}")
+            shard.add(target, output)
+            models.append(target)
+            _record_model(
+                contracts,
+                rank=rank,
+                asset_root=asset_root,
+                gender=gender,
+                slot=slot,
+                role=role,
+                source_rank=ARMOR_CLONE_SOURCE_RANK,
+                source_path=source_path,
+                target=target,
+                source=source,
+                output=output,
+                sculpted=False,
+                changed_vertices=0,
+            )
+        shard.effects.append(
+            {
+                "kind": "armor",
+                "rank": rank,
+                "asset_root": asset_root,
+                "gender": gender,
+                "class": None,
+                "models": [path.as_posix() for path in models],
+                "canonical_texture": canonical.as_posix(),
+                "private_textures": [path.as_posix() for path in private],
+            }
+        )
 
 
 def build_armor_shards(
@@ -52,134 +168,16 @@ def build_armor_shards(
     contracts: list[dict[str, object]],
     rewrite,
 ) -> list[PackageShard]:
-    """Create one bounded shard per rank while sharing no visible assets."""
+    """Create one bounded shard per rank without mutating protected donors."""
 
     shards = {
         rank: PackageShard(stage, f"armor-{rank:02d}-role-aware")
         for rank in ARMOR_RANK_DESIGNS
     }
     for asset_root in ASSET_ROOTS:
-        directory = client / asset_root / "effect"
-        body_source = regular(
-            directory / "female_body_effect_0010.tga", "native body-effect atlas"
-        )
-        declared_source = regular(directory / "11.tga", "native declared atlas")
-        for rank, design in ARMOR_RANK_DESIGNS.items():
-            shard = shards[rank]
-            palette = design.palette
-            body = recolour_luminance(
-                body_source,
-                Region(*palette.region),
-                palette.shadow,
-                palette.middle,
-                palette.highlight,
-                strength=palette.strength,
-            )
-            if body.changed_pixels <= 0 or body.alpha_changes != 0:
-                raise RankEffectError(
-                    f"AR{rank} role-aware atlas did not preserve alpha/detail"
-                )
-            main = Path(asset_root) / "effect" / (
-                f"reborn_body_effect_{rank:04d}_v2_main.tga"
-            )
-            declared = Path(asset_root) / "effect" / (
-                f"reborn_body_effect_{rank:04d}_v2_declared.tga"
-            )
-            shard.add(main, body.encoded)
-            shard.add(declared, declared_source)
-            mapping = {
-                b"female_body_effect_0010.tga": main.name.encode("ascii"),
-                b"11.tga": declared.name.encode("ascii"),
-            }
-            for gender in GENDERS:
-                source_stem = f"{gender}_body_effect_{ARMOR_SOURCE_RANK:04d}"
-                target_stem = f"{gender}_body_effect_{rank:04d}"
-                canonical = Path(asset_root) / "effect" / f"{target_stem}.gwo"
-                shard.add(canonical, body.encoded)
-                models: list[Path] = []
-                for slot, role in enumerate(SLOT_ROLES):
-                    source_path = directory / f"{source_stem}_{slot}.jcs"
-                    source = regular(source_path, "coherent native AR12 JCS")
-                    authored = source
-                    changed_vertices = 0
-                    if slot == 1:
-                        sculpt = sculpt_xof_mszip(
-                            source,
-                            ArmorMantleTransform(design),
-                            label=str(source_path),
-                        )
-                        authored = sculpt.encoded
-                        changed_vertices = sculpt.changed_vertices
-                        if changed_vertices <= 0:
-                            raise RankEffectError(
-                                f"AR{rank} mantle sculpt changed no vertices"
-                            )
-                        validate_silhouette(
-                            _single_mesh(source, f"{source_path}:source"),
-                            tuple(
-                                _single_mesh(
-                                    authored, f"{source_path}:AR{rank}"
-                                ).vertices
-                            ),
-                            design,
-                        )
-                    output = rewrite(authored, mapping, str(source_path))
-                    target = Path(asset_root) / "effect" / f"{target_stem}_{slot}.jcs"
-                    shard.add(target, output)
-                    models.append(target)
-                    contracts.append(
-                        {
-                            "effect": f"armor-ar{rank}",
-                            "design": design.name,
-                            "intent": design.intent,
-                            "asset_root": asset_root,
-                            "gender": gender,
-                            "slot": slot,
-                            "role": role,
-                            "source_rank": ARMOR_SOURCE_RANK,
-                            "sculpted": slot == 1,
-                            "changed_vertices": changed_vertices,
-                            "source_sha256": sha256_bytes(source),
-                            "output_sha256": sha256_bytes(output),
-                            "source_structural_sha256": structural_fingerprint(
-                                source, str(source_path)
-                            ),
-                            "output_structural_sha256": structural_fingerprint(
-                                output, str(target)
-                            ),
-                            "source": _audit_dict(audit_model(source, str(source_path))),
-                            "output": _audit_dict(audit_model(output, str(target))),
-                        }
-                    )
-                shard.effects.append(
-                    {
-                        "kind": "armor",
-                        "rank": rank,
-                        "asset_root": asset_root,
-                        "gender": gender,
-                        "class": None,
-                        "models": [path.as_posix() for path in models],
-                        "canonical_texture": canonical.as_posix(),
-                        "private_textures": [main.as_posix(), declared.as_posix()],
-                    }
-                )
-            contracts.append(
-                {
-                    "effect": f"armor-ar{rank}-atlas",
-                    "design": design.name,
-                    "asset_root": asset_root,
-                    "source_sha256": sha256_bytes(body_source),
-                    "output_sha256": sha256_bytes(body.encoded),
-                    "changed_pixels": body.changed_pixels,
-                    "outside_region_changes": body.outside_region_changes,
-                    "alpha_changes": body.alpha_changes,
-                    "region": list(palette.region),
-                    "palette": {
-                        "shadow": list(palette.shadow),
-                        "middle": list(palette.middle),
-                        "highlight": list(palette.highlight),
-                        "strength": palette.strength,
-                    },
-                }
-            )
+        _build_ar9_clone(client, shards[10], asset_root, contracts, rewrite)
+        build_ar11_bridge(client, shards[11], asset_root, contracts, rewrite)
+        build_ar12_aether(client, shards[12], asset_root, contracts, rewrite)
+        for rank in CAPSTONE_ARMOR_RANKS:
+            build_capstone(client, shards[rank], asset_root, rank, contracts, rewrite)
     return list(shards.values())

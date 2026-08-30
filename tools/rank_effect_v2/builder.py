@@ -28,7 +28,9 @@ from .package_io import PackageShard, regular, write_json
 
 PACKAGE_ID = "reborn-role-aware-rank-effects-v2"
 WEAPON_CLASS = "warrior"
-CONTRACT_SHARD_SIZE = 8
+# Rich role contracts can exceed the 20 KiB manifest ceiling in groups of
+# eight. Four keeps each shard bounded while retaining deterministic ordering.
+CONTRACT_SHARD_SIZE = 4
 
 
 def _rewrite(data: bytes, mapping: dict[bytes, bytes], label: str) -> bytes:
@@ -285,6 +287,11 @@ def build_package(client_root: Path, output_root: Path) -> tuple[int, int]:
                             "to": "legacy_body_effect_0011.tga",
                         },
                     ],
+                },
+                "armor_rank_10_structure": {
+                    "mode": "protected_rank_clone",
+                    "source_rank": 9,
+                    "require_distinct_palette": True,
                 },
             },
         )

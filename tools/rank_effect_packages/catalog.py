@@ -13,6 +13,10 @@ ASSET_ROOTS = ("Characters", "Characters_New")
 GENDERS = ("female", "male")
 ARMOR_RANKS = tuple(range(10, 15))
 PROTECTED_ARMOR_RANK = 9
+# AR9 remains the authored-coverage boundary.  Lower native ranks are listed
+# separately because the reviewed higher-rank designs also clone their effect
+# geometry and therefore need the same transactional hash protection.
+PROTECTED_ARMOR_DONOR_RANKS = (4, 5, PROTECTED_ARMOR_RANK)
 WEAPON_RANK = 10
 
 

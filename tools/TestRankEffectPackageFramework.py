@@ -65,14 +65,28 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _write_client_ar9(client: Path) -> None:
+def _write_client_armor_donors(client: Path) -> None:
     for root_index, root in enumerate(("Characters", "Characters_New")):
         effect = client / root / "effect"
         effect.mkdir(parents=True)
         texture10, texture11 = _tga(10 + root_index), _tga(20 + root_index)
+        (effect / "11.tga").write_bytes(_tga(5 + root_index))
         (effect / "female_body_effect_0010.tga").write_bytes(texture10)
         (effect / "female_body_effect_0011.tga").write_bytes(texture11)
         for gender_index, gender in enumerate(("female", "male")):
+            (effect / f"{gender}_body_effect_0004.gwo").write_bytes(
+                _tga(40 + gender_index)
+            )
+            (effect / f"{gender}_body_effect_0004_0.jcs").write_bytes(
+                _jcs(b"11.tga", 40)
+            )
+            (effect / f"{gender}_body_effect_0005.gwo").write_bytes(
+                _tga(50 + gender_index)
+            )
+            for index in range(3):
+                (effect / f"{gender}_body_effect_0005_{index}.jcs").write_bytes(
+                    _jcs(b"11.tga", 50 + index)
+                )
             (effect / f"{gender}_body_effect_0009.gwo").write_bytes(_tga(30 + gender_index))
             for index in range(3):
                 reference = (
@@ -193,18 +207,50 @@ def _armor_effect(rank: int, structure: str) -> EffectRecord:
     )
 
 
-def _adjacent_package(effects: tuple[EffectRecord, ...]) -> LoadedPackage:
-    baseline = {
-        "files": [
-            {
-                "path": f"Characters/effect/female_body_effect_0009_{slot}.jcs",
-                "sha256": str(slot) * 64,
-                "structural_sha256": str(slot + 1) * 64,
-            }
-            for slot in range(3)
-        ]
+_AR10_CLONE_POLICY = {
+    "mode": "protected_rank_clone",
+    "source_rank": 9,
+    "require_distinct_palette": True,
+}
+_PROTECTED_AR9_PALETTE = b"protected-ar9-palette"
+_DISTINCT_AR10_PALETTE = b"distinct-ar10-palette"
+
+
+def _protected_ar9_structure() -> str:
+    structures = [str(slot + 1) * 64 for slot in range(3)]
+    return hashlib.sha256("\n".join(structures).encode("ascii")).hexdigest()
+
+
+def _adjacent_package(
+    effects: tuple[EffectRecord, ...],
+    *,
+    rank10_policy: dict[str, object] | None = None,
+    rank10_palette: bytes = _DISTINCT_AR10_PALETTE,
+) -> LoadedPackage:
+    baseline_files = [
+        {
+            "path": f"Characters/effect/female_body_effect_0009_{slot}.jcs",
+            "sha256": str(slot) * 64,
+            "structural_sha256": str(slot + 1) * 64,
+        }
+        for slot in range(3)
+    ]
+    baseline_files.append(
+        {
+            "path": "Characters/effect/female_body_effect_0009.gwo",
+            "sha256": hashlib.sha256(_PROTECTED_AR9_PALETTE).hexdigest(),
+        }
+    )
+    manifest: dict[str, object] = {}
+    if rank10_policy is not None:
+        manifest["armor_rank_10_structure"] = rank10_policy
+    assets = {
+        effect.canonical_texture: (
+            rank10_palette if effect.rank == 10 else f"rank-{effect.rank}".encode("ascii")
+        )
+        for effect in effects
     }
-    return LoadedPackage(Path("."), {}, {}, effects, baseline)
+    return LoadedPackage(Path("."), manifest, assets, effects, {"files": baseline_files})
 
 
 def main() -> int:
@@ -236,6 +282,39 @@ def main() -> int:
         ),
         "missing preceding package armor rank",
     )
+
+    protected_ar9_structure = _protected_ar9_structure()
+    _expect_error(
+        lambda: verify_new_silhouettes(
+            _adjacent_package((_armor_effect(10, protected_ar9_structure),))
+        ),
+        "default AR10 protected-AR9 structure reuse",
+    )
+    verify_new_silhouettes(
+        _adjacent_package(
+            (_armor_effect(10, protected_ar9_structure),),
+            rank10_policy=dict(_AR10_CLONE_POLICY),
+        )
+    )
+    _expect_error(
+        lambda: verify_new_silhouettes(
+            _adjacent_package(
+                (_armor_effect(10, "d" * 64),),
+                rank10_policy=dict(_AR10_CLONE_POLICY),
+            )
+        ),
+        "opt-in AR10 clone structure mismatch",
+    )
+    _expect_error(
+        lambda: verify_new_silhouettes(
+            _adjacent_package(
+                (_armor_effect(10, protected_ar9_structure),),
+                rank10_policy=dict(_AR10_CLONE_POLICY),
+                rank10_palette=_PROTECTED_AR9_PALETTE,
+            )
+        ),
+        "opt-in AR10 clone unchanged protected palette",
+    )
     checks += 1
 
     original = _jcs(b"female_body_effect_0010.tga", 1)
@@ -262,7 +341,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="reborn-rank-effect-test-") as folder:
         root = Path(folder)
         client, package_root = root / "client", root / "package"
-        _write_client_ar9(client)
+        _write_client_armor_donors(client)
         _build_package(package_root, client)
         package = load_package(package_root)
         assert len(package.effects) == 4 and len(package.assets) == 18

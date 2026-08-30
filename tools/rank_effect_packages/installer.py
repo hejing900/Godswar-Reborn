@@ -16,7 +16,7 @@ from .formats import (
     rewrite_texture_references,
     structural_fingerprint,
 )
-from .package import LoadedPackage
+from .package import LoadedPackage, uses_protected_ar9_clone
 from .safety import require_origin_closed, require_plain_path
 
 
@@ -153,9 +153,10 @@ def _combined_structure(entries: list[dict[str, object]]) -> str:
 
 
 def verify_new_silhouettes(package: LoadedPackage) -> None:
-    """Reject exact structural reuse of each immediately preceding rank."""
+    """Enforce the reviewed AR10 clone and distinct later-rank silhouettes."""
 
     baseline = _baseline_entries(package)
+    clone_ar10 = uses_protected_ar9_clone(package.manifest)
     armor_effects = {
         (effect.asset_root, effect.gender, effect.rank): effect
         for effect in package.effects
@@ -201,11 +202,31 @@ def verify_new_silhouettes(package: LoadedPackage) -> None:
         ]
         if not prior:
             raise RankEffectError(f"No predecessor silhouette baseline for {effect.key}")
-        if _combined_structure(prior) == effect.structural_sha256:
-            if effect.kind == "armor":
+        prior_structure = _combined_structure(prior)
+        if effect.kind == "armor":
+            if clone_ar10:
+                if prior_structure != effect.structural_sha256:
+                    raise RankEffectError(
+                        f"AR10 must exactly clone protected AR9: {effect.key}"
+                    )
+                prior_texture = Path(effect.asset_root) / "effect" / (
+                    f"{effect.gender}_body_effect_0009.gwo"
+                )
+                prior_entry = baseline.get(prior_texture)
+                if (
+                    prior_entry is None
+                    or prior_entry["sha256"]
+                    == sha256_bytes(package.assets[effect.canonical_texture])
+                ):
+                    raise RankEffectError(
+                        f"AR10 clone must use a distinct palette: {effect.key}"
+                    )
+            elif prior_structure == effect.structural_sha256:
                 raise RankEffectError(
                     f"Effect reuses the preceding-rank silhouette: {effect.key}"
                 )
+            continue
+        if prior_structure == effect.structural_sha256:
             assert prior_texture is not None
             prior_entry = baseline.get(prior_texture)
             if (
@@ -232,6 +253,22 @@ def verify_installed(
     assert isinstance(coverage, dict)
     if coverage.get("armor_ranks"):
         baseline = _baseline_entries(package)
+        if uses_protected_ar9_clone(package.manifest):
+            for effect in package.effects:
+                if effect.kind != "armor" or effect.rank != 10:
+                    continue
+                for slot, model in enumerate(sorted(effect.models, key=lambda p: p.name)):
+                    source = Path(effect.asset_root) / "effect" / (
+                        f"{effect.gender}_body_effect_0009_{slot}.jcs"
+                    )
+                    target = _inside(client_root, model)
+                    if (
+                        source not in baseline
+                        or not target.is_file()
+                        or structural_fingerprint(target.read_bytes(), str(target))
+                        != baseline[source]["structural_sha256"]
+                    ):
+                        mismatches.append(model.as_posix())
         for root in ("Characters", "Characters_New"):
             for old, new in _LEGACY_MAPPINGS.items():
                 old_path = Path(root) / "effect" / old.decode("ascii")
