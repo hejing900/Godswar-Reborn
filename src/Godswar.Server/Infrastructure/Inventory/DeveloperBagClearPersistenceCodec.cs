@@ -19,7 +19,7 @@ internal static class DeveloperBagClearPersistenceCodec
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
     public const string AggregateType = "character_inventory";
     public const string EventType = "inventory.developer_bag_cleared";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamily = "developer_bag_clear";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";

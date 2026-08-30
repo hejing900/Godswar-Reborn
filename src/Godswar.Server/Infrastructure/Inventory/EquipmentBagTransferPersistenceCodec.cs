@@ -16,7 +16,7 @@ internal static class EquipmentBagTransferPersistenceCodec
     public const string AggregateType = "character_inventory";
     public const string EventType =
         "inventory.equipment_bag_transferred";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamilyCode =
         "equipment_bag_transfer";
     public const string PrincipalType = "account";

@@ -3,7 +3,13 @@ namespace Godswar.Server.Application.Messaging;
 internal enum OutboxOrderingPolicy : byte
 {
     StrictSequence = 1,
-    VersionedState = 2
+    VersionedState = 2,
+
+    /// <summary>
+    /// Delivers every event in increasing aggregate-version order while
+    /// allowing revisions owned by another durable stream to be absent.
+    /// </summary>
+    OrderedSparse = 3
 }
 
 internal enum OutboxOrderingDecision : byte
@@ -45,7 +51,8 @@ internal static class OutboxOrderingRules
             return OutboxOrderingDecision.Stale;
         }
 
-        if (policy == OutboxOrderingPolicy.VersionedState)
+        if (policy is OutboxOrderingPolicy.VersionedState or
+            OutboxOrderingPolicy.OrderedSparse)
         {
             return OutboxOrderingDecision.Deliver;
         }

@@ -14,7 +14,7 @@ internal static class WarehouseTransferPersistenceCodec
     public const string ConsumerKey = "inventory_projection_v1";
     public const string AggregateType = "character_inventory";
     public const string EventType = "inventory.warehouse_transferred";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamilyCode = "warehouse_transfer";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";

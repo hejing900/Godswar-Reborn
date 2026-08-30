@@ -173,10 +173,10 @@ internal sealed class ServerReadinessMonitor
              progression.HeartbeatAge <=
                 _options.MaximumWorkerHeartbeatAge);
         var outbox = PostgresCommandMetrics.GetSnapshot();
-        var outboxReady = !_requireOutbox ||
-            (outbox.State == OutboxDispatcherState.Running &&
-             outbox.HeartbeatAge <=
-                _options.MaximumWorkerHeartbeatAge);
+        var outboxReady = IsOutboxReady(
+            _requireOutbox,
+            outbox,
+            _options.MaximumWorkerHeartbeatAge);
         var reconciliation =
             _postgres?.GetReconciliationSnapshot();
         var reconciliationReady =
@@ -207,6 +207,14 @@ internal sealed class ServerReadinessMonitor
             AreRequiredSimulationLoopsReady());
         ObserveStateChange();
     }
+
+    internal static bool IsOutboxReady(
+        bool required,
+        PostgresOutboxRuntimeSnapshot snapshot,
+        TimeSpan maximumHeartbeatAge) =>
+        !required ||
+        (snapshot.State == OutboxDispatcherState.Running &&
+         snapshot.HeartbeatAge <= maximumHeartbeatAge);
 
     private async Task<bool> CheckDatabaseAsync(
         CancellationToken cancellationToken)

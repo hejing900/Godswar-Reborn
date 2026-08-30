@@ -16,7 +16,7 @@ internal sealed partial class CharacterInventoryOutboxConsumer :
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
 
     public OutboxOrderingPolicy OrderingPolicy =>
-        OutboxOrderingPolicy.StrictSequence;
+        OutboxOrderingPolicy.OrderedSparse;
 
     public ValueTask ConsumeAsync(
         OutboxEventMessage message,
@@ -43,28 +43,6 @@ internal sealed partial class CharacterInventoryOutboxConsumer :
                 DeveloperItemGrantPersistenceCodec.ContractVersion)
         {
             ValidateGrant(message);
-            return ValueTask.CompletedTask;
-        }
-
-        if (string.Equals(
-                message.EventType,
-                WarehouseTransferPersistenceCodec.EventType,
-                StringComparison.Ordinal) &&
-            message.SchemaVersion ==
-                WarehouseTransferPersistenceCodec.ContractVersion)
-        {
-            ValidateWarehouseTransfer(message);
-            return ValueTask.CompletedTask;
-        }
-
-        if (string.Equals(
-                message.EventType,
-                WarehouseExpansionPersistenceCodec.InventoryEventType,
-                StringComparison.Ordinal) &&
-            message.SchemaVersion ==
-                WarehouseExpansionPersistenceCodec.ContractVersion)
-        {
-            ValidateWarehouseKeyConsumption(message);
             return ValueTask.CompletedTask;
         }
 
@@ -185,6 +163,11 @@ internal sealed partial class CharacterInventoryOutboxConsumer :
             return ValueTask.CompletedTask;
         }
 
+        if (TryValidateHolySuit(message))
+        {
+            return ValueTask.CompletedTask;
+        }
+
         if (string.Equals(
                 message.EventType,
                 PetBagActivationInventoryPersistenceCodec.EventType,
@@ -193,6 +176,28 @@ internal sealed partial class CharacterInventoryOutboxConsumer :
                 PetBagActivationInventoryPersistenceCodec.ContractVersion)
         {
             ValidatePetBagActivation(message);
+            return ValueTask.CompletedTask;
+        }
+
+        if (string.Equals(
+                message.EventType,
+                WarehouseTransferPersistenceCodec.EventType,
+                StringComparison.Ordinal) &&
+            message.SchemaVersion ==
+                WarehouseTransferPersistenceCodec.ContractVersion)
+        {
+            ValidateWarehouseTransfer(message);
+            return ValueTask.CompletedTask;
+        }
+
+        if (string.Equals(
+                message.EventType,
+                WarehouseExpansionPersistenceCodec.InventoryEventType,
+                StringComparison.Ordinal) &&
+            message.SchemaVersion ==
+                WarehouseExpansionPersistenceCodec.ContractVersion)
+        {
+            ValidateWarehouseKeyConsumption(message);
             return ValueTask.CompletedTask;
         }
 

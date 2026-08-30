@@ -74,7 +74,8 @@ internal static class PostgresCommandMetrics
             "godswar_outbox_heartbeat_age_seconds",
             () => GetSnapshot().HeartbeatAge.TotalSeconds,
             unit: "s",
-            description: "Age of the latest outbox dispatcher pass.");
+            description:
+            "Age of the latest completed outbox dispatcher work boundary.");
     }
 
     public static void RecordInbox(
@@ -171,7 +172,16 @@ internal static class PostgresCommandMetrics
 
     public static void MarkOutboxPassCompleted()
     {
-        TouchOutboxHeartbeat();
+        MarkOutboxProgress();
+    }
+
+    public static void MarkOutboxProgress()
+    {
+        if ((OutboxDispatcherState)Volatile.Read(ref _outboxState) ==
+                OutboxDispatcherState.Running)
+        {
+            TouchOutboxHeartbeat();
+        }
     }
 
     public static void MarkOutboxStopped()

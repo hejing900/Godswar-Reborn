@@ -126,6 +126,7 @@ internal sealed partial class PostgresOutboxDispatcher
         {
             OutboxOrderingPolicy.StrictSequence => "strict",
             OutboxOrderingPolicy.VersionedState => "latest_wins",
+            OutboxOrderingPolicy.OrderedSparse => "ordered_sparse",
             _ => throw new ArgumentOutOfRangeException(nameof(policy))
         };
 
@@ -135,6 +136,7 @@ internal sealed partial class PostgresOutboxDispatcher
         {
             "strict" => OutboxOrderingPolicy.StrictSequence,
             "latest_wins" => OutboxOrderingPolicy.VersionedState,
+            "ordered_sparse" => OutboxOrderingPolicy.OrderedSparse,
             _ => throw new InvalidDataException(
                 "The outbox row has an unsupported ordering policy.")
         };

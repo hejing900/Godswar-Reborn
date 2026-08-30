@@ -21,7 +21,8 @@ internal static class WarehouseExpansionPersistenceCodec
     public const string WarehouseConsumerKey = "warehouse_projection_v1";
     public const string WarehouseAggregateType = "character_warehouse";
     public const string WarehouseEventType = "warehouse.capacity_expanded";
-    public const string OrderingPolicy = "strict";
+    public const string InventoryOrderingPolicy = "ordered_sparse";
+    public const string WarehouseOrderingPolicy = "strict";
     public const string LedgerReasonCode = "warehouse_expansion";
 
     public static string InventoryAggregateKey(int characterId) =>

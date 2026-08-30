@@ -19,7 +19,7 @@ internal static class ClassSuitPersistenceCodec
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
     public const string AggregateType = "character_inventory";
     public const string PrincipalType = "account";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string RetentionPolicy = "permanent";
     public const string EventType = "inventory.class_suit_changed";
 

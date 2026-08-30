@@ -119,6 +119,8 @@ internal static partial class PostgresMigrationFoundationChecks
         "20260828_118_medusa_monster_content",
         "20260828_119_medusa_external_score",
         "20260828_120_medusa_external_health",
-        "20260828_121_capital_npc_binding_gold"
+        "20260828_121_capital_npc_binding_gold",
+        "20260830_122_outbox_ordered_sparse",
+        "20260830_123_outbox_claim_candidate_index"
     ];
 }

@@ -298,6 +298,8 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateMedusaMonsterContent(),
         CreateMedusaExternalScore(),
         CreateMedusaExternalHealth(),
-        CreateCapitalNpcBindingGold()
+        CreateCapitalNpcBindingGold(),
+        CreateOutboxOrderedSparsePolicy(),
+        CreateOutboxClaimCandidateIndex()
     ];
 }

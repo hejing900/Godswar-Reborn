@@ -21,7 +21,7 @@ internal static class PetBagActivationInventoryPersistenceCodec
     public const string ConsumerKey = "inventory_projection_v1";
     public const string AggregateType = "character_inventory";
     public const string EventType = "inventory.pet_bag_item_activated";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const int MaximumLedgerEntryCount = 5;
 
     public static string AggregateKey(int characterId) =>

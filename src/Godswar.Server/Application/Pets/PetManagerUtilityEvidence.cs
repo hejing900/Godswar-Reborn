@@ -62,6 +62,9 @@ internal sealed record PetManagerUtilityEvidence(
     PetManagerUtilityPetState? BeforePetState = null,
     PetManagerUtilityPetState? AfterPetState = null)
 {
+    [JsonIgnore]
+    internal bool AuthenticatedLegacyActiveUnseal { get; init; }
+
     public bool IsValid =>
         Enum.IsDefined(Operation) &&
         PetId >= 0 &&
@@ -152,7 +155,8 @@ internal sealed record PetManagerUtilityEvidence(
                 unsealAfter.IsCarried == unsealAfter.IsSummoned &&
                 HasCompatibleUnsealEnergyEvidence(
                     unsealBefore,
-                    unsealAfter) &&
+                    unsealAfter,
+                    AuthenticatedLegacyActiveUnseal) &&
                 unsealAfter.Revision == unsealBefore.Revision + 1,
             PetManagerUtilityOperation.ClaimPetCall =>
                 PetId == 0 && ItemTemplateId == 11003 &&
@@ -180,15 +184,17 @@ internal sealed record PetManagerUtilityEvidence(
 
     private static bool HasCompatibleUnsealEnergyEvidence(
         PetManagerUtilityPetState before,
-        PetManagerUtilityPetState after)
+        PetManagerUtilityPetState after,
+        bool authenticatedLegacyActiveUnseal)
     {
         // Receipts persisted before energy evidence was introduced have both
         // pairs absent. Accept only that exact legacy shape; any partially
         // populated or contradictory new shape fails closed.
         if (!before.HasEnergyEvidence && !after.HasEnergyEvidence)
         {
-            return !after.IsCarried &&
-                !after.IsSummoned &&
+            return (!after.IsCarried && !after.IsSummoned ||
+                    authenticatedLegacyActiveUnseal &&
+                    after.IsCarried && after.IsSummoned) &&
                 before.CurrentEnergy is null &&
                 before.MaximumEnergy is null &&
                 after.CurrentEnergy is null &&

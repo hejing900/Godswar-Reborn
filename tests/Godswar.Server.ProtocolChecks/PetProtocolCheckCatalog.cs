@@ -184,6 +184,12 @@ internal static class PetProtocolCheckCatalog
             PetManagerUtilityProtocolChecks.CheckName,
             PetManagerUtilityProtocolChecks.RunAsync),
         (
+            PetManagerUtilityLegacySealCompatibilityChecks.CheckName,
+            PetManagerUtilityLegacySealCompatibilityChecks.RunAsync),
+        (
+            PetManagerUtilityLegacyUnsealCompatibilityChecks.CheckName,
+            PetManagerUtilityLegacyUnsealCompatibilityChecks.RunAsync),
+        (
             PetManagerUtilityHandlerChecks.CheckName,
             PetManagerUtilityHandlerChecks.RunAsync),
         (

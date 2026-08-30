@@ -19,7 +19,7 @@ internal static class MakeAttributeStonePersistenceCodec
     public const string AggregateType = "character_inventory";
     public const string EventType =
         "inventory.gear_mentor_attribute_stone_made";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamily =
         "gear_mentor_make_attribute_stone";
     public const string PrincipalType = "account";

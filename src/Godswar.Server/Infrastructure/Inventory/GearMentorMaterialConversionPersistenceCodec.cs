@@ -18,7 +18,7 @@ internal static class GearMentorMaterialConversionPersistenceCodec
     public const string ConsumerKey =
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
     public const string AggregateType = "character_inventory";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";
 

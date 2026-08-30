@@ -361,6 +361,12 @@ internal static class DataArchitectureCheckCatalog
             "Shared character-inventory outbox compatibility",
             CharacterInventoryOutboxConsumerChecks.RunAsync),
         (
+            OutboxRepairToolContractChecks.CheckName,
+            OutboxRepairToolContractChecks.RunAsync),
+        (
+            PostgresOutboxHistoricalRepairIntegrationChecks.CheckName,
+            PostgresOutboxHistoricalRepairIntegrationChecks.RunAsync),
+        (
             "PostgreSQL talent command precondition",
             PostgresTalentUpgradeIntegrationChecks.RunAsync),
         .. B19ReconciliationCheckCatalog.All,

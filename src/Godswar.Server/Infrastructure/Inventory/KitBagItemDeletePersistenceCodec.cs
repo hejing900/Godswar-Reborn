@@ -15,7 +15,7 @@ internal static class KitBagItemDeletePersistenceCodec
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
     public const string AggregateType = "character_inventory";
     public const string EventType = "inventory.kit_bag_item_deleted";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamilyCode = "kit_bag_item_delete";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";

@@ -30,6 +30,7 @@ internal static partial class PetDurablePersistenceCodec
     public static byte[] Encode(PetDurableReceipt receipt)
     {
         ArgumentNullException.ThrowIfNull(receipt);
+        RejectAuthenticatedLegacyUtilityEncode(receipt);
         receipt.Validate();
         if (receipt.Family == CommandFamily.PetGrowthReset &&
             receipt.Status == PetDurableReceiptStatus.PetGrowthPreviewed &&
@@ -384,6 +385,8 @@ internal static partial class PetDurablePersistenceCodec
             (CommandFamily.PetGrowthReset,
                 LegacyPetGrowthResetContractVersion) =>
                 EncodePetGrowthV3(receipt),
+            (CommandFamily.PetManagerUtility, ContractVersion) =>
+                CanonicalizePetManagerUtility(payload),
             _ => Encode(receipt)
         };
         var hash = SHA256.HashData(canonical);

@@ -18,7 +18,7 @@ internal static class EquipmentForgePersistenceCodec
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
     public const string AggregateType = "character_inventory";
     public const string EventType = "inventory.equipment_forged";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";
     public const string CommandFamilyCode = "equipment_forge";

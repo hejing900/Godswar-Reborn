@@ -16,7 +16,7 @@ internal static class MonsterDeathRewardPersistenceCodec
     public const string ConsumerKey = "progression_reward_projection_v1";
     public const string AggregateType = "character_progression";
     public const string EventType = "progression.monster_reward_settled";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamily = "monster_reward_settlement";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";

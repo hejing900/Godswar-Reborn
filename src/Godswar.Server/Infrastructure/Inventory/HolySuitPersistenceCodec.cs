@@ -14,7 +14,7 @@ internal static class HolySuitPersistenceCodec
     public const short ContractVersion = 1;
     public const string PrincipalType = "account";
     public const string AggregateType = "character_inventory";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string RetentionPolicy = "permanent";
     public const string ConsumerKey =
         DeveloperItemGrantPersistenceCodec.ConsumerKey;
@@ -52,6 +52,24 @@ internal static class HolySuitPersistenceCodec
                 "inventory.holy_suit_experience_transformed",
             _ => throw new ArgumentOutOfRangeException(nameof(family))
         };
+
+    public static bool IsEventType(string eventType) =>
+        string.Equals(
+            eventType,
+            EventType(CommandFamily.HolySuitStoreExperience),
+            StringComparison.Ordinal) ||
+        string.Equals(
+            eventType,
+            EventType(CommandFamily.HolySuitTransferExperience),
+            StringComparison.Ordinal) ||
+        string.Equals(
+            eventType,
+            EventType(CommandFamily.HolySuitConsumeWare),
+            StringComparison.Ordinal) ||
+        string.Equals(
+            eventType,
+            EventType(CommandFamily.HolySuitTransformExperience),
+            StringComparison.Ordinal);
 
     public static string ResultCode(HolySuitCommandResultStatus status) =>
         HolySuitNativeResults.IsCommitted(status)

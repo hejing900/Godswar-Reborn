@@ -252,6 +252,7 @@ internal sealed partial class PostgresWarehouseExpansionCommandExecutor
                 characterId),
             plan.NextInventoryRevision,
             WarehouseExpansionPersistenceCodec.InventoryEventType,
+            WarehouseExpansionPersistenceCodec.InventoryOrderingPolicy,
             evidence.Payload,
             cancellationToken);
         var capacityPayload = WarehouseExpansionPersistenceCodec.Encode(
@@ -267,6 +268,7 @@ internal sealed partial class PostgresWarehouseExpansionCommandExecutor
                 characterId),
             plan.NextWarehouseRevision,
             WarehouseExpansionPersistenceCodec.WarehouseEventType,
+            WarehouseExpansionPersistenceCodec.WarehouseOrderingPolicy,
             capacityPayload,
             cancellationToken);
     }
@@ -281,6 +283,7 @@ internal sealed partial class PostgresWarehouseExpansionCommandExecutor
         string aggregateKey,
         long revision,
         string eventType,
+        string orderingPolicy,
         byte[] payload,
         CancellationToken cancellationToken)
     {
@@ -309,7 +312,7 @@ internal sealed partial class PostgresWarehouseExpansionCommandExecutor
             WarehouseExpansionPersistenceCodec.ContractVersion);
         command.Parameters.AddWithValue(
             "orderingPolicy",
-            WarehouseExpansionPersistenceCodec.OrderingPolicy);
+            orderingPolicy);
         command.Parameters.Add("payload", NpgsqlDbType.Jsonb).Value =
             Encoding.UTF8.GetString(payload);
         command.Parameters.AddWithValue("maxAttempts", _maximumOutboxAttempts);

@@ -31,6 +31,10 @@ internal static partial class PostgresOutboxDispatcherIntegrationChecks
         await CheckNormalDeliveryAsync(dataSource, fixture);
         await CheckConcurrentPollersAsync(dataSource, fixture);
         await CheckStrictOrderingAsync(dataSource, fixture);
+        await CheckStrictGapEndsPassAsync(dataSource, fixture);
+        await CheckStrictHeadSchedulingAsync(dataSource, fixture);
+        await CheckOrderedSparseHeadSchedulingAsync(dataSource, fixture);
+        await CheckOrderedSparsePoisonBlockingAsync(dataSource, fixture);
         await CheckVersionedStateOrderingAsync(dataSource, fixture);
         await CheckStaleDeliveryAsync(dataSource, fixture);
         await CheckRetryAndPoisonAsync(dataSource, fixture);
@@ -229,6 +233,52 @@ internal static partial class PostgresOutboxDispatcherIntegrationChecks
             aggregateKey,
             expectedRevision: 2,
             expectInflight: false);
+    }
+
+    private static async Task CheckStrictGapEndsPassAsync(
+        NpgsqlDataSource dataSource,
+        CommandFixture fixture)
+    {
+        const string consumerKey = "checks.outbox.strict-gap-pass";
+        var firstGap = await InsertEventAsync(
+            dataSource,
+            fixture,
+            consumerKey,
+            NewAggregateKey("strict-gap-a"),
+            revision: 2,
+            orderingPolicy: "strict");
+        var secondGap = await InsertEventAsync(
+            dataSource,
+            fixture,
+            consumerKey,
+            NewAggregateKey("strict-gap-b"),
+            revision: 2,
+            orderingPolicy: "strict");
+        var consumer = new RecordingConsumer(
+            consumerKey,
+            OutboxOrderingPolicy.StrictSequence);
+        var dispatcher = CreateDispatcher(
+            dataSource,
+            consumer,
+            "checks-strict-gap-pass",
+            batchSize: 8);
+
+        Check.Equal(
+            1,
+            await dispatcher.DispatchOnceAsync(),
+            "one strict gap ends a bounded dispatcher pass");
+        Check.Equal(
+            0,
+            consumer.MessageCount,
+            "gap-only pass never reaches the consumer");
+        Check.Equal(
+            0,
+            (await ReadEventAsync(dataSource, firstGap.RowId)).AttemptCount,
+            "first gap does not consume a delivery attempt");
+        Check.Equal(
+            0,
+            (await ReadEventAsync(dataSource, secondGap.RowId)).AttemptCount,
+            "unvisited gap does not consume a delivery attempt");
     }
 
     private static void AssertContractBounds()

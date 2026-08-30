@@ -10,7 +10,7 @@ internal sealed class MonsterDeathRewardOutboxConsumer :
         MonsterDeathRewardPersistenceCodec.ConsumerKey;
 
     public OutboxOrderingPolicy OrderingPolicy =>
-        OutboxOrderingPolicy.StrictSequence;
+        OutboxOrderingPolicy.OrderedSparse;
 
     public ValueTask ConsumeAsync(
         OutboxEventMessage message,

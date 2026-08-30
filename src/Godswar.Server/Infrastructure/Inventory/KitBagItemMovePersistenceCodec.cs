@@ -16,7 +16,7 @@ internal static class KitBagItemMovePersistenceCodec
     public const string AggregateType = "character_inventory";
     public const string EventType =
         "inventory.kit_bag_item_moved";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamilyCode = "kit_bag_item_move";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";

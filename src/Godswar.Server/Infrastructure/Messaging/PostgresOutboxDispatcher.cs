@@ -44,41 +44,79 @@ internal sealed partial class PostgresOutboxDispatcher
         _probe = probe;
     }
 
-    public async Task RunAsync(
+    public Task RunAsync(
         CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
         {
-            return;
+            return Task.CompletedTask;
         }
 
+        return RunCoreAsync(DispatchOnceAsync, cancellationToken);
+    }
+
+    internal Task RunAsync(
+        Func<CancellationToken, Task<int>> dispatchPass,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dispatchPass);
+        if (!_options.Enabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunCoreAsync(dispatchPass, cancellationToken);
+    }
+
+    private async Task RunCoreAsync(
+        Func<CancellationToken, Task<int>> dispatchPass,
+        CancellationToken cancellationToken)
+    {
         PostgresCommandMetrics.MarkOutboxStarted();
+        var consecutiveTransientFailures = 0;
         try
         {
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var nextDelay = _options.PollInterval;
                 try
                 {
-                    await DispatchOnceAsync(cancellationToken);
+                    await dispatchPass(cancellationToken);
+                    consecutiveTransientFailures = 0;
+                    PostgresCommandMetrics.MarkOutboxPassCompleted();
                 }
-                catch (NpgsqlException)
+                catch (NpgsqlException error)
                     when (!cancellationToken.IsCancellationRequested)
                 {
+                    if (!error.IsTransient)
+                    {
+                        throw;
+                    }
+
+                    consecutiveTransientFailures = Math.Min(
+                        consecutiveTransientFailures + 1,
+                        30);
                     PostgresCommandMetrics.RecordRetry(
                         "dispatcher",
                         "database_unavailable");
+                    nextDelay = FailureRetryDelay(
+                        consecutiveTransientFailures);
                 }
                 catch (TimeoutException)
                     when (!cancellationToken.IsCancellationRequested)
                 {
+                    consecutiveTransientFailures = Math.Min(
+                        consecutiveTransientFailures + 1,
+                        30);
                     PostgresCommandMetrics.RecordRetry(
                         "dispatcher",
                         "database_timeout");
+                    nextDelay = FailureRetryDelay(
+                        consecutiveTransientFailures);
                 }
-                PostgresCommandMetrics.MarkOutboxPassCompleted();
                 await Task.Delay(
-                    _options.PollInterval,
+                    nextDelay,
                     cancellationToken);
             }
         }
@@ -95,6 +133,14 @@ internal sealed partial class PostgresOutboxDispatcher
             PostgresCommandMetrics.MarkOutboxFaulted();
             throw;
         }
+    }
+
+    private TimeSpan FailureRetryDelay(int consecutiveFailures)
+    {
+        var retryDelay = _options.RetryDelay(consecutiveFailures);
+        return retryDelay > _options.PollInterval
+            ? retryDelay
+            : _options.PollInterval;
     }
 
     internal async Task<int> DispatchOnceAsync(
@@ -125,9 +171,24 @@ internal sealed partial class PostgresOutboxDispatcher
                 var batch = await ClaimBatchAsync(
                     performPassValidation,
                     cancellationToken);
+                // This heartbeat follows a completed database transaction.
+                // It never pulses while a database command or consumer is
+                // stalled, so readiness can still detect a wedged worker.
+                PostgresCommandMetrics.MarkOutboxProgress();
                 performPassValidation = false;
                 RecordDeferredOutcomes(batch.DeferredOutcomes);
                 processed += batch.DeferredOutcomes.Count;
+
+                if (batch.DeferredOutcomes.Any(
+                        static outcome =>
+                            outcome.Kind == DeferredOutcomeKind.Gap))
+                {
+                    // A strict gap is a backoff boundary, not useful batch
+                    // throughput. End this pass so a permanently blocked
+                    // stream cannot consume the remaining batch or be
+                    // revisited after its delay expires within this pass.
+                    break;
+                }
 
                 if (batch.Claims.Count == 0)
                 {
@@ -146,6 +207,7 @@ internal sealed partial class PostgresOutboxDispatcher
                     batch.Claims[0],
                     cancellationToken);
                 processed++;
+                PostgresCommandMetrics.MarkOutboxProgress();
             }
 
             await RefreshBacklogAsync(cancellationToken);

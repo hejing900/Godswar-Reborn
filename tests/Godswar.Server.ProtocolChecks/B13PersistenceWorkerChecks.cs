@@ -146,6 +146,28 @@ internal static class B13PersistenceWorkerChecks
         Check.True(
             outbox.HeartbeatAge < TimeSpan.FromSeconds(1),
             "outbox heartbeat is fresh");
+        Thread.Sleep(25);
+        var heartbeatBeforeProgress =
+            PostgresCommandMetrics.GetSnapshot().HeartbeatAge;
+        PostgresCommandMetrics.MarkOutboxProgress();
+        Check.True(
+            PostgresCommandMetrics.GetSnapshot().HeartbeatAge <
+                heartbeatBeforeProgress,
+            "completed outbox work refreshes the running heartbeat");
+
+        PostgresCommandMetrics.MarkOutboxFaulted();
+        Thread.Sleep(25);
+        var faultedHeartbeat =
+            PostgresCommandMetrics.GetSnapshot().HeartbeatAge;
+        PostgresCommandMetrics.MarkOutboxProgress();
+        var faultedAfterProgress = PostgresCommandMetrics.GetSnapshot();
+        Check.True(
+            faultedAfterProgress.State == OutboxDispatcherState.Faulted,
+            "outbox progress cannot revive a faulted worker");
+        Check.True(
+            faultedAfterProgress.HeartbeatAge >= faultedHeartbeat,
+            "a faulted worker cannot refresh its heartbeat");
+        PostgresCommandMetrics.MarkOutboxStarted();
 
         var registry = new GameSessionRegistry();
         var progression =

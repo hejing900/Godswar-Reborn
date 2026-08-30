@@ -38,15 +38,8 @@ internal sealed class PostgresReconciliationReader :
             {
                 Key = OutboxConsumerContract.RequireKey(
                     consumer.ConsumerKey),
-                Policy = consumer.OrderingPolicy switch
-                {
-                    OutboxOrderingPolicy.StrictSequence =>
-                        "strict",
-                    OutboxOrderingPolicy.VersionedState =>
-                        "latest_wins",
-                    _ => throw new ArgumentOutOfRangeException(
-                        nameof(consumers))
-                }
+                Policy = ToDatabaseOrderingPolicy(
+                    consumer.OrderingPolicy)
             })
             .OrderBy(item => item.Key, StringComparer.Ordinal)
             .ToArray();
@@ -144,6 +137,16 @@ internal sealed class PostgresReconciliationReader :
 
     private static int Seconds(TimeSpan timeout) =>
         Math.Max(1, checked((int)Math.Ceiling(timeout.TotalSeconds)));
+
+    internal static string ToDatabaseOrderingPolicy(
+        OutboxOrderingPolicy policy) =>
+        policy switch
+        {
+            OutboxOrderingPolicy.StrictSequence => "strict",
+            OutboxOrderingPolicy.VersionedState => "latest_wins",
+            OutboxOrderingPolicy.OrderedSparse => "ordered_sparse",
+            _ => throw new ArgumentOutOfRangeException(nameof(policy))
+        };
 }
 
 internal sealed partial class PostgresReconciliationSnapshot :

@@ -7,7 +7,7 @@ internal static partial class PostgresMigrationFoundationChecks
     private static void CheckForwardOnlyCatalog()
     {
         Check.Equal(
-            116,
+            118,
             PostgresSchemaMigrationCatalog.All.Count,
             "migration catalog entry count");
         var baseline = PostgresSchemaMigrationCatalog.All[0];
@@ -347,6 +347,48 @@ internal static partial class PostgresMigrationFoundationChecks
                 "map_mode BETWEEN 0 AND 5",
                 StringComparison.Ordinal),
             "sealed gameplay content retains constrained monster attack and map-mode PvP authority");
+
+        var orderedSparse = PostgresSchemaMigrationCatalog.All.Single(
+            migration => migration.Id ==
+                "20260830_122_outbox_ordered_sparse");
+        Check.True(
+            orderedSparse.Sql.Contains(
+                "'ordered_sparse'",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "event.lease_token IS NOT NULL",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "position.inflight_event_id IS NOT NULL",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "current_setting('session_replication_role') <> 'origin'",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "'trg_outbox_events_guard'",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "'trg_outbox_positions_lease_consistency'",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "ck_outbox_events_sparse_consumer_policy",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "ck_outbox_positions_sparse_consumer_policy",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "DISABLE TRIGGER trg_outbox_events_guard",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "DISABLE TRIGGER trg_outbox_consumer_positions_guard",
+                StringComparison.Ordinal) &&
+            orderedSparse.Sql.Contains(
+                "SET CONSTRAINTS ALL IMMEDIATE",
+                StringComparison.Ordinal) &&
+            !orderedSparse.Sql.Contains(
+                "'replica'",
+                StringComparison.Ordinal),
+            "ordered-sparse conversion refuses active streams, preserves guards, and prevents policy regression");
     }
 
 }

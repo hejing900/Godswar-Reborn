@@ -315,45 +315,8 @@ internal sealed partial class PostgresOutboxDispatcher
         NpgsqlTransaction transaction,
         CancellationToken cancellationToken)
     {
-        const string sql =
-            """
-            WITH registered(consumer_key) AS (
-                SELECT unnest(@consumer_keys::text[])
-            )
-            SELECT
-                e.id,
-                e.event_id,
-                e.consumer_key,
-                e.aggregate_type,
-                e.aggregate_key,
-                e.aggregate_version,
-                e.event_type,
-                e.contract_version,
-                e.ordering_policy,
-                e.payload::text,
-                e.attempt_count,
-                e.max_attempts,
-                p.current_version,
-                e.created_at,
-                clock_timestamp()
-            FROM public.outbox_events AS e
-            INNER JOIN registered AS r
-                ON r.consumer_key = e.consumer_key
-            INNER JOIN public.outbox_consumer_positions AS p
-                ON p.consumer_key = e.consumer_key
-               AND p.aggregate_type = e.aggregate_type
-               AND p.aggregate_key = e.aggregate_key
-            WHERE e.delivered_at IS NULL
-              AND e.poisoned_at IS NULL
-              AND e.lease_token IS NULL
-              AND e.available_at <= clock_timestamp()
-              AND p.inflight_event_id IS NULL
-            ORDER BY e.available_at, e.id
-            LIMIT 1
-            FOR UPDATE OF e, p SKIP LOCKED;
-            """;
         await using var command =
-            CreateCommand(sql, connection, transaction);
+            CreateCommand(CandidateQuerySql, connection, transaction);
         command.Parameters.Add(
             "consumer_keys",
             NpgsqlDbType.Array | NpgsqlDbType.Text).Value =

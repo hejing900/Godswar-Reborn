@@ -26,6 +26,9 @@ internal static class B13OperationsCheckCatalog
             "B13 drain and persistence-worker runtime",
             B13PersistenceWorkerChecks.RunAsync),
         (
+            PostgresOutboxDispatcherLivenessChecks.CheckName,
+            PostgresOutboxDispatcherLivenessChecks.RunAsync),
+        (
             "B13 privacy and deployment architecture ratchet",
             B13OperationalArchitectureChecks.RunAsync)
     ];

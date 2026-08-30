@@ -22,7 +22,7 @@ internal static class DeveloperItemGrantPersistenceCodec
         "inventory.developer_material_granted";
     public const string EventType =
         "inventory.developer_item_granted";
-    public const string OrderingPolicy = "strict";
+    public const string OrderingPolicy = "ordered_sparse";
     public const string CommandFamily = "developer_item_grant";
     public const string PrincipalType = "account";
     public const string RetentionPolicy = "permanent";
