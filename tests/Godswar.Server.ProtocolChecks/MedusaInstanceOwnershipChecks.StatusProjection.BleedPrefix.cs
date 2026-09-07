@@ -217,23 +217,37 @@ internal static partial class MedusaInstanceOwnershipChecks
                     resolution.Damage > 0);
             var observation = await fixture.AttackAsync(
                 fixture.CreateAttack(eventId));
+            await fixture.Socket.Session.TerminalCleanupCompletion
+                .WaitAsync(TimeSpan.FromSeconds(2));
             var noPublishedFrames =
                 await RemainedWithoutTrailingMedusaFramesAsync(
                     fixture.Socket,
                     observerSocket);
 
             Check.True(
-                fixture.Socket.Session.IsDisconnected &&
+                fixture.Socket.Session.IsDisconnected,
+                "committed-Bleed source-roster drift disconnects the exact target");
+            Check.True(
                 !fixture.Registry.TryGetSessionWorldInstanceId(
                     fixture.Socket.Session,
-                    out _) &&
-                !observerSocket.Session.IsDisconnected &&
-                noPublishedFrames &&
-                observation.AfterHealth < observation.BeforeHealth &&
-                observation.AfterVitalsRevision ==
-                    observation.BeforeVitalsRevision + 1 &&
+                    out _),
+                "committed-Bleed source-roster drift removes the target membership");
+            Check.True(
+                !observerSocket.Session.IsDisconnected,
+                "committed-Bleed source-roster drift retains unaffected observers");
+            Check.True(
+                noPublishedFrames,
+                "committed-Bleed source-roster drift admits no prefix/status bytes or late ordinary publication");
+            Check.True(
+                observation.AfterHealth < observation.BeforeHealth,
+                "committed-Bleed source-roster drift preserves the irreversible HP commit");
+            Check.Equal(
+                observation.BeforeVitalsRevision + 1,
+                observation.AfterVitalsRevision,
+                "committed-Bleed source-roster drift preserves the irreversible vitals revision");
+            Check.True(
                 fixture.Mechanics().ActiveEffects.IsEmpty,
-                "committed-Bleed source-roster drift preserves the irreversible HP/vitals commit, exact-fail-closes and removes the target with exact-life effect cleanup, admits no prefix/status bytes, and cannot fall through to the late ordinary publisher");
+                "committed-Bleed source-roster drift clears effects for the disconnected life");
         }
         finally
         {
@@ -280,6 +294,8 @@ internal static partial class MedusaInstanceOwnershipChecks
                     resolution.Damage > 0);
             var observation = await fixture.AttackAsync(
                 fixture.CreateAttack(eventId));
+            await fixture.Socket.Session.TerminalCleanupCompletion
+                .WaitAsync(TimeSpan.FromSeconds(2));
             var worldImpact = await observerSocket.ReadPacketAsync();
             var worldDamage = await observerSocket.ReadPacketAsync();
             var noTrailingFrames =

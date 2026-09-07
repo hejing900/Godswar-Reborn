@@ -1,3 +1,5 @@
+using Godswar.Server.Application.Progression;
+using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game;
 using Godswar.Server.Application.Characters;
 using Npgsql;
@@ -158,4 +160,34 @@ internal sealed partial class PostgresGameStore
             : FocusedGameplayProjectionCompatibility.ToLegacy(result);
     }
 
+
+    public Task<CapitalShopPurchaseResult> PurchaseCapitalShopItemAsync(
+        int accountId, int characterId, Guid purchaseId, CapitalShopOffer offer,
+        int quantity, CancellationToken cancellationToken = default) =>
+        _capitalShopPurchases.PurchaseCapitalShopItemAsync(accountId, characterId,
+            purchaseId, offer, quantity, cancellationToken);
+
+    public Task<MonsterLootPickupResult> PickupMonsterLootAsync(
+        int accountId, int characterId, Guid deathEventId, int lootIndex,
+        uint itemId, int quantity, CancellationToken cancellationToken = default) =>
+        _monsterRewardExtras.PickupMonsterLootAsync(accountId, characterId,
+            deathEventId, lootIndex, itemId, quantity, cancellationToken);
+
+    public Task<PetMonsterExperienceResult> ApplyPetMonsterKillExperienceAsync(
+        int accountId, int characterId, Guid deathEventId, int experience,
+        CancellationToken cancellationToken = default) =>
+        _monsterRewardExtras.ApplyPetMonsterKillExperienceAsync(accountId, characterId,
+            deathEventId, experience, cancellationToken);
+
+    public Task<FighterLevelSealChangeResult> ChangeFighterLevelSealAsync(
+        int accountId, int characterId, RealmId realmId, PlayerOwnershipFence ownership,
+        Guid operationId, bool desiredSealed, CancellationToken cancellationToken = default) =>
+        _fighterLevelSeals.ChangeFighterLevelSealAsync(accountId, characterId, realmId,
+            ownership, operationId, desiredSealed, cancellationToken);
+
+    public Task<WeekendExperienceClaimStatus> ClaimWeekendExperienceAsync(
+        int accountId, int characterId, RealmId realmId, DateOnly claimDay,
+        DateTimeOffset claimedAtUtc, CancellationToken cancellationToken = default) =>
+        _weekendExperienceClaims.ClaimWeekendExperienceAsync(accountId, characterId,
+            realmId, claimDay, claimedAtUtc, cancellationToken);
 }

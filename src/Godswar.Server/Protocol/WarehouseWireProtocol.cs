@@ -1,19 +1,7 @@
 using System.Buffers.Binary;
-using Godswar.Server.Protocol;
+using Godswar.Server.Application.Warehouse;
 
-namespace Godswar.Server.Application.Warehouse;
-
-/// <summary>
-/// Server-owned interpretation of one stock MSG_STORAGE_ITEM frame. Bag slots
-/// are flattened to 0..95 so no client page/cell values escape this boundary.
-/// </summary>
-internal readonly record struct WarehouseTransferIntent(
-    WarehouseTransferOperation Operation,
-    int WarehouseSlot,
-    int KitBagSlot,
-    int DestinationWarehouseSlot,
-    int Money,
-    WarehouseStorageType StorageType);
+namespace Godswar.Server.Protocol;
 
 internal static class WarehouseWireProtocol
 {

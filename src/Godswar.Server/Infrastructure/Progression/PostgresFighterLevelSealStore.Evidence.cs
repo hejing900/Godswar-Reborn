@@ -1,3 +1,4 @@
+using Godswar.Server.State;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -7,9 +8,9 @@ using Godswar.Server.Domain.World.Instances;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Godswar.Server.State;
+namespace Godswar.Server.Infrastructure.Progression;
 
-internal sealed partial class PostgresGameStore
+internal sealed partial class PostgresFighterLevelSealStore
 {
     private const string FighterLevelSealCommandFamily =
         "fighter_level_seal";

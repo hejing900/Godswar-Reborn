@@ -13,28 +13,18 @@ internal static class MapEcsRuntimeCutoverChecks
 
     public static async Task RunAsync()
     {
-        await using var socket =
-            await RuntimePolicySessionSocket.CreateAsync();
-
-        CheckFailedInitialHydration(socket.Session);
-        CheckFailedSameMapUpdate(socket.Session);
-        CheckFailedCrossMapUpdate(socket.Session);
-        CheckValidLifecycle(
-            socket.Session,
-            PlayerRuntimeMode.Ecs);
-        CheckValidLifecycle(
-            socket.Session,
-            PlayerRuntimeMode.Legacy);
-
-        Check.Equal(
-            0,
-            socket.Available,
-            "map runtime cutover emits no network packets");
+        await CheckFailedInitialHydrationAsync();
+        await CheckFailedSameMapUpdateAsync();
+        await CheckFailedCrossMapUpdateAsync();
+        await CheckValidLifecycleAsync(PlayerRuntimeMode.Ecs);
+        await CheckValidLifecycleAsync(PlayerRuntimeMode.Legacy);
     }
 
-    private static void CheckFailedInitialHydration(
-        ClientSession session)
+    private static async Task CheckFailedInitialHydrationAsync()
     {
+        await using var ecsSocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        var session = ecsSocket.Session;
         var invalidCharacter = CreateCharacter(
             mapId: 0,
             accountId: InvalidAccountId,
@@ -66,6 +56,9 @@ internal static class MapEcsRuntimeCutoverChecks
             unseenPlayers.Count,
             "failed initial ECS hydration has no unseen-player result");
 
+        await using var legacySocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        session = legacySocket.Session;
         var legacy = CreateRegistry(PlayerRuntimeMode.Legacy);
         legacy.JoinMap(
             session,
@@ -95,11 +88,15 @@ internal static class MapEcsRuntimeCutoverChecks
             session,
             mapId: 0,
             "legacy invalid-session removal");
+        AssertNoPackets(ecsSocket);
+        AssertNoPackets(legacySocket);
     }
 
-    private static void CheckFailedSameMapUpdate(
-        ClientSession session)
+    private static async Task CheckFailedSameMapUpdateAsync()
     {
+        await using var ecsSocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        var session = ecsSocket.Session;
         var validCharacter = CreateCharacter(
             mapId: 0,
             accountId: AccountId,
@@ -152,6 +149,9 @@ internal static class MapEcsRuntimeCutoverChecks
             mapId: 0,
             "same-map ECS cleanup");
 
+        await using var legacySocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        session = legacySocket.Session;
         var legacy = CreateRegistry(PlayerRuntimeMode.Legacy);
         legacy.JoinMap(
             session,
@@ -180,11 +180,15 @@ internal static class MapEcsRuntimeCutoverChecks
             session,
             mapId: 0,
             "legacy same-map cleanup");
+        AssertNoPackets(ecsSocket);
+        AssertNoPackets(legacySocket);
     }
 
-    private static void CheckFailedCrossMapUpdate(
-        ClientSession session)
+    private static async Task CheckFailedCrossMapUpdateAsync()
     {
+        await using var ecsSocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        var session = ecsSocket.Session;
         var validCharacter = CreateCharacter(
             mapId: 0,
             accountId: AccountId,
@@ -250,6 +254,9 @@ internal static class MapEcsRuntimeCutoverChecks
             mapId: 0,
             "cross-map ECS cleanup");
 
+        await using var legacySocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        session = legacySocket.Session;
         var legacy = CreateRegistry(PlayerRuntimeMode.Legacy);
         legacy.JoinMap(
             session,
@@ -280,12 +287,16 @@ internal static class MapEcsRuntimeCutoverChecks
             session,
             mapId: 1,
             "legacy cross-map cleanup");
+        AssertNoPackets(ecsSocket);
+        AssertNoPackets(legacySocket);
     }
 
-    private static void CheckValidLifecycle(
-        ClientSession session,
+    private static async Task CheckValidLifecycleAsync(
         PlayerRuntimeMode mode)
     {
+        await using var socket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        var session = socket.Session;
         const byte mapId = 2;
         var character = CreateCharacter(
             mapId,
@@ -346,7 +357,14 @@ internal static class MapEcsRuntimeCutoverChecks
                 new Dictionary<uint, long>(),
                 out _),
             $"{mode} valid removal clears global membership");
+        AssertNoPackets(socket);
     }
+
+    private static void AssertNoPackets(RuntimePolicySessionSocket socket) =>
+        Check.Equal(
+            0,
+            socket.Available,
+            "map runtime cutover emits no network packets");
 
     private static void AssertNoMapMembership(
         GameSessionRegistry registry,

@@ -16,10 +16,8 @@ internal static partial class PetBootstrapPersistenceChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet bootstrap persistence " +
+            throw new CheckSkippedException($"PostgreSQL pet bootstrap persistence " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await CheckPostgresAggregateAsync(connectionString);

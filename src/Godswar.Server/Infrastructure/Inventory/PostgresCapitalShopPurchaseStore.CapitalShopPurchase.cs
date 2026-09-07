@@ -1,11 +1,13 @@
+using static Godswar.Server.Infrastructure.Inventory.PostgresItemAcquisitionPolicy;
+using Godswar.Server.State;
 using System.Data;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Infrastructure.Inventory;
 using Npgsql;
 
-namespace Godswar.Server.State;
+namespace Godswar.Server.Infrastructure.Inventory;
 
-internal sealed partial class PostgresGameStore
+internal sealed partial class PostgresCapitalShopPurchaseStore
 {
     public async Task<CapitalShopPurchaseResult>
         PurchaseCapitalShopItemAsync(

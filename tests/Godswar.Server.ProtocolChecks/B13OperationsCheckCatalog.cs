@@ -5,6 +5,9 @@ internal static class B13OperationsCheckCatalog
     public static readonly (string Name, Func<Task> Run)[] All =
     [
         (
+            "B13 PostgreSQL startup retry classification and safe diagnostics",
+            PostgresStartupFailureChecks.RunAsync),
+        (
             "B13 bounded structured logs, metrics, and traces",
             B13ObservabilityCoreChecks.RunAsync),
         (

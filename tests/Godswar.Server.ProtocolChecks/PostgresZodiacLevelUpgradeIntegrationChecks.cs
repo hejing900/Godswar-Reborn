@@ -18,9 +18,7 @@ internal static class PostgresZodiacLevelUpgradeIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL Zodiac level-up integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL Zodiac level-up integration ({ConnectionStringVariable} is not set)");
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];
@@ -32,6 +30,8 @@ internal static class PostgresZodiacLevelUpgradeIntegrationChecks
         {
             await using var storeA = new PostgresGameStore(connectionString);
             await storeA.EnsureSeedDataAsync();
+            await PostgresCharacterCreationContentFixture.EnsureGameplayPublishedAsync(
+                connectionString);
             await using var dataSourceA =
                 NpgsqlDataSource.Create(connectionString);
             await using var dataSourceB =

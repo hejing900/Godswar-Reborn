@@ -222,8 +222,9 @@ internal static partial class
                       AND event_row.aggregate_key = @aggregateKey
                     ORDER BY event_row.aggregate_version
                 )
-            FROM public.accounts account_row
-            WHERE account_row.id = @accountId;
+            FROM public.account_realm account_row
+            WHERE account_row.account_id = @accountId
+              AND account_row.realm_id = 1;
             """);
         command.Parameters.AddWithValue("accountId", accountId);
         command.Parameters.AddWithValue(

@@ -22,9 +22,7 @@ internal static partial class PostgresOutboxHistoricalRepairIntegrationChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         var phase = Environment.GetEnvironmentVariable(PhaseVariable)?

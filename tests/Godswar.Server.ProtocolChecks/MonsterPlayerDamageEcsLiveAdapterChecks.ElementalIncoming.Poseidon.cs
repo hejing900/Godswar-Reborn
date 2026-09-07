@@ -88,7 +88,7 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
                     registry.GetPlayerLifeRevision(socket.Session),
                     eventId),
                 CancellationToken.None);
-            await socket.ReadPacketAsync(24);
+            await ReadMonsterImpactPrefixAsync(socket, mode, monsterObjectId);
             var damage = await socket.ReadPacketAsync(30);
             if (index == events.Count - 1)
             {

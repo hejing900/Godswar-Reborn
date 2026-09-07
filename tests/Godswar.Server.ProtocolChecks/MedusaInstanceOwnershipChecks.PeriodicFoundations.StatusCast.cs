@@ -46,6 +46,7 @@ internal static partial class MedusaInstanceOwnershipChecks
                     DateTimeOffset.UtcNow,
                     CancellationToken.None,
                     "PeriodicFoundationStatusObservation");
+            await session.TerminalCleanupCompletion.WaitAsync(TimeSpan.FromSeconds(2));
             Check.True(
                 snapshot is not null &&
                 observationCalls == 1 &&
@@ -108,6 +109,8 @@ internal static partial class MedusaInstanceOwnershipChecks
                     fixture.Source.SpawnGeneration,
                     CancellationToken.None,
                     "PeriodicFoundationCastStartReplay");
+            await observerSocket.Session.TerminalCleanupCompletion
+                .WaitAsync(TimeSpan.FromSeconds(2));
             Check.True(
                 admitted == 1 &&
                 replayed == 0 &&

@@ -323,8 +323,14 @@ internal static class DeferredRedisArchitectureChecks
             program,
             "coordination.Worker.WaitUntilRegisteredAsync(",
             "workerBackhaulRuntime.Start(",
-            "server.WaitUntilStartedAsync(",
+            "ServerListenerReadiness.WaitAsync(",
             "coordination.Worker.PublishAvailableAsync(");
+        var listenerReadiness = Read(root,
+            "src/Godswar.Server/ServerListenerReadiness.cs");
+        AssertOrdered(listenerReadiness,
+            "await Task.WhenAll(endpoints.Select(",
+            "server.WaitUntilStartedAsync(",
+            "await readiness.WaitUntilFirstRefreshAsync(");
 
         var host = Read(
             root,

@@ -48,44 +48,6 @@ internal interface IGameStore : IAsyncDisposable
         int talentExperience,
         CancellationToken cancellationToken = default);
 
-    Task<PetMonsterExperienceResult> ApplyPetMonsterKillExperienceAsync(
-        int accountId,
-        int characterId,
-        Guid deathEventId,
-        int experience,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new PetMonsterExperienceResult(
-            PetMonsterExperienceStatus.NoSummonedPet,
-            deathEventId,
-            0,
-            PetId: null,
-            TotalExperience: null,
-            PetRevision: null));
-
-    Task<MonsterLootPickupResult> PickupMonsterLootAsync(
-        int accountId,
-        int characterId,
-        Guid deathEventId,
-        int lootIndex,
-        uint itemId,
-        int quantity,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new MonsterLootPickupResult(
-            MonsterLootPickupStatus.Unsupported,
-            Character: null));
-
-    Task<CapitalShopPurchaseResult> PurchaseCapitalShopItemAsync(
-        int accountId,
-        int characterId,
-        Guid purchaseId,
-        CapitalShopOffer offer,
-        int quantity,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new CapitalShopPurchaseResult(
-            CapitalShopPurchaseStatus.UnsupportedItem,
-            Character: null,
-            CurrencyBalance: 0));
-
     Task<ZodiacSkillGridActivationResult?> ActivateZodiacSkillGridAsync(
         int accountId,
         int characterId,

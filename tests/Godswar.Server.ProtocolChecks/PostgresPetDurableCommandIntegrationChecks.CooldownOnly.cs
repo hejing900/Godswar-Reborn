@@ -19,10 +19,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {ConsumableCooldownCheckName} " +
+            throw new CheckSkippedException($"{ConsumableCooldownCheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -30,10 +28,8 @@ internal static partial class
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {ConsumableCooldownCheckName} requires a " +
+            throw new CheckSkippedException($"{ConsumableCooldownCheckName} requires a " +
                 $"disposable B03/B12 database; received '{database}'");
-            return;
         }
 
         await new PostgresSchemaMigrationRunner(dataSource)

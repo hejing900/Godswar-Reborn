@@ -353,7 +353,7 @@ internal static partial class ElementalClassSuitAttributeChecks
                 commit,
                 StringComparison.Ordinal);
             var primaryReward = source.IndexOf(
-                "PrepareMonsterKillRewardAsync",
+                "PrepareClaimedMonsterKillRewardAsync",
                 commit,
                 StringComparison.Ordinal);
             var publication = source.IndexOf(

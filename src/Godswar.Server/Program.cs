@@ -55,7 +55,7 @@ try
     var holyBalance =
         await ServerRuntimeContentComposition.LoadHolySpiritBalanceAsync(options);
     var dailyNpcs = await
-        ServerDailyNpcStartup.LoadBalancesAsync(options, itemContent);
+        ServerDailyNpcStartup.LoadBalancesAsync(options, itemContent, petContent);
     var worldContent = await ServerWorldContentComposition.TryLoadAsync(options);
     if (worldContent is null)
     {
@@ -413,28 +413,8 @@ try
             readinessMonitor.RunAsync);
         taskSupervisor.SealRegistrations();
 
-        await Task.WhenAll(endpointServers.Select(
-            server => server.WaitUntilStartedAsync(shutdown.Token))).WaitAsync(
-            TimeSpan.FromSeconds(10),
-            shutdown.Token);
-        if (managementServer is not null)
-        {
-            await managementServer.WaitUntilStartedAsync(
-                shutdown.Token).WaitAsync(
-                    TimeSpan.FromSeconds(10),
-                    shutdown.Token);
-        }
-        if (secureUdpRuntime is not null)
-        {
-            await secureUdpRuntime.WaitUntilReadyAsync(
-                shutdown.Token).WaitAsync(
-                    TimeSpan.FromSeconds(10),
-                    shutdown.Token);
-        }
-        await readinessMonitor.WaitUntilFirstRefreshAsync(
-            shutdown.Token).WaitAsync(
-                TimeSpan.FromSeconds(10),
-                shutdown.Token);
+        await ServerListenerReadiness.WaitAsync(endpointServers,
+            managementServer, secureUdpRuntime, readinessMonitor, shutdown.Token);
         serverOperationalState.SetDependency(
             ServerReadinessDependency.ListenerProfile,
             ready: true);
@@ -504,8 +484,9 @@ try
 
     ServerRuntimeShutdown.SetProcessOutcome(fatalRuntimeFailure, observability);
 }
-catch
+catch (Exception error)
 {
+    StartupFailureDiagnostics.Record(observability.Logger, error);
     observability.RecordLifecycle(
         "server",
         "startup_failed",

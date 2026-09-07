@@ -1,3 +1,4 @@
+using Godswar.Server.Application.Pets;
 using System.Data;
 using Godswar.Server.Application.Items;
 using Godswar.Server.Application.OnlineAwards;
@@ -10,15 +11,18 @@ internal sealed class PostgresOnlineAwardBalanceSettingsStore :
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly IItemTemplateCatalog _templates;
+    private readonly IPetContentCatalog _pets;
 
     public PostgresOnlineAwardBalanceSettingsStore(
         NpgsqlDataSource dataSource,
-        IItemTemplateCatalog templates)
+        IItemTemplateCatalog templates,
+        IPetContentCatalog pets)
     {
         _dataSource = dataSource ??
             throw new ArgumentNullException(nameof(dataSource));
         _templates = templates ??
             throw new ArgumentNullException(nameof(templates));
+        _pets = pets ?? throw new ArgumentNullException(nameof(pets));
     }
 
     public async Task<OnlineAwardBalanceUpdateResult> TryPublishSuccessorAsync(
@@ -160,6 +164,7 @@ internal sealed class PostgresOnlineAwardBalanceSettingsStore :
 
             if (!OnlineAwardPinnedItemPolicy.IsValid(
                     _templates,
+                    _pets,
                     reward))
             {
                 return null;

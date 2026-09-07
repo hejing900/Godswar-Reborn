@@ -28,10 +28,8 @@ internal static partial class PostgresTalentInboxOutboxIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL talent inbox/outbox integration " +
+            throw new CheckSkippedException("PostgreSQL talent inbox/outbox integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -41,11 +39,9 @@ internal static partial class PostgresTalentInboxOutboxIntegrationChecks
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL talent inbox/outbox integration " +
+                throw new CheckSkippedException("PostgreSQL talent inbox/outbox integration " +
                     $"requires a disposable godswar_b03_*_smoke_XX or " +
                     $"godswar_b08_* database; received '{databaseName}'");
-                return;
             }
         }
 

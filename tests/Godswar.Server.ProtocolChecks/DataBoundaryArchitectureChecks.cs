@@ -306,6 +306,23 @@ internal static class DataBoundaryArchitectureChecks
             DataBoundaryArchitectureAnalyzer.Analyze(clean, baseline).IsClean,
             "architecture analyzer accepts the exact reviewed baseline");
 
+        var typedFeature = Copy(clean);
+        typedFeature["Application/Feature.cs"] =
+            "namespace Godswar.Server.Application; " +
+            "internal sealed partial class Feature { " +
+            "private readonly IFeatureStore _store; }";
+        typedFeature["Application/Feature.Read.cs"] =
+            "namespace Godswar.Server.Application; " +
+            "internal sealed partial class Feature { " +
+            "void Read() => _store.LoadAsync(); }";
+        Check.True(DataBoundaryArchitectureAnalyzer.Analyze(typedFeature, baseline).IsClean,
+            "typed feature stores in partial classes do not count as broad-store debt");
+        typedFeature["Application/Feature.Read.cs"] +=
+            " void Bad() => _gameStore.LoadAsync();";
+        Check.True(DataBoundaryArchitectureAnalyzer.Analyze(typedFeature, baseline)
+                .NewDebt.Any(value => value.Contains("store call", StringComparison.Ordinal)),
+            "a feature store does not exempt other broad-store receivers in the same file");
+
         var increased = Copy(clean);
         increased["Game/Legacy.cs"] +=
             " internal void Again() " +

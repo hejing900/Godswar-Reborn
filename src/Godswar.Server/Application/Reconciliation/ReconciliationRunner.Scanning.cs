@@ -2,106 +2,75 @@ namespace Godswar.Server.Application.Reconciliation;
 
 internal sealed partial class ReconciliationRunner
 {
-    private async Task<ScopeScanResult> ScanCharactersAsync(
+    private async Task ScanCharactersAsync(
         IReconciliationSnapshot snapshot,
-        ReconciliationScanState state,
-        IDictionary<ReconciliationCategory, long> counts,
+        ScanProgress progress,
         CancellationToken cancellationToken)
     {
-        if (state.CharactersComplete)
+        if (progress.State.CharactersComplete)
         {
-            return new ScopeScanResult(state, 0);
+            return;
         }
 
-        var cursor = state.CharacterCursor;
-        var rows = 0;
         var remaining = _options.MaximumCharactersPerRun;
         while (remaining > 0)
         {
+            var cursor = progress.State.CharacterCursor;
             var limit = Math.Min(_options.BatchSize, remaining);
             var page = await snapshot.ReadCharacterPageAsync(
-                cursor,
-                limit,
-                cancellationToken);
+                cursor, limit, cancellationToken);
             ValidatePage(cursor, page, limit);
-            rows += page.RowsScanned;
+            Add(progress.Counts, page.Findings);
+            progress.CharacterRows += page.RowsScanned;
             remaining -= page.RowsScanned;
-            Add(counts, page.Findings);
+            progress.State = progress.State with
+            {
+                CharacterCursor = page.ReachedEnd ? 0 : page.NextKey,
+                CharactersComplete = page.ReachedEnd
+            };
             if (page.ReachedEnd)
             {
-                return new ScopeScanResult(
-                    state with
-                    {
-                        CharacterCursor = 0,
-                        CharactersComplete = true
-                    },
-                    rows);
+                return;
             }
-
-            cursor = page.NextKey;
         }
-
-        return new ScopeScanResult(
-            state with { CharacterCursor = cursor },
-            rows);
     }
 
-    private async Task<ScopeScanResult> ScanOutboxAsync(
+    private async Task ScanOutboxAsync(
         IReconciliationSnapshot snapshot,
-        ReconciliationScanState state,
-        IDictionary<ReconciliationCategory, long> counts,
+        ScanProgress progress,
         CancellationToken cancellationToken)
     {
-        if (state.OutboxComplete)
-        {
-            return new ScopeScanResult(state, 0);
-        }
-
-        var working = state;
-        var rows = 0;
         var remaining = _options.MaximumOutboxEventsPerRun;
-        while (remaining > 0 && !working.OutboxComplete)
+        while (remaining > 0 && !progress.State.OutboxComplete)
         {
+            var working = progress.State;
             var scanEvents =
                 SelectOutboxScope(working) == OutboxScanScope.Events;
             var limit = Math.Min(_options.BatchSize, remaining);
             if (scanEvents)
             {
                 var page = await snapshot.ReadOutboxPageAsync(
-                    working.OutboxEventCursor,
-                    limit,
-                    cancellationToken);
-                ValidatePage(
-                    working.OutboxEventCursor,
-                    page,
-                    limit);
-                rows += page.RowsScanned;
+                    working.OutboxEventCursor, limit, cancellationToken);
+                ValidatePage(working.OutboxEventCursor, page, limit);
+                Add(progress.Counts, page.Findings);
+                progress.OutboxRows += page.RowsScanned;
                 remaining -= page.RowsScanned;
-                Add(counts, page.Findings);
-                working = working with
+                progress.State = working with
                 {
-                    OutboxEventCursor = page.ReachedEnd
-                        ? 0
-                        : page.NextKey,
+                    OutboxEventCursor = page.ReachedEnd ? 0 : page.NextKey,
                     OutboxEventsComplete = page.ReachedEnd,
                     NextOutboxScope = OutboxScanScope.Positions
                 };
             }
             else
             {
-                var page =
-                    await snapshot.ReadOutboxPositionPageAsync(
-                        working.OutboxPositionCursor,
-                        limit,
-                        cancellationToken);
-                ValidatePositionPage(
-                    working.OutboxPositionCursor,
-                    page,
-                    limit);
-                rows += page.RowsScanned;
+                var page = await snapshot.ReadOutboxPositionPageAsync(
+                    working.OutboxPositionCursor, limit, cancellationToken);
+                ValidatePositionPage(working.OutboxPositionCursor, page, limit);
+                Add(progress.Counts, page.Findings);
+                progress.OutboxRows += page.RowsScanned;
                 remaining -= page.RowsScanned;
-                Add(counts, page.Findings);
-                working = working with
+                progress.State = working with
                 {
                     OutboxPositionCursor = page.ReachedEnd
                         ? ReconciliationOutboxPositionCursor.Start
@@ -111,8 +80,6 @@ internal sealed partial class ReconciliationRunner
                 };
             }
         }
-
-        return new ScopeScanResult(working, rows);
     }
 
     private static OutboxScanScope SelectOutboxScope(
@@ -218,7 +185,13 @@ internal sealed partial class ReconciliationRunner
             CharactersComplete && OutboxComplete;
     }
 
-    private readonly record struct ScopeScanResult(
-        ReconciliationScanState State,
-        int RowsScanned);
+    // Mutated only after a complete, validated page. A later bounded read may
+    // time out without losing either that page's cursor or its finding counts.
+    private sealed class ScanProgress(ReconciliationScanState state)
+    {
+        public ReconciliationScanState State { get; set; } = state;
+        public Dictionary<ReconciliationCategory, long> Counts { get; } = [];
+        public int CharacterRows { get; set; }
+        public int OutboxRows { get; set; }
+    }
 }

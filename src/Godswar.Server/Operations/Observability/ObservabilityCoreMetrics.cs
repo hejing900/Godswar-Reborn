@@ -60,6 +60,8 @@ internal static class StructuredLogCodes
                 "telemetry_exporter",
             OperationalLogEvent.LegacyDiagnosticSuppressed =>
                 "legacy_diagnostic_suppressed",
+            OperationalLogEvent.StartupFailure => "startup_failure",
+            OperationalLogEvent.StartupFailureFrame => "startup_failure_frame",
             _ => throw new ArgumentOutOfRangeException(nameof(eventId))
         };
 
@@ -87,6 +89,10 @@ internal static class StructuredLogCodes
             OperationalLogField.Count => "count",
             OperationalLogField.DurationMilliseconds => "duration_ms",
             OperationalLogField.Truncated => "truncated",
+            OperationalLogField.ExceptionType => "exception_type",
+            OperationalLogField.SqlState => "sqlstate",
+            OperationalLogField.MigrationId => "migration_id",
+            OperationalLogField.Frame => "frame",
             _ => throw new ArgumentOutOfRangeException(nameof(field))
         };
 }

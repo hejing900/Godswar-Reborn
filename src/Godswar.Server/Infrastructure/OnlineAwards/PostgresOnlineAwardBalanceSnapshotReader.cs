@@ -1,3 +1,4 @@
+using Godswar.Server.Application.Pets;
 using System.Data;
 using Godswar.Server.Application.Items;
 using Godswar.Server.Application.OnlineAwards;
@@ -11,27 +12,32 @@ internal sealed class PostgresOnlineAwardBalanceSnapshotReader
         OnlineAwardBalanceSnapshot.MaximumRewardRows + 1;
     private readonly NpgsqlDataSource _dataSource;
     private readonly IItemTemplateCatalog _templates;
+    private readonly IPetContentCatalog _pets;
 
     public PostgresOnlineAwardBalanceSnapshotReader(
         NpgsqlDataSource dataSource,
-        IItemTemplateCatalog templates)
+        IItemTemplateCatalog templates,
+        IPetContentCatalog pets)
     {
         _dataSource = dataSource ??
             throw new ArgumentNullException(nameof(dataSource));
         _templates = templates ??
             throw new ArgumentNullException(nameof(templates));
+        _pets = pets ?? throw new ArgumentNullException(nameof(pets));
     }
 
     public static async Task<OnlineAwardBalanceSnapshot> LoadAsync(
         string connectionString,
         IItemTemplateCatalog templates,
+        IPetContentCatalog pets,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         return await new PostgresOnlineAwardBalanceSnapshotReader(
             dataSource,
-            templates)
+            templates,
+            pets)
             .ReadAsync(cancellationToken);
     }
 
@@ -119,6 +125,7 @@ internal sealed class PostgresOnlineAwardBalanceSnapshotReader
             snapshot.Rewards.Any(reward =>
                 !OnlineAwardPinnedItemPolicy.IsValid(
                     _templates,
+                    _pets,
                     reward)))
         {
             throw new InvalidDataException(

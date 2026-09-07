@@ -58,6 +58,8 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
         string? InventoryFingerprint,
         IReadOnlyList<InventoryRowSnapshot>? InventoryRows,
         string? AccountCharacterFingerprint,
+        string? ProjectedAccountCharacterFingerprint,
+        IdentityColumnProjection? IdentityProjection,
         string? CheckpointFingerprint,
         string? LifecycleFingerprint,
         string? PacketPayloadFingerprint,

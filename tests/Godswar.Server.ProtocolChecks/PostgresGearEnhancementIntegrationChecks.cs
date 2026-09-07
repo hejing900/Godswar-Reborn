@@ -25,10 +25,8 @@ internal static partial class PostgresGearEnhancementIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL Gear Enhancement integration " +
+            throw new CheckSkippedException("PostgreSQL Gear Enhancement integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -38,11 +36,9 @@ internal static partial class PostgresGearEnhancementIntegrationChecks
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL Gear Enhancement integration " +
+                throw new CheckSkippedException("PostgreSQL Gear Enhancement integration " +
                     "requires a disposable B03/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

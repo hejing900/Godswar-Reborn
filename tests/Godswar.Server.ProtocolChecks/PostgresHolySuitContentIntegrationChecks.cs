@@ -18,9 +18,7 @@ internal static class PostgresHolySuitContentIntegrationChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);

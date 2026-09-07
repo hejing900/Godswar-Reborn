@@ -1,3 +1,4 @@
+using Godswar.Server.Infrastructure.Rewards;
 using Godswar.Server.Application.Accounts;
 using Godswar.Server.Application.Inventory;
 using Godswar.Server.Application.Progression;
@@ -27,7 +28,9 @@ internal sealed partial class PostgresGameStore :
     ILegacyAccountLoginStore,
     IGameplayItemContentProvider,
     IWeekendExperienceClaimStore,
-    IFighterLevelSealStore
+    IFighterLevelSealStore,
+    ICapitalShopPurchaseStore,
+    IMonsterRewardExtrasStore
 {
     private const short ItemLocationEquipment = 0;
     private const short ItemLocationKitBag = 1;
@@ -75,6 +78,10 @@ internal sealed partial class PostgresGameStore :
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly PostgresAccountStore _accountStore;
+    private readonly PostgresCapitalShopPurchaseStore _capitalShopPurchases;
+    private readonly PostgresMonsterRewardExtrasStore _monsterRewardExtras;
+    private readonly PostgresFighterLevelSealStore _fighterLevelSeals;
+    private readonly PostgresWeekendExperienceClaimStore _weekendExperienceClaims;
     private readonly PostgresExperienceBoostStateReader
         _experienceBoostStateReader;
     private readonly PostgresWorldBossAreaControlStore
@@ -110,6 +117,10 @@ internal sealed partial class PostgresGameStore :
             PostgresPetLearnedSkillContentBinding.ValidateOptional(
                 petLearnedSkillContent?.Revision.Sha256);
         _accountStore = new PostgresAccountStore(_dataSource);
+        _capitalShopPurchases = new(_dataSource, GetCharacterByIdAsync);
+        _monsterRewardExtras = new(_dataSource, GetCharacterByIdAsync);
+        _fighterLevelSeals = new(_dataSource);
+        _weekendExperienceClaims = new(_dataSource);
         _experienceBoostStateReader =
             new PostgresExperienceBoostStateReader(
                 _dataSource,
@@ -239,9 +250,6 @@ internal sealed partial class PostgresGameStore :
         return string.IsNullOrWhiteSpace(name) ? $"Hero{Random.Shared.Next(1000, 9999)}" : name;
     }
 
-    private static bool IsTransientStartupFailure(Exception ex)
-    {
-        return ex is NpgsqlException or TimeoutException or IOException
-            || ex.InnerException is not null && IsTransientStartupFailure(ex.InnerException);
-    }
+    private static bool IsTransientStartupFailure(Exception ex) =>
+        PostgresSchemaStartup.IsTransient(ex);
 }

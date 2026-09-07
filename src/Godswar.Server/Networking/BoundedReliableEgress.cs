@@ -14,6 +14,8 @@ internal sealed partial class BoundedReliableEgress : IAsyncDisposable
     private readonly BoundedByteQueue<PendingWrite> _queue;
     private readonly NetworkRuntimeOptions _options;
     private readonly Task _pumpTask;
+    private readonly TaskCompletionSource _terminalFinalized =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TimeProvider _timeProvider;
     private readonly Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask> _write;
     private long _pendingAdmissionBytes;
@@ -122,6 +124,7 @@ internal sealed partial class BoundedReliableEgress : IAsyncDisposable
         try
         {
             await _pumpTask;
+            await _terminalFinalized.Task;
         }
         finally
         {
@@ -214,24 +217,28 @@ internal sealed partial class BoundedReliableEgress : IAsyncDisposable
                 new ObjectDisposedException(nameof(BoundedReliableEgress));
             active?.SetExceptionNonThrowing(terminalError);
             active = null;
-            while (_queue.TryTakeTerminalEntry(out var entry))
+            CompleteQueuedTerminalWrites(terminalError);
+        }
+    }
+
+    private void CompleteQueuedTerminalWrites(Exception terminalError)
+    {
+        while (_queue.TryTakeTerminalEntry(out var entry))
+        {
+            // Complete delivery owners before any teardown observer can wait
+            // for their visibility leases. Diagnostics remain best effort.
+            entry.Item.SetExceptionNonThrowing(terminalError);
+            entry.Item.EnsureAdmissionRecordedNonThrowing(_endpointRole);
+            try
             {
-                // Completion ownership is the first obligation. Metrics and
-                // admission diagnostics are deliberately best effort after
-                // every removed write has a terminal result.
-                entry.Item.SetExceptionNonThrowing(terminalError);
-                entry.Item.EnsureAdmissionRecordedNonThrowing(_endpointRole);
-                try
-                {
-                    NetworkRuntimeMetrics.RecordReliableQueueRemoved(
-                        _endpointRole,
-                        NetworkTrafficDirection.Outbound,
-                        itemCount: 1,
-                        byteCount: entry.ByteCount);
-                }
-                catch
-                {
-                }
+                NetworkRuntimeMetrics.RecordReliableQueueRemoved(
+                    _endpointRole,
+                    NetworkTrafficDirection.Outbound,
+                    itemCount: 1,
+                    byteCount: entry.ByteCount);
+            }
+            catch
+            {
             }
         }
     }
@@ -277,6 +284,7 @@ internal sealed partial class BoundedReliableEgress : IAsyncDisposable
         try
         {
             _queue.Complete(error);
+            CompleteQueuedTerminalWrites(error);
         }
         catch
         {
@@ -298,6 +306,12 @@ internal sealed partial class BoundedReliableEgress : IAsyncDisposable
         }
         catch
         {
+        }
+        finally
+        {
+            // Dispose must also observe external terminalizers, which can
+            // finish notification after the physical-write pump has stopped.
+            _terminalFinalized.TrySetResult();
         }
     }
 

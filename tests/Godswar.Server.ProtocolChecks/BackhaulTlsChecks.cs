@@ -171,6 +171,21 @@ internal static partial class BackhaulProtocolChecks
                     worker,
                     new BackhaulCertificatePins(
                         [BackhaulCertificatePins.FingerprintOf(gateway)]));
+            var validationFailures = new System.Collections.Concurrent.ConcurrentQueue<string>();
+            var validateWorker = gatewayOptions.RemoteCertificateValidationCallback!;
+            gatewayOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
+            {
+                var acceptedPeer = validateWorker(sender, certificate, chain, errors);
+                if (!acceptedPeer)
+                {
+                    validationFailures.Enqueue(certificate is null
+                        ? "worker certificate missing"
+                        : $"worker certificate rejected: subject={certificate.Subject}; issuer={certificate.Issuer}; " +
+                          $"sha256={Convert.ToHexString(SHA256.HashData(certificate.GetRawCertData()))}; " +
+                          $"expected={BackhaulCertificatePins.FingerprintOf(worker)}");
+                }
+                return acceptedPeer;
+            };
 
             var clientHandshake =
                 BackhaulStreamIo.AuthenticateAsGatewayAsync(
@@ -186,7 +201,15 @@ internal static partial class BackhaulProtocolChecks
                     TimeSpan.FromSeconds(10),
                     TimeProvider.System,
                     CancellationToken.None);
-            await Task.WhenAll(clientHandshake, serverHandshake);
+            try
+            {
+                await Task.WhenAll(clientHandshake, serverHandshake);
+            }
+            catch (AuthenticationException error) when (!validationFailures.IsEmpty)
+            {
+                throw new AuthenticationException(
+                    string.Join("; ", validationFailures), error);
+            }
             Check.True(
                 BackhaulTlsPolicy.IsNegotiationAccepted(
                     gatewayStream,

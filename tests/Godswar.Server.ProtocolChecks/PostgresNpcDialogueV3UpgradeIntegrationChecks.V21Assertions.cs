@@ -36,7 +36,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         command.Parameters.AddWithValue(
             "revision",
             NpgsqlDbType.Varchar,
-            NpcDialogueBaselineV21.ExpectedRevision);
+            PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision);
         await using var reader = await command.ExecuteReaderAsync();
         Check.True(await reader.ReadAsync(), "canonical V21 release exists");
         var expectedCounts = new[]
@@ -162,7 +162,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         command.Parameters.AddWithValue(
             "dialogue_revision",
             NpgsqlDbType.Varchar,
-            NpcDialogueBaselineV21.ExpectedRevision);
+            PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision);
         command.Parameters.AddWithValue(
             "spawn_revision",
             NpgsqlDbType.Varchar,
@@ -204,6 +204,6 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         command.Parameters.AddWithValue(
             "v21",
             NpgsqlDbType.Varchar,
-            NpcDialogueBaselineV21.ExpectedRevision);
+            PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision);
     }
 }

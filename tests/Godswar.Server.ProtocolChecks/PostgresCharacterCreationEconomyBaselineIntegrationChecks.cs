@@ -23,10 +23,8 @@ internal static class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} " +
+            throw new CheckSkippedException($"{CheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -34,16 +32,16 @@ internal static class
         var databaseName = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(databaseName))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable " +
                 "godswar_b03_*_smoke_XX or godswar_b09_* database; " +
                 $"received '{databaseName}'");
-            return;
         }
 
         await using var store =
             new PostgresGameStore(connectionString);
         await store.EnsureSeedDataAsync();
+        await PostgresCharacterCreationContentFixture.EnsureGameplayPublishedAsync(
+            connectionString);
 
         var token = Guid.NewGuid().ToString("N")[..12];
         var account = await store.LoginOrCreateAccountAsync(

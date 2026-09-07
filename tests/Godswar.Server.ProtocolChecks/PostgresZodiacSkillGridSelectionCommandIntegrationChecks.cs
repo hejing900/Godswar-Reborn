@@ -28,10 +28,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL Zodiac selection integration " +
+            throw new CheckSkippedException("PostgreSQL Zodiac selection integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safety =
@@ -43,11 +41,9 @@ internal static partial class
                 await command.ExecuteScalarAsync() as string ?? "";
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL Zodiac selection integration " +
+                throw new CheckSkippedException("PostgreSQL Zodiac selection integration " +
                     "requires a disposable B03/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

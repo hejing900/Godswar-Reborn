@@ -77,8 +77,8 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
             WHERE index_row.indrelid =
                     to_regclass('public.character_base')
               AND index_class.relname = ANY(ARRAY[
-                  'ux_character_base_active_account_slot',
-                  'ix_character_base_deleted_account_slot',
+                  'ux_character_base_active_account_realm_slot',
+                  'ix_character_base_deleted_account_realm_slot',
                   'ix_character_base_purge_due'
               ]::text[])
               AND index_row.indisvalid

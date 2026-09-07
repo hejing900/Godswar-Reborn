@@ -89,7 +89,15 @@ internal sealed class PostgresSchemaMigrationRunner
             var pending = PostgresSchemaMigrationPlan.Build(migrations, applied);
             foreach (var migration in pending)
             {
-                await ApplyMigrationAsync(connection, migration, cancellationToken);
+                try
+                {
+                    await ApplyMigrationAsync(connection, migration, cancellationToken);
+                }
+                catch (Exception error)
+                {
+                    error.Data["GodswarMigrationId"] = migration.Id;
+                    throw;
+                }
             }
         }
         finally

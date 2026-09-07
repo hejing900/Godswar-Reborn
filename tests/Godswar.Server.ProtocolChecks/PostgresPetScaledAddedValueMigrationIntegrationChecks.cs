@@ -19,17 +19,13 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL pet scaled Added-value V3 integration " +
+            throw new CheckSkippedException("PostgreSQL pet scaled Added-value V3 integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
         if (await IsMigrationAppliedAsync(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL pet scaled Added-value V3 integration " +
+            throw new CheckSkippedException("PostgreSQL pet scaled Added-value V3 integration " +
                 $"({MigrationId} is already applied)");
-            return;
         }
 
         await using var dataSource =

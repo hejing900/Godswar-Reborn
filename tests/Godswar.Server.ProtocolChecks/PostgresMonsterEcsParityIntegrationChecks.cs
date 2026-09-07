@@ -25,10 +25,8 @@ internal static class PostgresMonsterEcsParityIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL captured-monster ECS parity " +
+            throw new CheckSkippedException($"PostgreSQL captured-monster ECS parity " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var store = new PostgresGameStore(connectionString);

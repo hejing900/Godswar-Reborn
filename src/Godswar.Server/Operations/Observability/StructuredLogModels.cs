@@ -19,7 +19,9 @@ internal enum OperationalLogEvent : byte
     ReadinessChanged = 3,
     ManagementRequest = 4,
     TelemetryExporter = 5,
-    LegacyDiagnosticSuppressed = 6
+    LegacyDiagnosticSuppressed = 6,
+    StartupFailure = 7,
+    StartupFailureFrame = 8
 }
 
 internal enum OperationalLogField : byte
@@ -32,7 +34,11 @@ internal enum OperationalLogField : byte
     Category = 6,
     Count = 7,
     DurationMilliseconds = 8,
-    Truncated = 9
+    Truncated = 9,
+    ExceptionType = 10,
+    SqlState = 11,
+    MigrationId = 12,
+    Frame = 13
 }
 
 internal enum OperationalLogValueKind : byte

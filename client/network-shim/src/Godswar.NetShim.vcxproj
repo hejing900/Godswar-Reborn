@@ -85,6 +85,8 @@
     <ClInclude Include="NetClientProxy.h" />
     <ClInclude Include="OriginFighterExperienceHost.h" />
     <ClInclude Include="OriginWarehousePageHost.h" />
+    <ClInclude Include="WarehouseNpcEndpoints.h" />
+    <ClInclude Include="OriginWarehousePageUi.h" />
     <ClInclude Include="RawFighterLevelSealProjectionBridge.h" />
     <ClInclude Include="OpaqueDuplexPump.h" />
     <ClInclude Include="SocketHandle.h" />
@@ -140,6 +142,7 @@
     <ClCompile Include="OriginAvatarPreviewHost.cpp" />
     <ClCompile Include="OriginFighterExperienceHost.cpp" />
     <ClCompile Include="OriginWarehousePageHost.cpp" />
+    <ClCompile Include="OriginWarehousePageUi.cpp" />
     <ClCompile Include="OriginWarehousePageHost.Patches.cpp" />
     <ClCompile Include="RawFighterLevelSealProjectionBridge.cpp" />
     <ClCompile Include="BoundedChunkQueue.cpp" />

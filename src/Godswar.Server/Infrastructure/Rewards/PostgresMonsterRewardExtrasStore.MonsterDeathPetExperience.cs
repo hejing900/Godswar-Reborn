@@ -1,9 +1,10 @@
+using Godswar.Server.State;
 using System.Data;
 using Npgsql;
 
-namespace Godswar.Server.State;
+namespace Godswar.Server.Infrastructure.Rewards;
 
-internal sealed partial class PostgresGameStore
+internal sealed partial class PostgresMonsterRewardExtrasStore
 {
     public async Task<PetMonsterExperienceResult>
         ApplyPetMonsterKillExperienceAsync(

@@ -62,16 +62,15 @@ internal sealed partial class GameSessionRegistry
         var persistence = ResolveFocusedPersistence(
             store,
             zodiacLevelStore,
-            experienceBoosts);
+            experienceBoosts,
+            characterRuntimeProjections);
         _store = persistence.LegacyStore;
         _checkpointCoordinator = checkpointCoordinator;
         _progressionIntervalSettlementCommands =
             progressionIntervalSettlementCommands;
         _zodiacLevelStore = persistence.ZodiacLevels;
         _experienceBoosts = persistence.ExperienceBoosts;
-        _characterRuntimeProjections =
-            characterRuntimeProjections ??
-            store as ICharacterRuntimeProjectionReader;
+        _characterRuntimeProjections = persistence.CharacterProjections;
         _requiresDurablePlayerPersistence =
             requiresDurablePlayerPersistence;
         ValidateDurablePlayerPersistenceComposition();
@@ -105,17 +104,20 @@ internal sealed partial class GameSessionRegistry
     private static (
         T? LegacyStore,
         IZodiacLevelStore? ZodiacLevels,
-        IExperienceBoostStateReader? ExperienceBoosts)
+        IExperienceBoostStateReader? ExperienceBoosts,
+        ICharacterRuntimeProjectionReader? CharacterProjections)
         ResolveFocusedPersistence<T>(
             T? broadStore,
             IZodiacLevelStore? zodiacLevels,
-            IExperienceBoostStateReader? experienceBoosts)
+            IExperienceBoostStateReader? experienceBoosts,
+            ICharacterRuntimeProjectionReader? characterProjections)
         where T : class =>
         (
             broadStore,
             zodiacLevels ?? broadStore as IZodiacLevelStore,
             experienceBoosts ??
-                broadStore as IExperienceBoostStateReader);
+                broadStore as IExperienceBoostStateReader,
+            characterProjections ?? broadStore as ICharacterRuntimeProjectionReader);
 
     public void JoinMap(
         ClientSession session,
@@ -156,6 +158,17 @@ internal sealed partial class GameSessionRegistry
         PlayerOwnershipFence? expectedOwnership,
         bool preservePlayerStatus)
     {
+        using var mutation = AcquireMembershipMutation(session);
+        return RemoveCoreLocked(session, expectedOwnership,
+            preservePlayerStatus, mutation.Removal);
+    }
+
+    private bool RemoveCoreLocked(
+        ClientSession session,
+        PlayerOwnershipFence? expectedOwnership,
+        bool preservePlayerStatus,
+        MapInstance.PlayerRemovalLease? removal)
+    {
         GameSessionContext? context;
         lock (_gate)
         {
@@ -174,7 +187,7 @@ internal sealed partial class GameSessionRegistry
 
             try
             {
-                RemoveFromMap(context);
+                RemoveFromMap(context, removal);
                 ReleaseWorldPlacement(context);
             }
             catch
@@ -233,7 +246,8 @@ internal sealed partial class GameSessionRegistry
         GameCharacter character,
         bool advanceWorldRevision = true)
     {
-        lock (_gate)
+        using (var mutation = AcquireMembershipMutation(
+                   session, targetMap: character.CurrentMap))
         {
             if (!_sessions.TryGetValue(session, out var existing))
             {
@@ -315,7 +329,7 @@ internal sealed partial class GameSessionRegistry
                 }
                 if (instanceChanged)
                 {
-                    RemoveFromMap(existing);
+                    RemoveFromMap(existing, mutation.Removal);
                     sourceRemoved = true;
                 }
 

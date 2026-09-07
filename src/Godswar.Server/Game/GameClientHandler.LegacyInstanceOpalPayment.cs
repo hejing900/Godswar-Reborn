@@ -169,9 +169,14 @@ internal sealed partial class GameClientHandler
         var projected = true;
         foreach (var member in party.Members)
         {
+            if (member.RealmId != _processRealmId)
+            {
+                projected = false;
+                continue;
+            }
             var account = await _characterSnapshots.ReadAsync(
                 member.AccountId,
-                member.RealmId,
+                _processRealmId,
                 CancellationToken.None);
             var hydrated = CharacterLoadSnapshotHydrator.Hydrate(account);
             if (hydrated is null ||

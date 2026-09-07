@@ -5,7 +5,7 @@ using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class MapLiveTransferChecks
+internal static partial class MapLiveTransferChecks
 {
     private const int AccountId = 121;
     private const int CharacterId = 1_231;
@@ -436,12 +436,14 @@ internal static class MapLiveTransferChecks
     }
 
     private static GameSessionRegistry CreateRegistry(
-        PlayerRuntimeMode playerRuntimeMode = PlayerRuntimeMode.Ecs) =>
+        PlayerRuntimeMode playerRuntimeMode = PlayerRuntimeMode.Ecs,
+        WorldInstanceRuntimeOptions? worldInstanceOptions = null) =>
         new(
             store: null,
             zodiacEnergyOptions: null,
             monsterRuntimeMode: MonsterRuntimeMode.Ecs,
             playerRuntimeMode,
+            worldInstanceOptions: worldInstanceOptions,
             gameplayCatalogs: GameplayContentTestFixtures.Runtime);
 
     private static GameCharacter CreateCharacter() =>

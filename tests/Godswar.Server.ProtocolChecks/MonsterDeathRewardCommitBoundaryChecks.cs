@@ -68,10 +68,10 @@ internal static class MonsterDeathRewardCommitBoundaryChecks
                     root,
                     relativePath.Replace('/', Path.DirectorySeparatorChar)));
             var prepare = source.IndexOf(
-                "PrepareMonsterKillRewardAsync",
+                "PrepareClaimedMonsterKillRewardAsync",
                 StringComparison.Ordinal);
             var publish = source.IndexOf(
-                "PublishMonsterKillRewardAsync",
+                "await pendingReward.PublishAsync(",
                 StringComparison.Ordinal);
             Check.True(
                 prepare >= 0 &&

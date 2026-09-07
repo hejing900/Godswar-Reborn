@@ -81,6 +81,7 @@ internal static partial class MedusaInstanceOwnershipChecks
                     DateTimeOffset.UtcNow,
                     CancellationToken.None,
                     "MedusaAdmittedTerminalCheck");
+            await session.TerminalCleanupCompletion.WaitAsync(TimeSpan.FromSeconds(2));
             Check.True(
                 snapshot is not null &&
                 session.IsDisconnected &&

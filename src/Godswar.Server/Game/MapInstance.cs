@@ -67,9 +67,10 @@ internal sealed partial class MapInstance
         viewer.TransitionGate.Wait();
         try
         {
+            var removed = RemoveSessionAndShadow(session, out context);
             _monsterViewers.TryRemove(
                 new KeyValuePair<ClientSession, MonsterViewerState>(session, viewer));
-            return RemoveSessionAndShadow(session, out context);
+            return removed;
         }
         finally
         {

@@ -26,10 +26,8 @@ internal static partial class RedisSemanticGatewayCoordinationIntegrationChecks
                 ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP Redis semantic-gateway integration " +
+            throw new CheckSkippedException($"Redis semantic-gateway integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         var environment =

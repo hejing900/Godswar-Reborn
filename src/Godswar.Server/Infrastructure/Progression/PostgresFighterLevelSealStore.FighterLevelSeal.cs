@@ -1,3 +1,4 @@
+using Godswar.Server.State;
 using System.Data;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Commands;
@@ -7,9 +8,9 @@ using Godswar.Server.Infrastructure.Characters;
 using Godswar.Server.Infrastructure.Inventory;
 using Npgsql;
 
-namespace Godswar.Server.State;
+namespace Godswar.Server.Infrastructure.Progression;
 
-internal sealed partial class PostgresGameStore
+internal sealed partial class PostgresFighterLevelSealStore
 {
     public async Task<FighterLevelSealChangeResult>
         ChangeFighterLevelSealAsync(

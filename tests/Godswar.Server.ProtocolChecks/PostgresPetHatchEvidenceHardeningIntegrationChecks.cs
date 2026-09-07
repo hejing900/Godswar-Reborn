@@ -25,9 +25,7 @@ internal static class PostgresPetHatchEvidenceHardeningIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
@@ -91,10 +89,8 @@ internal static class PostgresPetHatchEvidenceHardeningIntegrationChecks
             return true;
         }
 
-        Console.WriteLine(
-            $"SKIP {CheckName} requires a disposable B03/B12 database; " +
+        throw new CheckSkippedException($"{CheckName} requires a disposable B03/B12 database; " +
             $"received '{database}'");
-        return false;
     }
 
     private static async Task AssertValidEvidenceAcceptedAsync(
@@ -433,8 +429,8 @@ internal static class PostgresPetHatchEvidenceHardeningIntegrationChecks
                 VALUES (@username)
                 RETURNING id
             ), character_row AS (
-                INSERT INTO public.character_base (account_id, name)
-                SELECT id, @characterName
+                INSERT INTO public.character_base (account_id, server_id, name)
+                SELECT id, 1, @characterName
                 FROM account
                 RETURNING id
             )

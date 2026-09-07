@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.Characters;
 using Godswar.Server.Application.Talents;
 using Godswar.Server.Game;
 

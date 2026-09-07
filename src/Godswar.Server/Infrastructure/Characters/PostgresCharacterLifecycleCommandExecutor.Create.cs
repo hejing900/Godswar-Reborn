@@ -1,7 +1,7 @@
+using Godswar.Server.Domain.Characters;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Domain.World.Instances;
-using Godswar.Server.Game;
 using Godswar.Server.Infrastructure.Database;
 using Godswar.Server.State;
 using Npgsql;

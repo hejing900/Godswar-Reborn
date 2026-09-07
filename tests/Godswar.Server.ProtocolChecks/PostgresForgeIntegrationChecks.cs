@@ -12,8 +12,7 @@ internal static class PostgresForgeIntegrationChecks
         var connectionString = Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine($"SKIP PostgreSQL forge integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL forge integration ({ConnectionStringVariable} is not set)");
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];
@@ -28,6 +27,8 @@ internal static class PostgresForgeIntegrationChecks
             await using var storeB = new PostgresGameStore(connectionString);
             await storeA.EnsureSeedDataAsync();
             await storeB.EnsureSeedDataAsync();
+            await PostgresCharacterCreationContentFixture.EnsureGameplayPublishedAsync(
+                connectionString);
 
             var account = await storeA.LoginOrCreateAccountAsync(username, string.Empty);
             accountId = account.Id;

@@ -18,18 +18,14 @@ internal static class PostgresPetInitialSavvyV3MigrationIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet initial-Savvy V3 integration " +
+            throw new CheckSkippedException($"PostgreSQL pet initial-Savvy V3 integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         if (await IsMigrationAppliedAsync(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet initial-Savvy V3 integration " +
+            throw new CheckSkippedException($"PostgreSQL pet initial-Savvy V3 integration " +
                 $"({MigrationId} is already applied)");
-            return;
         }
 
         await using var dataSource =

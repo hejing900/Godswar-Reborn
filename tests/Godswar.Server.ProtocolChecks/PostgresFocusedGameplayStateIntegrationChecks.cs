@@ -33,10 +33,8 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} " +
+            throw new CheckSkippedException($"{CheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =

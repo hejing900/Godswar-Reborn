@@ -1,3 +1,4 @@
+using Godswar.Server.State;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
@@ -5,9 +6,9 @@ using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace Godswar.Server.State;
+namespace Godswar.Server.Infrastructure.Rewards;
 
-internal sealed partial class PostgresGameStore
+internal sealed partial class PostgresMonsterRewardExtrasStore
 {
     private static async Task AdvanceLootInventoryRevisionAsync(
         NpgsqlConnection connection,

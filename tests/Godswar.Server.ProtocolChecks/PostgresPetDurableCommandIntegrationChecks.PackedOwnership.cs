@@ -15,10 +15,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {PackedSealOwnershipCheckName} " +
+            throw new CheckSkippedException($"{PackedSealOwnershipCheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -26,10 +24,8 @@ internal static partial class
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {PackedSealOwnershipCheckName} requires a " +
+            throw new CheckSkippedException($"{PackedSealOwnershipCheckName} requires a " +
                 $"disposable B03/B12 database; received '{database}'");
-            return;
         }
 
         await new PostgresSchemaMigrationRunner(dataSource)

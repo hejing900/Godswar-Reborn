@@ -48,12 +48,9 @@ internal sealed partial class ReconciliationRunner
         var stopwatch = Stopwatch.StartNew();
         var manifestCounts =
             new Dictionary<ReconciliationCategory, long>();
-        var scanCounts =
-            new Dictionary<ReconciliationCategory, long>();
-        var characterRows = 0;
-        var outboxRows = 0;
-        var workingState = _continuation;
+        var progress = new ScanProgress(_continuation);
         var scanPerformed = false;
+        var authorityValidated = false;
         var truncated = false;
         var timedOut = false;
 
@@ -73,6 +70,11 @@ internal sealed partial class ReconciliationRunner
             var manifest = await snapshot
                 .ReadManifestAndContentAsync(linked.Token);
             Add(manifestCounts, manifest);
+            authorityValidated = !manifest.Any(finding =>
+                finding.Count > 0 && finding.Category is
+                    ReconciliationCategory.SchemaMigrationManifestMismatch or
+                    ReconciliationCategory.NpcContentPublicationMismatch or
+                    ReconciliationCategory.NpcContentCountMismatch);
             var schemaMismatch = manifest.Any(finding =>
                 finding.Category ==
                     ReconciliationCategory
@@ -81,24 +83,9 @@ internal sealed partial class ReconciliationRunner
             if (!schemaMismatch)
             {
                 scanPerformed = true;
-                var characterResult =
-                    await ScanCharactersAsync(
-                        snapshot,
-                        workingState,
-                        scanCounts,
-                        linked.Token);
-                characterRows = characterResult.RowsScanned;
-                workingState = characterResult.State;
-
-                var outboxResult =
-                    await ScanOutboxAsync(
-                        snapshot,
-                        workingState,
-                        scanCounts,
-                        linked.Token);
-                outboxRows = outboxResult.RowsScanned;
-                workingState = outboxResult.State;
-                truncated = !workingState.SweepCompleted;
+                await ScanCharactersAsync(snapshot, progress, linked.Token);
+                await ScanOutboxAsync(snapshot, progress, linked.Token);
+                truncated = !progress.State.SweepCompleted;
             }
             else
             {
@@ -114,6 +101,15 @@ internal sealed partial class ReconciliationRunner
         {
             timedOut = true;
         }
+        catch (Exception exception)
+            when (!cancellationToken.IsCancellationRequested &&
+                  (exception is TimeoutException ||
+                   exception.InnerException is TimeoutException))
+        {
+            // Providers may surface command timeouts before the run deadline.
+            // Already completed pages remain valid report-only observations.
+            timedOut = true;
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
         var status = timedOut
@@ -123,14 +119,14 @@ internal sealed partial class ReconciliationRunner
                 : ReconciliationRunStatus.Completed;
         var accumulatedCounts =
             ToDictionary(_continuation.AccumulatedFindings);
-        Add(accumulatedCounts, ToCounts(scanCounts));
+        Add(accumulatedCounts, ToCounts(progress.Counts));
         var reportCounts =
             new Dictionary<ReconciliationCategory, long>(
                 accumulatedCounts);
         Add(reportCounts, ToCounts(manifestCounts));
         var observedCounts =
             new Dictionary<ReconciliationCategory, long>(
-                scanCounts);
+                progress.Counts);
         Add(observedCounts, ToCounts(manifestCounts));
         var report = new ReconciliationReport(
             SchemaVersion: 1,
@@ -138,17 +134,18 @@ internal sealed partial class ReconciliationRunner
             status,
             startedAtUtc,
             Math.Max(0, stopwatch.ElapsedMilliseconds),
-            characterRows,
-            outboxRows,
-            truncated,
-            ToCounts(reportCounts));
+            progress.CharacterRows,
+            progress.OutboxRows,
+            truncated || timedOut,
+            ToCounts(reportCounts),
+            authorityValidated);
         _metrics.Record(report, ToCounts(observedCounts));
-        if (!timedOut && scanPerformed)
+        if (scanPerformed)
         {
             _continuation =
                 status == ReconciliationRunStatus.Completed
                     ? ReconciliationScanState.Start
-                    : workingState with
+                    : progress.State with
                     {
                         AccumulatedFindings =
                             ToCounts(accumulatedCounts)

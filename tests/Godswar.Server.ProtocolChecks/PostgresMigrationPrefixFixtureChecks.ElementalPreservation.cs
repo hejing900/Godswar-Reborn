@@ -21,10 +21,8 @@ internal static partial class PostgresMigrationPrefixFixtureChecks
         var sourceDatabase = source.Database ?? string.Empty;
         if (!B03TemplateDatabasePattern.IsMatch(sourceDatabase))
         {
-            Console.WriteLine(
-                "SKIP migration054 preservation clone requires the " +
+            throw new CheckSkippedException("migration054 preservation clone requires the " +
                 "disposable B03 smoke-template database");
-            return;
         }
 
         var guardDatabase = sourceDatabase.Replace(

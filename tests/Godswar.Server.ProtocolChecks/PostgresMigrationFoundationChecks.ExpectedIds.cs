@@ -145,6 +145,7 @@ internal static partial class PostgresMigrationFoundationChecks
         "20260901_138_duel_arena_npc_content_v2",
         "20260901_139_duel_arena_dialogue_v15",
         "20260907_140_duel_arena_initial_actions",
-        "20260907_141_duel_arena_services"
+        "20260907_141_duel_arena_services",
+        "20260907_142_restore_item_view_authority"
     ];
 }

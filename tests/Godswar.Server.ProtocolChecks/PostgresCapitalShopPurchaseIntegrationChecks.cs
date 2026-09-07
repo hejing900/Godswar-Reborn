@@ -27,9 +27,7 @@ internal static class PostgresCapitalShopPurchaseIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource =
@@ -37,10 +35,8 @@ internal static class PostgresCapitalShopPurchaseIntegrationChecks
         var databaseName = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(databaseName))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable B03/B09/B12 " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable B03/B09/B12 " +
                 $"database; received '{databaseName}'");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);

@@ -98,18 +98,26 @@ internal static class CharacterLifecyclePersistenceCodec
             ? CommittedResultCode
             : TerminalRejectedResultCode;
 
-    public static byte[] Encode(CharacterLifecycleReceipt receipt)
+    public static byte[] Encode(CharacterLifecycleReceipt receipt) =>
+        Encode(receipt, ContractVersion);
+
+    private static byte[] Encode(
+        CharacterLifecycleReceipt receipt,
+        short contractVersion)
     {
         ArgumentNullException.ThrowIfNull(receipt);
         var buffer = new ArrayBufferWriter<byte>(512);
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
-            writer.WriteNumber("contractVersion", ContractVersion);
+            writer.WriteNumber("contractVersion", contractVersion);
             writer.WriteNumber("family", (ushort)receipt.Family);
             writer.WriteNumber("status", (byte)receipt.Status);
             writer.WriteNumber("accountId", receipt.AccountId);
-            writer.WriteNumber("realmId", receipt.RealmId.Value);
+            if (contractVersion != LegacyContractVersion)
+            {
+                writer.WriteNumber("realmId", receipt.RealmId.Value);
+            }
             writer.WriteNumber("characterSlot", receipt.CharacterSlot);
             writer.WriteNumber("characterId", receipt.CharacterId);
             writer.WriteNumber(
@@ -172,7 +180,7 @@ internal static class CharacterLifecyclePersistenceCodec
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(payloadJson);
         var payload = Encoding.UTF8.GetBytes(payloadJson);
-        var receipt = Decode(payload);
+        var receipt = Decode(payload, out var contractVersion);
 
         if (receipt.Family != expectedFamily ||
             receipt.AccountId != expectedAccountId ||
@@ -192,7 +200,9 @@ internal static class CharacterLifecyclePersistenceCodec
                 "The stored character lifecycle identity is inconsistent.");
         }
 
-        var actualHash = Hash(payload);
+        // PostgreSQL JSONB rewrites property order and whitespace. Recreate
+        // the original version's encoded bytes before checking its hash.
+        var actualHash = Hash(Encode(receipt, contractVersion));
         if (expectedHash.Length != actualHash.Length ||
             !CryptographicOperations.FixedTimeEquals(
                 expectedHash,
@@ -206,7 +216,11 @@ internal static class CharacterLifecyclePersistenceCodec
     }
 
     public static CharacterLifecycleReceipt Decode(
-        ReadOnlySpan<byte> payload)
+        ReadOnlySpan<byte> payload) => Decode(payload, out _);
+
+    private static CharacterLifecycleReceipt Decode(
+        ReadOnlySpan<byte> payload,
+        out short contractVersion)
     {
         EnsurePayloadBound(payload.Length);
         CharacterLifecycleReceipt receipt;
@@ -221,7 +235,7 @@ internal static class CharacterLifecyclePersistenceCodec
                     MaxDepth = 4
                 });
             var root = document.RootElement;
-            var contractVersion =
+            contractVersion =
                 root.GetProperty("contractVersion").GetInt16();
             if (contractVersion is not (
                     LegacyContractVersion or ContractVersion))

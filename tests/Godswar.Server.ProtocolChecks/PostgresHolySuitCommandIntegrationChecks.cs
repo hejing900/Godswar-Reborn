@@ -33,10 +33,8 @@ internal static partial class PostgresHolySuitCommandIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL Holy Suit integration " +
+            throw new CheckSkippedException("PostgreSQL Holy Suit integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safety = NpgsqlDataSource.Create(connectionString))
@@ -45,10 +43,8 @@ internal static partial class PostgresHolySuitCommandIntegrationChecks
             var database = await command.ExecuteScalarAsync() as string ?? "";
             if (!DisposableDatabasePattern.IsMatch(database))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL Holy Suit integration requires a " +
+                throw new CheckSkippedException("PostgreSQL Holy Suit integration requires a " +
                     $"disposable B03/B09 database; received '{database}'");
-                return;
             }
         }
 

@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.Characters;
 using System.Collections.Frozen;
 using Godswar.Server.State;
 

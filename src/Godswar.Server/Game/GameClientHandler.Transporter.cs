@@ -88,8 +88,12 @@ internal sealed partial class GameClientHandler
             arrival.TargetArrival.Z,
             $"npc-transporter:{route.NpcKey}:{subId}",
             cancellationToken);
-        if (!transitioned)
+        if (transitioned != SceneTransitionOutcome.CommittedAwaitingReadiness)
         {
+            if (transitioned == SceneTransitionOutcome.CommittedRequiresReconnect)
+            {
+                return;
+            }
             Console.Error.WriteLine(
                 "[transporter] transition rejected by map authority " +
                 $"character={_character.Name} npc={npcId} sub={subId} " +

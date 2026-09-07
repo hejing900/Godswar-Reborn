@@ -1,12 +1,13 @@
+using Godswar.Server.Domain.Characters;
 using Godswar.Server.Domain.World.Instances;
 
 namespace Godswar.Server.State;
 
 internal static class GameDefaults
 {
-    public const byte SpartaCamp = 0;
+    public const byte SpartaCamp = FactionPortalSkillPolicy.SpartaCamp;
 
-    public const byte AthensCamp = 1;
+    public const byte AthensCamp = FactionPortalSkillPolicy.AthensCamp;
 
     public const byte SpartaCapitalMap = 0;
 

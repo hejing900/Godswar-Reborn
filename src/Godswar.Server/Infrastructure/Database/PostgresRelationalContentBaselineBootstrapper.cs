@@ -250,7 +250,11 @@ internal static partial class PostgresRelationalContentBaselineBootstrapper
             }
         }
 
-        var sql = LoadReviewedSql(resource);
+        // Item views were cut over by schema migrations. Import only their
+        // reviewed seed data so clean startup cannot undo that authority.
+        var sql = resource == ItemAttributesResource
+            ? LoadReviewedItemAttributeSeedSql()
+            : LoadReviewedSql(resource);
         await using var command = new NpgsqlCommand(
             sql,
             connection,

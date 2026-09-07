@@ -78,11 +78,12 @@ internal static class DataBoundaryArchitectureAnalyzer
         ArgumentNullException.ThrowIfNull(sourceFiles);
         ArgumentNullException.ThrowIfNull(baseline);
 
+        var legacyStoreSources = LegacyStoreSources(sourceFiles);
         var storeCalls = CountStoreCalls(
-            sourceFiles,
+            legacyStoreSources,
             baseline.GameStoreMethods);
         var storeFieldReferences = CountReferences(
-            sourceFiles,
+            legacyStoreSources,
             StoreFieldPattern,
             static path => !IsUnder(path, "State/"));
         var storeParameterPaths = baseline.StoreParameterReferences
@@ -195,6 +196,38 @@ internal static class DataBoundaryArchitectureAnalyzer
         }
 
         return result;
+    }
+
+    // A field name does not establish a dependency. Explicitly typed feature
+    // interfaces are not IGameStore, including usages in sibling partials.
+    // Unresolved fields remain counted so this cannot hide untyped new debt.
+    private static IReadOnlyDictionary<string, string> LegacyStoreSources(
+        IReadOnlyDictionary<string, string> sourceFiles)
+    {
+        var field = new Regex(
+            @"\b(?:private|protected|internal|public)\s+" +
+            @"(?:(?:readonly|static)\s+)*(?<type>I[A-Za-z0-9_]+)\??\s+_store\b",
+            RegexOptions.CultureInvariant);
+        var featureTypes = sourceFiles.Values
+            .Where(source => field.Matches(source) is { Count: > 0 } matches &&
+                matches.All(match => match.Groups["type"].Value != "IGameStore"))
+            .Select(DeclaredType)
+            .Where(type => type is not null)
+            .ToHashSet(StringComparer.Ordinal);
+        return sourceFiles.ToDictionary(pair => pair.Key,
+            pair => featureTypes.Contains(DeclaredType(pair.Value))
+                ? StoreFieldPattern.Replace(pair.Value, "_typedFeatureStore")
+                : pair.Value,
+            StringComparer.Ordinal);
+    }
+
+    private static string? DeclaredType(string source)
+    {
+        var types = Regex.Matches(source, @"\bclass\s+(?<name>[A-Za-z0-9_]+)");
+        if (types.Count != 1) return null;
+        var type = types[0];
+        var ns = Regex.Match(source, @"\bnamespace\s+(?<name>[A-Za-z0-9_.]+)");
+        return ns.Groups["name"].Value + "." + type.Groups["name"].Value;
     }
 
     private static Dictionary<string, int> CountReferences(

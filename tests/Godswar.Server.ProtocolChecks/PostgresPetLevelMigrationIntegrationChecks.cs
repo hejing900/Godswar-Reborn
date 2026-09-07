@@ -18,30 +18,24 @@ internal static partial class PostgresPetLevelMigrationIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-level migration integration " +
+            throw new CheckSkippedException($"PostgreSQL pet-level migration integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         if (!await IsMigrationAppliedAsync(
                 connectionString,
                 RequiredMigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-level migration integration " +
+            throw new CheckSkippedException($"PostgreSQL pet-level migration integration " +
                 $"({RequiredMigrationId} is required)");
-            return;
         }
 
         if (await IsMigrationAppliedAsync(
                 connectionString,
                 MigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-level migration integration " +
+            throw new CheckSkippedException($"PostgreSQL pet-level migration integration " +
                 $"({MigrationId} is already applied)");
-            return;
         }
 
         var migration = PostgresSchemaMigrationCatalog.All.Single(

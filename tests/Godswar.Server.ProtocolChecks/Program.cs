@@ -20,8 +20,19 @@ internal static partial class Program
 
     public static async Task<int> Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--schema-metadata")
+        {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                schemaVersion = 1,
+                migrationCount = PostgresSchemaMigrationCatalog.All.Count,
+                migrationHead = PostgresSchemaMigrationCatalog.All[^1].Id
+            }));
+            return 0;
+        }
         (string Name, Func<Task> Run)[] checks =
         [
+            (ProtocolCheckRunnerChecks.CheckName, ProtocolCheckRunnerChecks.RunAsync),
             .. CoreRuntimeCheckCatalog.All,
             .. WorldTravelCheckCatalog.All,
             .. LegacyInstanceCheckCatalog.All,
@@ -282,41 +293,7 @@ internal static partial class Program
             ("ClientSession concurrent send ordering", CheckConcurrentSendOrderingAsync)
         ];
 
-        var filters = args
-            .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .ToArray();
-        if (filters.Length > 0)
-        {
-            checks = checks
-                .Where(check => filters.Any(filter =>
-                    check.Name.Contains(
-                        filter,
-                        StringComparison.OrdinalIgnoreCase)))
-                .ToArray();
-            if (checks.Length == 0)
-            {
-                Console.Error.WriteLine(
-                    $"No protocol check matched: {string.Join(", ", filters)}");
-                return 2;
-            }
-        }
-
-        var failures = 0;
-        foreach (var check in checks)
-        {
-            try
-            {
-                await check.Run();
-                Console.WriteLine($"PASS {check.Name}");
-            }
-            catch (Exception ex)
-            {
-                failures++;
-                Console.Error.WriteLine($"FAIL {check.Name}: {ex}");
-            }
-        }
-
-        Console.WriteLine($"Protocol checks: {checks.Length - failures} passed, {failures} failed");
-        return failures == 0 ? 0 : 1;
+        return await ProtocolCheckRunner.RunAsync(
+            checks, args, Console.Out, Console.Error);
     }
 }

@@ -9,6 +9,7 @@ $ErrorActionPreference = 'Stop'
 $requiredVcToolsVersion = '14.44.35207'
 $requiredWindowsSdkVersion = '10.0.26100.0'
 $repoRoot = Split-Path -Parent $PSScriptRoot
+& (Join-Path $PSScriptRoot 'TestWarehouseEndpointParity.ps1') | Out-Host
 $solution = Join-Path $repoRoot 'client\network-shim\Godswar.NetShim.sln'
 $vswhere = Join-Path ${env:ProgramFiles(x86)} `
     'Microsoft Visual Studio\Installer\vswhere.exe'

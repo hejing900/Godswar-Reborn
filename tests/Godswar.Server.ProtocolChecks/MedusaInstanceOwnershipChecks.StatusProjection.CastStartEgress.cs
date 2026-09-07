@@ -208,14 +208,18 @@ internal static partial class MedusaInstanceOwnershipChecks
                 observerSocket.Session.IsDisconnected,
                 "busy captured observer visibility fails closed while the exact target cast start remains live");
 
-            var remove = Task.Run(() =>
-                fixture.Registry.Remove(observerSocket.Session));
-            await Task.Delay(25);
+            var remove = observerSocket.Session.TerminalCleanupCompletion;
+            Check.True(
+                !remove.IsCompleted,
+                "terminal observer cleanup remains tracked while its transition is held");
             await heldTransition.DisposeAsync();
             transitionReleased = true;
             await remove.WaitAsync(TimeSpan.FromSeconds(1));
             Check.True(
-                remove.IsCompletedSuccessfully,
+                remove.IsCompletedSuccessfully &&
+                !fixture.Registry.TryGetSessionWorldInstanceId(
+                    observerSocket.Session,
+                    out _),
                 "observer removal completes after the held transition releases without a registry/transition deadlock");
         }
         finally

@@ -28,10 +28,8 @@ internal static partial class PostgresHolyStoneCommandIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL Holy Stone integration " +
+            throw new CheckSkippedException("PostgreSQL Holy Stone integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safety =
@@ -40,11 +38,9 @@ internal static partial class PostgresHolyStoneCommandIntegrationChecks
             var databaseName = await ReadDatabaseNameAsync(safety);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL Holy Stone integration requires " +
+                throw new CheckSkippedException("PostgreSQL Holy Stone integration requires " +
                     "a disposable B03/B09 database; received " +
                     $"'{databaseName}'");
-                return;
             }
         }
 

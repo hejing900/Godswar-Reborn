@@ -1,3 +1,4 @@
+using Godswar.Server.Application.Pets;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -29,7 +30,8 @@ internal sealed partial class PostgresOnlineAwardCommandExecutor :
         PostgresOutboxDispatcherOptions options,
         OnlineAwardBalanceSnapshot balance,
         RealmCalendar realmCalendar,
-        IItemTemplateCatalog itemTemplates)
+        IItemTemplateCatalog itemTemplates,
+        IPetContentCatalog petContent)
     {
         _dataSource = dataSource ??
             throw new ArgumentNullException(nameof(dataSource));
@@ -52,6 +54,7 @@ internal sealed partial class PostgresOnlineAwardCommandExecutor :
         if (_balance.Rewards.Any(reward =>
                 !OnlineAwardPinnedItemPolicy.IsValid(
                     itemTemplates,
+                    petContent,
                     reward)))
         {
             throw new InvalidDataException(

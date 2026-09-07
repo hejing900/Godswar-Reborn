@@ -5,6 +5,8 @@
 
 namespace godswar::network {
 
+class WarehousePageUi;
+
 namespace warehouse_page_host_detail {
 
 bool PrepareRuntimePatchOnLoad() noexcept;
@@ -35,6 +37,7 @@ bool RewriteTransferPacketForPages(
 class OriginWarehousePageHost final {
 public:
     OriginWarehousePageHost() noexcept;
+    explicit OriginWarehousePageHost(WarehousePageUi& ui) noexcept;
 
     void Reset() noexcept;
     bool TryRewriteClientPacket(
@@ -56,6 +59,7 @@ private:
         std::size_t destinationBytes,
         int* requestBytes) noexcept;
 
+    WarehousePageUi& ui_;
     bool enabled_ = false;
     std::uint32_t warehouseNpcId_ = 0;
     int visiblePage_ = 0;

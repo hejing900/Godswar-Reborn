@@ -99,13 +99,9 @@ internal static partial class BackhaulSkillHandlerChecks
 
         await InvokeLethalMonsterAttackAsync(fixture);
 
-        var packets = new[]
-        {
-            await fixture.Socket.ReadPacketAsync(),
-            await fixture.Socket.ReadPacketAsync(),
-            await fixture.Socket.ReadPacketAsync(),
-            await fixture.Socket.ReadPacketAsync()
-        };
+        var packets = await ReadLethalAttackSequenceAsync(
+            fixture,
+            playerRuntimeMode);
         Check.Equal(
             "0800BB2748140000",
             Convert.ToHexString(packets[0]),

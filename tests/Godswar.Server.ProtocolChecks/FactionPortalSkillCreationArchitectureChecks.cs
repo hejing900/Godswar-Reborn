@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.Characters;
 namespace Godswar.Server.ProtocolChecks;
 
 internal static class FactionPortalSkillCreationArchitectureChecks
@@ -9,8 +10,8 @@ internal static class FactionPortalSkillCreationArchitectureChecks
     [
         "src/Godswar.Server/Infrastructure/Characters/" +
         "PostgresCharacterLifecycleCommandExecutor.Create.cs",
-        "src/Godswar.Server/State/" +
-        "PostgresGameStore.Characters.Persistence.cs"
+        "src/Godswar.Server/Infrastructure/Characters/" +
+        "PostgresFactionPortalSkillWriter.cs"
     ];
 
     public static Task RunAsync()
@@ -20,6 +21,12 @@ internal static class FactionPortalSkillCreationArchitectureChecks
         {
             CheckCreationPath(root, relativePath);
         }
+
+        var legacyCreation = File.ReadAllText(Path.Combine(root,
+            "src/Godswar.Server/State/PostgresGameStore.Characters.Persistence.cs"));
+        Check.True(legacyCreation.Contains("PostgresFactionPortalSkillWriter.InsertAsync(",
+                StringComparison.Ordinal),
+            "compatibility character creation delegates faction portal SQL to its provider writer");
 
         return Task.CompletedTask;
     }

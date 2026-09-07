@@ -33,9 +33,13 @@ internal sealed partial class GameClientHandler
                     DateTimeOffset.UtcNow).Outcome ==
                 MedusaCharacterEffectAuthorityOutcome.ResolvedActive,
             cancellationToken);
-        if (!transitioned)
+        if (transitioned == SceneTransitionOutcome.RejectedWithoutRelocation)
         {
             return false;
+        }
+        if (transitioned == SceneTransitionOutcome.CommittedRequiresReconnect)
+        {
+            return true;
         }
 
         Console.WriteLine(

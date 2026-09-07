@@ -19,18 +19,14 @@ internal static partial class PostgresMedusaDurableAdmissionStoreChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         var database = await ReadDatabaseAsync(dataSource);
         if (!PostgresMedusaAdmissionSchema.IsDisposableDatabaseName(database))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} (database '{database}' is not disposable)");
-            return;
+            throw new CheckSkippedException($"{CheckName} (database '{database}' is not disposable)");
         }
 
         var wrongDatabase = database == "godswar_medusa_ffffffff"

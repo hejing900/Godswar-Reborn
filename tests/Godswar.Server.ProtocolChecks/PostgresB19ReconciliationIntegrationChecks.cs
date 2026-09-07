@@ -24,10 +24,8 @@ internal static partial class PostgresB19ReconciliationIntegrationChecks
         var connectionString = ReadConnectionString();
         if (connectionString is null)
         {
-            Console.WriteLine(
-                $"SKIP {BoundedCheckName} " +
+            throw new CheckSkippedException($"{BoundedCheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
         await using var dataSource =
             NpgsqlDataSource.Create(connectionString);
@@ -168,10 +166,8 @@ internal static partial class PostgresB19ReconciliationIntegrationChecks
         var connectionString = ReadConnectionString();
         if (connectionString is null)
         {
-            Console.WriteLine(
-                $"SKIP {RestoredCheckName} " +
+            throw new CheckSkippedException($"{RestoredCheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
         await using var dataSource =
             NpgsqlDataSource.Create(connectionString);

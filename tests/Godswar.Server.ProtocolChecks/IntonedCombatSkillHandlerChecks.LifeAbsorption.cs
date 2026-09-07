@@ -22,6 +22,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
                 playerRuntimeMode: mode);
             await fixture.BeginCastAsync();
 
+            await AssertMonsterClaimAsync(fixture);
             var damage = await fixture.Socket.ReadPacketAsync(32);
             var impact = await fixture.Socket.ReadPacketAsync(24);
             var mana = await fixture.Socket.ReadPacketAsync(12);

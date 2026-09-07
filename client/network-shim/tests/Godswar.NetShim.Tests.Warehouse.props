@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="SecureWarehouseIdentityTests.cpp" />
+    <ClCompile Include="SecureWarehouseParserTests.cpp" />
+    <ClCompile Include="SecureWarehouseRegistryTests.cpp" />
+    <ClCompile Include="..\src\OriginWarehousePageHost.cpp" />
+    <ClCompile Include="..\src\OriginWarehousePageHost.Patches.cpp" />
+    <ClInclude Include="SecureWarehouseIdentityTests.h" />
+    <ClInclude Include="SecureWarehouseTestSupport.h" />
+    <ClInclude Include="..\src\OriginWarehousePageHost.h" />
+    <ClCompile Include="OriginWarehousePageHostTests.cpp" />
+    <ClCompile Include="..\src\OriginWarehousePageUi.cpp" />
+    <ClInclude Include="..\src\OriginWarehousePageUi.h" />
+    <ClInclude Include="..\src\WarehouseNpcEndpoints.h" />
+  </ItemGroup>
+</Project>

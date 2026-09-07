@@ -64,7 +64,7 @@ internal static partial class PetPresenceProtocolChecks
                 targetPetId,
                 operationId));
 
-        var packets = fixture.Transport.ReadLegacyPackets();
+        var packets = await fixture.Transport.ReadLegacyPacketsAsync(4);
         Check.Equal(
             4,
             packets.Count,
@@ -134,7 +134,7 @@ internal static partial class PetPresenceProtocolChecks
                 PetId,
                 operationId));
 
-        var packets = fixture.Transport.ReadLegacyPackets();
+        var packets = await fixture.Transport.ReadLegacyPacketsAsync(1);
         Check.Equal(
             1,
             packets.Count,
@@ -206,7 +206,7 @@ internal static partial class PetPresenceProtocolChecks
         await fixture.InvokeAsync(packet);
         await fixture.InvokeAsync(packet);
 
-        var packets = fixture.Transport.ReadLegacyPackets();
+        var packets = await fixture.Transport.ReadLegacyPacketsAsync(5);
         Check.Equal(
             5,
             packets.Count,

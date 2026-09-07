@@ -25,10 +25,8 @@ internal static partial class PostgresDeveloperItemGrantIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL developer-item grant integration " +
+            throw new CheckSkippedException("PostgreSQL developer-item grant integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -38,12 +36,10 @@ internal static partial class PostgresDeveloperItemGrantIntegrationChecks
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL developer-item grant integration " +
+                throw new CheckSkippedException("PostgreSQL developer-item grant integration " +
                     "requires a disposable godswar_b03_*_smoke_XX, " +
                     $"godswar_b08_*, or godswar_b09_* database; received " +
                     $"'{databaseName}'");
-                return;
             }
         }
 

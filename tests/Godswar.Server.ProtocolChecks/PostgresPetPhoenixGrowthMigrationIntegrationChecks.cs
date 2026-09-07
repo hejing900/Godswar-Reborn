@@ -19,18 +19,14 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL pet Phoenix Growth migration integration " +
+            throw new CheckSkippedException("PostgreSQL pet Phoenix Growth migration integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         if (await IsMigrationAppliedAsync(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL pet Phoenix Growth migration integration " +
+            throw new CheckSkippedException("PostgreSQL pet Phoenix Growth migration integration " +
                 $"({MigrationId} is already applied)");
-            return;
         }
 
         await using var dataSource =

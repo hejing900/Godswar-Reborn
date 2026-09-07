@@ -1,3 +1,4 @@
+using Godswar.Server.Infrastructure.Inventory;
 using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
@@ -12,20 +13,20 @@ internal static class CapitalShopInventoryPlannerChecks
         var offered = CompactItemEntry.Parse(
             "[4001,,,,,,1,1,0,1,0,0]");
         Check.True(
-            PostgresGameStore.IsCapitalShopStackCompatible(
+            PostgresCapitalShopPurchaseStore.IsCapitalShopStackCompatible(
                 offered with { Stack = 98 },
                 offered),
             "the same authoritative item state can merge");
         Check.True(
-            !PostgresGameStore.IsCapitalShopStackCompatible(
+            !PostgresCapitalShopPurchaseStore.IsCapitalShopStackCompatible(
                 offered with { Stack = 98, Bound = 1 },
                 offered),
             "different binding state cannot merge");
 
-        var fullBag = new PostgresGameStore.CapitalShopBag(
+        var fullBag = new PostgresCapitalShopPurchaseStore.CapitalShopBag(
             [new(7001, 42, 98, "{\"stack\":98}")],
             Enumerable.Repeat(true, 96).ToArray());
-        var fullBagPlan = PostgresGameStore.PlanCapitalShopMutation(
+        var fullBagPlan = PostgresCapitalShopPurchaseStore.PlanCapitalShopMutation(
             fullBag,
             quantity: 1,
             stackCap: 99) ?? throw new InvalidOperationException(
@@ -46,8 +47,8 @@ internal static class CapitalShopInventoryPlannerChecks
         var occupied = new bool[96];
         occupied[0] = true;
         occupied[2] = true;
-        var splitPlan = PostgresGameStore.PlanCapitalShopMutation(
-            new PostgresGameStore.CapitalShopBag(
+        var splitPlan = PostgresCapitalShopPurchaseStore.PlanCapitalShopMutation(
+            new PostgresCapitalShopPurchaseStore.CapitalShopBag(
                 [
                     new(7002, 2, 97, "{\"stack\":97}"),
                     new(7001, 0, 98, "{\"stack\":98}")
@@ -73,8 +74,8 @@ internal static class CapitalShopInventoryPlannerChecks
             splitPlan.Inserts[0].Stack,
             "remaining quantity is preserved across update and insert splits");
 
-        var noCapacity = PostgresGameStore.PlanCapitalShopMutation(
-            new PostgresGameStore.CapitalShopBag([], fullBag.Occupied),
+        var noCapacity = PostgresCapitalShopPurchaseStore.PlanCapitalShopMutation(
+            new PostgresCapitalShopPurchaseStore.CapitalShopBag([], fullBag.Occupied),
             quantity: 1,
             stackCap: 99);
         Check.True(

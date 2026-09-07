@@ -1,9 +1,11 @@
-using Godswar.Server.State;
-
-namespace Godswar.Server.Game;
+namespace Godswar.Server.Domain.Characters;
 
 internal static class FactionPortalSkillPolicy
 {
+    public const byte SpartaCamp = 0;
+
+    public const byte AthensCamp = 1;
+
     public const uint AthensCapitalPortalSkillId = 3060;
 
     public const uint AthensSuburbPortalSkillId = 3061;
@@ -15,8 +17,8 @@ internal static class FactionPortalSkillPolicy
     public static uint ResolveCapitalPortalSkillId(byte camp) =>
         camp switch
         {
-            GameDefaults.SpartaCamp => SpartaCapitalPortalSkillId,
-            GameDefaults.AthensCamp => AthensCapitalPortalSkillId,
+            SpartaCamp => SpartaCapitalPortalSkillId,
+            AthensCamp => AthensCapitalPortalSkillId,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(camp),
                 camp,
@@ -26,8 +28,8 @@ internal static class FactionPortalSkillPolicy
     public static uint ResolveSuburbPortalSkillId(byte camp) =>
         camp switch
         {
-            GameDefaults.SpartaCamp => SpartaSuburbPortalSkillId,
-            GameDefaults.AthensCamp => AthensSuburbPortalSkillId,
+            SpartaCamp => SpartaSuburbPortalSkillId,
+            AthensCamp => AthensSuburbPortalSkillId,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(camp),
                 camp,

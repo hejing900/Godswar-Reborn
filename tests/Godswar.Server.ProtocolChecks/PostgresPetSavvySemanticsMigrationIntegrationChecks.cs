@@ -21,25 +21,19 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-savvy semantics migration integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet-savvy semantics migration integration ({ConnectionStringVariable} is not set)");
         }
 
         if (!await IsMigrationAppliedAsync(
                 connectionString,
                 RequiredMigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-savvy semantics migration integration ({RequiredMigrationId} is required)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet-savvy semantics migration integration ({RequiredMigrationId} is required)");
         }
 
         if (await IsMigrationAppliedAsync(connectionString, MigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-savvy semantics migration integration ({MigrationId} is already applied)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet-savvy semantics migration integration ({MigrationId} is already applied)");
         }
 
         Check.True(

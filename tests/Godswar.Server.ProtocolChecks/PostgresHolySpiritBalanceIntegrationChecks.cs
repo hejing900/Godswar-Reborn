@@ -26,9 +26,7 @@ internal static partial class PostgresHolySpiritBalanceIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(
@@ -36,10 +34,8 @@ internal static partial class PostgresHolySpiritBalanceIntegrationChecks
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable B09/B12 database; " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable B09/B12 database; " +
                 $"received '{database}'");
-            return;
         }
 
         var fresh = await IsFreshAsync(dataSource);

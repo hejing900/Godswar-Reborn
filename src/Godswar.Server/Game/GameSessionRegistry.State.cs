@@ -11,7 +11,7 @@ internal sealed partial class GameSessionRegistry
     private void AddToMap(GameSessionContext context)
     {
         var runtime = GetRequiredWorldInstance(context);
-        InvokeWorldOwner(
+        InvokeWorldOwnerAuthoritativeMutation(
             runtime,
             map => map.AddOrUpdate(context));
     }
@@ -39,13 +39,12 @@ internal sealed partial class GameSessionRegistry
         PlayerTransformOverride? transformOverride)
     {
         var runtime = GetRequiredWorldInstance(context);
-        var transfer = InvokeWorldOwner(
+        var transfer = InvokeWorldOwnerAuthoritativeMutation(
             runtime,
             map => map.StagePlayerTransfer(
                 context,
                 transformOverride));
         return new WorldInstancePlayerTransfer(
-            this,
             runtime,
             transfer);
     }
@@ -74,7 +73,8 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
-    private void RemoveFromMap(GameSessionContext context)
+    private void RemoveFromMap(GameSessionContext context,
+        MapInstance.PlayerRemovalLease? removal)
     {
         if (TryGetWorldInstance(context, out var runtime))
         {
@@ -84,7 +84,12 @@ internal sealed partial class GameSessionRegistry
                 out var currentLifeRevision)
                 ? currentLifeRevision
                 : -1;
-            InvokeWorldOwner(
+            if (removal is null)
+            {
+                throw new InvalidOperationException(
+                    "World removal requires a prepared delivery lease.");
+            }
+            InvokeWorldOwnerAuthoritativeMutation(
                 runtime,
                 map =>
                 {
@@ -92,7 +97,7 @@ internal sealed partial class GameSessionRegistry
                         context,
                         lifeRevision,
                         removedAt);
-                    map.Remove(context.Session, out _);
+                    removal.Remove(map, context.Session, out _);
                     map.ClearMonsterAggroForCharacter(
                         context.CharacterId,
                         removedAt);
@@ -103,16 +108,13 @@ internal sealed partial class GameSessionRegistry
     private sealed class WorldInstancePlayerTransfer :
         IDisposable
     {
-        private readonly GameSessionRegistry _registry;
         private readonly WorldInstanceRuntime _runtime;
         private MapInstance.PlayerTransfer? _transfer;
 
         public WorldInstancePlayerTransfer(
-            GameSessionRegistry registry,
             WorldInstanceRuntime runtime,
             MapInstance.PlayerTransfer transfer)
         {
-            _registry = registry;
             _runtime = runtime;
             _transfer = transfer;
         }
@@ -124,7 +126,7 @@ internal sealed partial class GameSessionRegistry
             var transfer = _transfer ??
                 throw new ObjectDisposedException(
                     nameof(WorldInstancePlayerTransfer));
-            _registry.InvokeWorldOwner(
+            InvokeWorldOwnerAuthoritativeMutation(
                 _runtime,
                 _ => transfer.Commit(
                     publishRegistryContext));
@@ -138,7 +140,7 @@ internal sealed partial class GameSessionRegistry
                 null);
             if (transfer is not null)
             {
-                _registry.InvokeWorldOwner(
+                InvokeWorldOwnerAuthoritativeMutation(
                     _runtime,
                     _ => transfer.Dispose());
             }

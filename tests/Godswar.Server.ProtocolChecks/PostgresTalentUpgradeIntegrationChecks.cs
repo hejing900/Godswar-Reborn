@@ -16,9 +16,7 @@ internal static class PostgresTalentUpgradeIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL talent command integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL talent command integration ({ConnectionStringVariable} is not set)");
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];

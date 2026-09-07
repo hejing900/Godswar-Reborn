@@ -526,9 +526,12 @@ internal sealed partial class ClientSession : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        Interlocked.Exchange(ref _disconnected, 1);
         try
         {
             await _egress.DisposeAsync();
+            ScheduleTerminalCleanup();
+            await TerminalCleanupCompletion;
         }
         finally
         {

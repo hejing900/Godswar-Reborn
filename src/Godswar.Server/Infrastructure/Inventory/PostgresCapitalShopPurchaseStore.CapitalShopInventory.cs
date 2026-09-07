@@ -1,8 +1,11 @@
+using static Godswar.Server.Infrastructure.Inventory.PostgresCompactItemReader;
+using static Godswar.Server.Infrastructure.Inventory.PostgresCompactItemWriter;
+using Godswar.Server.State;
 using Npgsql;
 
-namespace Godswar.Server.State;
+namespace Godswar.Server.Infrastructure.Inventory;
 
-internal sealed partial class PostgresGameStore
+internal sealed partial class PostgresCapitalShopPurchaseStore
 {
     private static async Task<CapitalShopBag> LockCapitalShopBagAsync(
         NpgsqlConnection connection,

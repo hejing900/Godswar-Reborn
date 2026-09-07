@@ -24,6 +24,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
         var focusBookIds = Enumerable.Range(10_530, 6).ToArray();
         var nameplateIds = Enumerable.Range(3820, 6).ToArray();
         var historicalExclusions = focusBookIds.Concat(nameplateIds)
+            .Concat(PostPetItemsV3ItemIds)
             .Append(WarehouseItemContentBaseline.StorageBoxKeyItemId)
             .Append(CaptureToolItemId)
             .Append(LegacyInstanceOpalItemContentBaseline.ItemId)

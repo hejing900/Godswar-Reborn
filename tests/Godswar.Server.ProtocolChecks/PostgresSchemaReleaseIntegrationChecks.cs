@@ -14,10 +14,8 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL schema-release integration " +
+            throw new CheckSkippedException($"PostgreSQL schema-release integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
@@ -31,7 +29,7 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
 
         await InitializeReleaseAsync(connectionString);
 
-        var after = await ReadSnapshotAsync(dataSource);
+        var after = await ReadSnapshotAsync(dataSource, before.IdentityProjection);
         AssertReleaseState(after);
         await AssertDurableStatePreservedAsync(
             dataSource,
@@ -52,7 +50,8 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
     }
 
     private static async Task<SchemaReleaseSnapshot> ReadSnapshotAsync(
-        NpgsqlDataSource dataSource)
+        NpgsqlDataSource dataSource,
+        IdentityColumnProjection? identityProjection = null)
     {
         await using var connection = await dataSource.OpenConnectionAsync();
         var markerCount = await ReadInt32Async(connection, """
@@ -101,50 +100,8 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
                 ? null
                 : await ReadInventoryRowsAsync(
                     connection);
-        var accountCharacterFingerprint =
-            await RelationExistsAsync(connection, "public.accounts") &&
-            await RelationExistsAsync(connection, "public.character_base")
-                ? await ReadTextAsync(connection, """
-                    SELECT
-                        (SELECT count(*)::text || ':' ||
-                            md5(COALESCE(
-                                string_agg(
-                                (
-                                    to_jsonb(account_row) -
-                                    'character_lifecycle_version'
-                                )::text,
-                                    '|' ORDER BY account_row.id),
-                                ''))
-                         FROM public.accounts account_row) ||
-                        '|' ||
-                        (SELECT count(*)::text || ':' ||
-                            md5(COALESCE(
-                                string_agg(
-                                    (
-                                        to_jsonb(character_row) -
-                                        ARRAY[
-                                            'wallet_revision',
-                                            'inventory_revision',
-                                            'progression_reward_revision',
-                                            'fighter_level_sealed',
-                                            'pet_shed_capacity',
-                                            'pet_shed_revision',
-                                            'position_revision',
-                                            'checkpoint_owner_id',
-                                            'checkpoint_owner_generation',
-                                            'character_slot',
-                                            'lifecycle_state',
-                                            'lifecycle_version',
-                                            'deleted_at',
-                                            'restore_until',
-                                            'purge_after'
-                                        ]::text[]
-                                    )::text,
-                                    '|' ORDER BY character_row.id),
-                                ''))
-                         FROM public.character_base character_row);
-                    """)
-                : null;
+        var identity = await ReadIdentityStateAsync(connection, identityProjection);
+        var accountCharacterFingerprint = identity.FullFingerprint;
         var checkpointColumnCount =
             await RelationExistsAsync(connection, "public.character_base")
                 ? await ReadInt32Async(connection, """
@@ -377,6 +334,8 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
             inventoryFingerprint,
             inventoryRows,
             accountCharacterFingerprint,
+            identity.ProjectedFingerprint,
+            identity.Projection,
             checkpointFingerprint,
             lifecycle.Fingerprint,
             packetPayloadFingerprint,

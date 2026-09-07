@@ -6,7 +6,8 @@ namespace Godswar.Server.Operations.Observability;
 
 internal sealed class BoundedStructuredLogger : IDisposable
 {
-    private const int EventKindCount = 6;
+    private static readonly int EventKindCount =
+        Enum.GetValues<OperationalLogEvent>().Max(static kind => (int)kind);
 
     private readonly int[] _eventCounts = new int[EventKindCount];
     private readonly object _gate = new();
@@ -343,12 +344,12 @@ internal sealed class BoundedStructuredLogger : IDisposable
     private static void ValidateUniqueFields(
         ReadOnlySpan<OperationalLogValue> fields)
     {
-        Span<bool> seen = stackalloc bool[10];
+        Span<bool> seen = stackalloc bool[byte.MaxValue + 1];
+        seen.Clear();
         foreach (var field in fields)
         {
             var index = (int)field.Field;
-            if (index <= 0 ||
-                index >= seen.Length ||
+            if (!Enum.IsDefined(field.Field) ||
                 seen[index])
             {
                 throw new ArgumentException(

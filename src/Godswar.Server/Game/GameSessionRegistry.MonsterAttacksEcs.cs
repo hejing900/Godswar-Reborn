@@ -185,6 +185,37 @@ internal sealed partial class GameSessionRegistry
                 $"[monster] secondary damage deferred target={targetContext.DisplayName}: {ex.Message}");
         }
 
+        // Settle terminal secondary rewards before ordinary attack transport.
+        // Committed Bleed retains its synchronous prefix admission above;
+        // reward packets still follow damage and Medusa status publication.
+        PreparedPveMonsterKillReward? preparedReboundReward = null;
+        IReadOnlyList<PreparedPveMonsterKillReward>
+            preparedElementalRewards = [];
+        try
+        {
+            preparedReboundReward =
+                await PrepareMonsterReboundRewardAsync(
+                    targetContext,
+                    reboundCommit);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"[monster] rebound reward preparation deferred target={targetContext.DisplayName}: {ex.Message}");
+        }
+        try
+        {
+            preparedElementalRewards =
+                await PreparePveElementalKillRewardsAsync(
+                    targetContext,
+                    elementalReflection);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"[monster] elemental reward preparation deferred target={targetContext.DisplayName}: {ex.Message}");
+        }
+
         try
         {
             InvokeProtocolCheckBeforeMedusaBleedVitalsPersistence(
@@ -270,34 +301,6 @@ internal sealed partial class GameSessionRegistry
             transaction,
             damageResolvedAt);
         medusaStatusCompleted = true;
-
-        PreparedPveMonsterKillReward? preparedReboundReward = null;
-        IReadOnlyList<PreparedPveMonsterKillReward>
-            preparedElementalRewards = [];
-        try
-        {
-            preparedReboundReward =
-                await PrepareMonsterReboundRewardAsync(
-                    targetContext,
-                    reboundCommit);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(
-                $"[monster] rebound reward preparation deferred target={targetContext.DisplayName}: {ex.Message}");
-        }
-        try
-        {
-            preparedElementalRewards =
-                await PreparePveElementalKillRewardsAsync(
-                    targetContext,
-                    elementalReflection);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(
-                $"[monster] elemental reward preparation deferred target={targetContext.DisplayName}: {ex.Message}");
-        }
 
         try
         {

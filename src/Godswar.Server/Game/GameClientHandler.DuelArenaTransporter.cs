@@ -48,12 +48,13 @@ internal sealed partial class GameClientHandler
         }
 
         ClearDuelArenaTransporterDialogueContext();
-        if (!await TryBeginSameMapSceneTransitionAsync(
+        var outcome = await TryBeginSameMapSceneTransitionAsync(
                 destination.TargetX,
                 destination.TargetZ,
                 $"npc-duel-arena-transporter:{route.NpcKey}:{subId}",
                 continuationGuard: null,
-                cancellationToken))
+                cancellationToken);
+        if (outcome != SceneTransitionOutcome.CommittedAwaitingReadiness)
         {
             if (!_session.IsDisconnected)
             {

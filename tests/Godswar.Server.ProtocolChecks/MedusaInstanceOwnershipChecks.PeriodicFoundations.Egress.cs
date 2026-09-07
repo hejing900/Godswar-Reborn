@@ -113,6 +113,8 @@ internal static partial class MedusaInstanceOwnershipChecks
                 await fixture.Socket.ReadPacketAsync();
             var isolatedSelfSecond =
                 await fixture.Socket.ReadPacketAsync();
+            await observerSocket.Session.TerminalCleanupCompletion
+                .WaitAsync(TimeSpan.FromSeconds(2));
             Check.True(
                 terminalOutcome == "AdmittedTerminal" &&
                 observerSocket.Session.IsDisconnected &&

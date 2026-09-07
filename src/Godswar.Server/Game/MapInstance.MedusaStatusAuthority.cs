@@ -104,7 +104,10 @@ internal sealed partial class MapInstance
 
             lock (_membershipGate)
             {
-                if (!IsExactCurrentMedusaMembership(expectedContext))
+                // Teardown retains exact map, character, ownership, and
+                // membership authority after disconnect revokes WorldReady.
+                // Gameplay queries still require live readiness below.
+                if (!IsExactStoredMedusaMembership(expectedContext))
                 {
                     return false;
                 }
@@ -168,6 +171,11 @@ internal sealed partial class MapInstance
 
     private bool IsExactCurrentMedusaMembership(
         GameSessionContext expectedContext) =>
+        expectedContext.WorldReady &&
+        IsExactStoredMedusaMembership(expectedContext);
+
+    private bool IsExactStoredMedusaMembership(
+        GameSessionContext expectedContext) =>
         expectedContext.Session is not null &&
         expectedContext.Ownership.IsValid &&
         expectedContext.WorldInstanceId == WorldInstanceId &&
@@ -175,7 +183,6 @@ internal sealed partial class MapInstance
         expectedContext.MapId == MapId &&
         expectedContext.CharacterId == expectedContext.Character.Id &&
         expectedContext.Character.CurrentMap == MapId &&
-        expectedContext.WorldReady &&
         _sessions.TryGetValue(
             expectedContext.Session,
             out var current) &&

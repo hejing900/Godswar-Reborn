@@ -15,10 +15,8 @@ internal static partial class PostgresMigrationPrefixFixtureChecks
         var requestedPrefix = Environment.GetEnvironmentVariable(PrefixVariable);
         if (string.IsNullOrWhiteSpace(requestedPrefix))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL migration-prefix fixture " +
+            throw new CheckSkippedException($"PostgreSQL migration-prefix fixture " +
                 $"({PrefixVariable} is not set)");
-            return;
         }
 
         var connectionString =

@@ -12,7 +12,10 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
         await CheckMonsterReboundAsync(PlayerRuntimeMode.Legacy);
         await CheckMonsterReboundAsync(PlayerRuntimeMode.Ecs);
         await CheckMonsterReboundLeaseRollbackAsync();
-        await CheckMonsterReboundRewardSurvivesCancellationAsync();
+        await CheckMonsterReboundRewardSurvivesCancellationAsync(
+            PlayerRuntimeMode.Legacy);
+        await CheckMonsterReboundRewardSurvivesCancellationAsync(
+            PlayerRuntimeMode.Ecs);
     }
 
     private static async Task CheckMonsterReboundLeaseRollbackAsync()
@@ -158,21 +161,26 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
         MonsterDamageResult? preparedKill = null;
         var prepareCount = 0;
         var publishCount = 0;
-        var queuedBytesAtPrepare = 0;
-        var queuedBytesAtPublish = 0;
+        var admittedBytesAtPrepare = 0L;
+        byte[] impactPacket = [];
+        byte[] incomingPacket = [];
+        byte[] reboundPacket = [];
         registry.RegisterPveMonsterKillRewardPreparer(
             socket.Session,
             damageResult =>
             {
                 prepareCount++;
                 preparedKill = damageResult;
-                queuedBytesAtPrepare = socket.Available;
+                admittedBytesAtPrepare =
+                    MonsterAttackEgressHighWaterBytes(socket);
                 return Task.FromResult<PreparedPveMonsterKillReward?>(
-                    new PreparedPveMonsterKillReward(_ =>
+                    new PreparedPveMonsterKillReward(async _ =>
                     {
                         publishCount++;
-                        queuedBytesAtPublish = socket.Available;
-                        return Task.CompletedTask;
+                        impactPacket = await ReadMonsterImpactPrefixAsync(
+                            socket, playerRuntimeMode, monsterObjectId);
+                        incomingPacket = await socket.ReadPacketAsync(30);
+                        reboundPacket = await socket.ReadPacketAsync(30);
                     }));
             });
 
@@ -198,13 +206,18 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
         Check.True(
             appliedPlayerDamage > monsterBefore.CurrentHealth,
             $"{playerRuntimeMode} fixture produces terminal rebound");
+        Check.Equal(
+            0L,
+            admittedBytesAtPrepare,
+            $"{playerRuntimeMode} rebound settles before any attack frame is admitted");
         Check.True(
             preparedKill is { Killed: true } &&
             preparedKill.ObjectId == monsterObjectId &&
             prepareCount == 1 &&
             publishCount == 1 &&
-            queuedBytesAtPrepare == 0 &&
-            queuedBytesAtPublish >= 84,
+            impactPacket.Length == 24 &&
+            incomingPacket.Length == 30 &&
+            reboundPacket.Length == 30,
             $"{playerRuntimeMode} rebound settles before all attack packets " +
             "and publishes reward packets afterward");
         Check.True(
@@ -218,9 +231,6 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
                 monsterBefore.HealthRevision + 1,
             $"{playerRuntimeMode} terminal rebound mutates monster once");
 
-        var impactPacket = await socket.ReadPacketAsync(24);
-        var incomingPacket = await socket.ReadPacketAsync(30);
-        var reboundPacket = await socket.ReadPacketAsync(30);
         Check.Equal((ushort)10046,
             BinaryPrimitives.ReadUInt16LittleEndian(
                 impactPacket.AsSpan(2, 2)),
@@ -250,7 +260,8 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
     }
 
     private static async Task
-        CheckMonsterReboundRewardSurvivesCancellationAsync()
+        CheckMonsterReboundRewardSurvivesCancellationAsync(
+            PlayerRuntimeMode playerRuntimeMode)
     {
         const uint monsterObjectId = 9_108;
         var activeAt = DateTimeOffset.UtcNow;
@@ -260,12 +271,12 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
             store: null,
             zodiacEnergyOptions: null,
             MonsterRuntimeMode.Ecs,
-            PlayerRuntimeMode.Legacy,
+            playerRuntimeMode,
             gameplayCatalogs: CreateMonsterCombatCatalog(
                 MonsterAttackDamageKind.Physical));
         var character = CreateCharacter();
         character.Id += 8;
-        character.Name = "ReboundCancellation";
+        character.Name = $"ReboundCancellation{playerRuntimeMode}";
         character.CurrentHp = 10_000;
         character.MaxHp = 10_000;
         character.CalculatedStats = new CharacterStats
@@ -354,15 +365,16 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
         }
 
         Check.True(
-            canceled &&
+            (playerRuntimeMode != PlayerRuntimeMode.Legacy || canceled) &&
             prepareCount == 1 &&
             publishCount == 0 &&
+            MonsterAttackEgressHighWaterBytes(socket) == 0 &&
             registry.TryGetMonsterSnapshot(
                 character.CurrentMap,
                 monsterObjectId,
                 out var monsterAfter) &&
             !monsterAfter.IsAlive,
-            "terminal rebound reward is durably prepared before canceled " +
+            $"{playerRuntimeMode} terminal rebound reward is durably prepared before canceled " +
             "damage transport and is not packet-published out of order");
         registry.Remove(socket.Session);
     }

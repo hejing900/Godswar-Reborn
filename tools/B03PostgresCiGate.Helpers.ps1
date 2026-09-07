@@ -23,6 +23,53 @@ function Invoke-Docker {
     return @($commandOutput | ForEach-Object ToString)
 }
 
+function Get-B03RepositorySmokeCheckNames {
+    return @(
+        'PostgreSQL forward-only database cleanup',
+        'PostgreSQL official NPC content publication',
+        'PostgreSQL official NPC dialogue publication',
+        'PostgreSQL item-template publication',
+        'PostgreSQL immutable pet-content publication',
+        'PostgreSQL pinned world-content baseline',
+        'PostgreSQL consistent character snapshot reader',
+        'PostgreSQL B20F authoritative loadout projection',
+        'PostgreSQL authoritative Class Suit transaction',
+        'PostgreSQL focused progression and world-boss persistence',
+        'PostgreSQL focused account persistence adapter',
+        'PostgreSQL talent command precondition',
+        'PostgreSQL talent inbox/outbox transaction',
+        'PostgreSQL developer-item grant transaction',
+        'PostgreSQL durable developer bag-clear transaction',
+        'PostgreSQL durable Make Attribute Stone transaction',
+        'PostgreSQL durable Gear Mentor material conversions',
+        'PostgreSQL durable Gear Mentor Decompose transaction',
+        'PostgreSQL durable Gear Enhancement transactions',
+        'PostgreSQL durable equipment-forge transactions',
+        'PostgreSQL durable kit-bag item-delete transactions',
+        'PostgreSQL durable kit-bag item-move transactions',
+        'PostgreSQL durable equipment/bag transfer transactions',
+        'PostgreSQL durable Holy Stone transactions',
+        'PostgreSQL authoritative Holy Suit transactions',
+        'PostgreSQL durable Zodiac skill-grid activation',
+        'PostgreSQL durable Zodiac skill-grid upgrade',
+        'PostgreSQL durable Zodiac skill-grid selection',
+        'PostgreSQL character-creation economy baseline',
+        'PostgreSQL versioned character checkpoints',
+        'PostgreSQL durable character lifecycle commands',
+        'PostgreSQL exactly-once monster reward settlement',
+        'PostgreSQL durable online progression intervals',
+        'PostgreSQL retry-safe pet value commands',
+        'PostgreSQL outbox dispatcher recovery and ordering',
+        'PostgreSQL equipment-forge race and preservation',
+        'PostgreSQL Zodiac level-up race',
+        'PostgreSQL authoritative pet level-up',
+        'PostgreSQL pet-egg hatch transaction',
+        'PostgreSQL immutable pet hatch-rank evidence integration',
+        'PostgreSQL learned pet-skill content publication integration',
+        'PostgreSQL immutable pet Merge-savvy lookup migration'
+    )
+}
+
 function Invoke-PostgresTool {
     param(
         [Parameter(Mandatory)]
@@ -212,7 +259,7 @@ function Invoke-RequiredProtocolCheck {
         try {
             $ErrorActionPreference = 'Continue'
             $outputLines = @(
-                & dotnet $protocolChecksAssembly $Name 2>&1 |
+                & dotnet $protocolChecksAssembly --require-no-skips $Name 2>&1 |
                     ForEach-Object ToString
             )
             $exitCode = $LASTEXITCODE

@@ -147,10 +147,8 @@ internal static partial class RedisWorkerCoordinationIntegrationChecks
             Environment.GetEnvironmentVariable(adminVariable);
         if (string.IsNullOrWhiteSpace(adminConnection))
         {
-            Console.WriteLine(
-                "SKIP Redis CLIENT PAUSE fault injection " +
+            throw new CheckSkippedException("Redis CLIENT PAUSE fault injection " +
                 $"({adminVariable} is not set)");
-            return;
         }
 
         var adminOptions = ConfigurationOptions.Parse(adminConnection);

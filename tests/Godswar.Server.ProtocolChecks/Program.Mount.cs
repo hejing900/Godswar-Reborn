@@ -188,7 +188,7 @@ internal static partial class Program
                 character.AccountId,
                 character,
                 WorldObjectIds.ForPlayer(character.Id),
-                worldReady: false);
+                worldReady: true);
             var lifeRevision = registry.GetPlayerLifeRevision(session);
             var statusPacketLength = PacketBuilder.PlayerStatusEffects(
                 character,

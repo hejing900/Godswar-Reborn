@@ -11,6 +11,21 @@ permissions:
   contents: read
 
 jobs:
+  native-client-gate:
+    runs-on: windows-2022
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Native warehouse endpoint contract
+        shell: pwsh
+        run: ./tools/TestWarehouseEndpointParity.ps1 -SelfTest
+
+      - name: Reproducible x86 shim build and native unit checks
+        shell: pwsh
+        run: ./tools/TestClientNetworkShim.ps1 -UnitOnly
+
   bounded-network-gate:
     runs-on: windows-latest
     timeout-minutes: 15

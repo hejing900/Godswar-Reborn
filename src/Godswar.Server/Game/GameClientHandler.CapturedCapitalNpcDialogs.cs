@@ -127,7 +127,7 @@ internal sealed partial class GameClientHandler
     {
         if (_account is null ||
             _character is null ||
-            _store is not IFighterLevelSealStore levelSeals)
+            _fighterLevelSeals is not { } levelSeals)
         {
             Console.Error.WriteLine(
                 "[level-sealer] durable character authority unavailable");
@@ -353,7 +353,7 @@ internal sealed partial class GameClientHandler
     {
         if (_account is null ||
             _character is null ||
-            _store is not IWeekendExperienceClaimStore claims)
+            _weekendExperienceClaims is not { } claims)
         {
             Console.Error.WriteLine(
                 "[npc] weekend EXP claim has no durable character authority");

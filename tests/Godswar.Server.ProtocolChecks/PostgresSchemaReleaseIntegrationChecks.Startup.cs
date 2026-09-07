@@ -10,8 +10,10 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
         string connectionString)
     {
         await PostgresSchemaStartup.InitializeAsync(connectionString);
+        var migratedViews = await ReadPublicViewDefinitionsAsync(connectionString);
         await PostgresRelationalContentBaselineBootstrapper.EnsureAsync(
             connectionString);
+        await AssertPublicViewDefinitionsAsync(connectionString, migratedViews);
         _ = await PostgresItemTemplateContentBootstrapper.LoadAsync(
             connectionString);
         _ = await PostgresWorldContentBootstrapper.LoadAsync(

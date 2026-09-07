@@ -26,10 +26,8 @@ internal static class PostgresEconomyLedgerMigrationIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL economy ledger migration integration " +
+            throw new CheckSkippedException($"PostgreSQL economy ledger migration integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -39,11 +37,9 @@ internal static class PostgresEconomyLedgerMigrationIntegrationChecks
             "SELECT current_database();");
         if (!DisposableDatabasePattern.IsMatch(databaseName))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL economy ledger migration integration " +
+            throw new CheckSkippedException("PostgreSQL economy ledger migration integration " +
                 "requires a disposable godswar_b03_*_(empty|restored) " +
                 $"or godswar_b09_* database; received '{databaseName}'");
-            return;
         }
 
         await using (var store =

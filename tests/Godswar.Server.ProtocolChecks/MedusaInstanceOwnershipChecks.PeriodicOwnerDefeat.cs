@@ -293,11 +293,11 @@ internal static partial class MedusaInstanceOwnershipChecks
 
         Check.True(
             SpinWait.SpinUntil(
-                () => fixture.Socket.Session.IsDisconnected,
-                TimeSpan.FromSeconds(2)) &&
-            !fixture.Registry.IsSessionInWorldInstance(
-                fixture.Socket.Session,
-                fixture.Runtime.InstanceId),
+                () => fixture.Socket.Session.IsDisconnected &&
+                    !fixture.Registry.IsSessionInWorldInstance(
+                        fixture.Socket.Session,
+                        fixture.Runtime.InstanceId),
+                TimeSpan.FromSeconds(2)),
             "the preprepared registry fallback disconnects outside the owner and registry gates");
     }
 

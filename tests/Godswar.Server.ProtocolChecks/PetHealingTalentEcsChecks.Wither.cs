@@ -59,7 +59,7 @@ internal static partial class PetHealingTalentEcsChecks
             "src",
             "Godswar.Server",
             "Game",
-            "GameSessionRegistry.MonsterAttacksEcs.cs"));
+            "GameSessionRegistry.MonsterAttacksEcs.Transaction.cs"));
         var adjustment = monsterAttack.IndexOf(
             "AdjustMonsterIncomingElementalHealingLocked(",
             StringComparison.Ordinal);

@@ -1,4 +1,5 @@
 using Godswar.Server.Game;
+using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game.WorldInstances;
 using Godswar.Server.Networking;
 using Godswar.Server.State;
@@ -18,9 +19,14 @@ internal static partial class MedusaInstanceOwnershipChecks
         var authored = CreateAttachmentFixture();
         var definition = authored.Inputs.Definitions[0];
         var mapId = checked((byte)definition.MapId);
+        var created = await registry.CreateLocalWorldInstanceAsync(
+            RealmId.Tempest, MapId.FromLegacy(mapId), InstanceKind.Dungeon,
+            playerCapacity: 4);
+        var explicitInstanceId = created.Runtime?.InstanceId ??
+            throw new InvalidOperationException("Registry race dungeon was not created.");
         Check.True(
-            registry.InitializeMapMonsters(
-                mapId,
+            registry.InitializeWorldInstanceMonsters(
+                explicitInstanceId,
                 [definition],
                 StartedAt) == 1,
             "registry race fixture initializes one ordinary target");
@@ -30,11 +36,12 @@ internal static partial class MedusaInstanceOwnershipChecks
         var character = CreateRegistryDamageCharacter(
             characterId: 101,
             mapId);
-        registry.JoinMap(
+        registry.JoinWorldInstance(
             session,
             character.AccountId,
             character,
             objectId: 0x7B01,
+            explicitInstanceId,
             joinedAt: StartedAt);
         Check.True(registry.TryGetSessionWorldInstanceId(
                 session,

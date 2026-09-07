@@ -53,11 +53,17 @@ internal static partial class
     {
         var token = Guid.NewGuid().ToString("N")[..12];
         await using var command = dataSource.CreateCommand("""
-            INSERT INTO public.accounts (username, password)
-            VALUES
-                (@firstUsername, ''),
-                (@secondUsername, '')
-            RETURNING id;
+            WITH inserted_accounts AS (
+                INSERT INTO public.accounts (username, password)
+                VALUES
+                    (@firstUsername, ''),
+                    (@secondUsername, '')
+                RETURNING id
+            )
+            INSERT INTO public.account_realm (account_id, realm_id)
+            SELECT id, 1
+            FROM inserted_accounts
+            RETURNING account_id;
             """);
         command.Parameters.AddWithValue(
             "firstUsername",
@@ -107,19 +113,22 @@ internal static partial class
     {
         await using var command = dataSource.CreateCommand("""
             WITH next_version AS (
-                UPDATE public.accounts
+                UPDATE public.account_realm
                 SET character_lifecycle_version =
                         character_lifecycle_version + 1
-                WHERE id = @accountId
+                WHERE account_id = @accountId
+                  AND realm_id = 1
                 RETURNING character_lifecycle_version
             )
             INSERT INTO public.character_base (
                 account_id,
+                server_id,
                 name,
                 lifecycle_version
             )
             SELECT
                 @accountId,
+                1,
                 @name,
                 next_version.character_lifecycle_version
             FROM next_version
@@ -138,14 +147,16 @@ internal static partial class
     {
         await using var command = dataSource.CreateCommand("""
             WITH next_version AS (
-                UPDATE public.accounts
+                UPDATE public.account_realm
                 SET character_lifecycle_version =
                         character_lifecycle_version + 1
-                WHERE id = @accountId
+                WHERE account_id = @accountId
+                  AND realm_id = 1
                 RETURNING character_lifecycle_version
             )
             INSERT INTO public.character_base (
                 account_id,
+                server_id,
                 name,
                 lifecycle_version,
                 lifecycle_state,
@@ -155,6 +166,7 @@ internal static partial class
             )
             SELECT
                 @accountId,
+                1,
                 @name,
                 next_version.character_lifecycle_version,
                 'deleted',
@@ -176,16 +188,17 @@ internal static partial class
     {
         await using var command = dataSource.CreateCommand("""
             WITH target AS (
-                SELECT account_id
+                SELECT account_id, server_id
                 FROM public.character_base
                 WHERE id = @characterId
             ),
             next_version AS (
-                UPDATE public.accounts account_row
+                UPDATE public.account_realm account_row
                 SET character_lifecycle_version =
                         account_row.character_lifecycle_version + 1
                 FROM target
-                WHERE account_row.id = target.account_id
+                WHERE account_row.account_id = target.account_id
+                  AND account_row.realm_id = target.server_id
                 RETURNING account_row.character_lifecycle_version
             )
             UPDATE public.character_base
@@ -214,16 +227,17 @@ internal static partial class
     {
         await using var command = dataSource.CreateCommand("""
             WITH target AS (
-                SELECT account_id
+                SELECT account_id, server_id
                 FROM public.character_base
                 WHERE id = @characterId
             ),
             next_version AS (
-                UPDATE public.accounts account_row
+                UPDATE public.account_realm account_row
                 SET character_lifecycle_version =
                         account_row.character_lifecycle_version + 1
                 FROM target
-                WHERE account_row.id = target.account_id
+                WHERE account_row.account_id = target.account_id
+                  AND account_row.realm_id = target.server_id
                 RETURNING account_row.character_lifecycle_version
             )
             UPDATE public.character_base
@@ -286,10 +300,12 @@ internal static partial class
         var sql = $"""
             INSERT INTO public.character_base (
                 account_id,
+                server_id,
                 name
             )
             VALUES (
                 @accountId,
+                1,
                 @name
             );
             UPDATE public.character_base

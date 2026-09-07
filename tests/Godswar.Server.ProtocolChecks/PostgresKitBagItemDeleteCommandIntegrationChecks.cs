@@ -26,10 +26,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL kit-bag item-delete integration " +
+            throw new CheckSkippedException("PostgreSQL kit-bag item-delete integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -39,11 +37,9 @@ internal static partial class
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL kit-bag item-delete integration " +
+                throw new CheckSkippedException("PostgreSQL kit-bag item-delete integration " +
                     "requires a disposable B03/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

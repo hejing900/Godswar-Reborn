@@ -300,17 +300,17 @@ internal static class B17CoordinationConfigurationChecks
                 options.Game.WorldInstances.ServerNodeId,
                 "staged worker has one stable node identity");
             Check.Equal(
-                23,
+                27,
                 options.Game.WorldInstances.StaticOpenWorldInstances.Length,
                 "staged worker owns all currently connected open-world maps");
             Check.True(
                 options.Game.WorldInstances.StaticOpenWorldInstances
                     .Select(static route => (int)route.MapId)
                     .Order()
-                    .SequenceEqual(Enumerable.Range(0, 23)),
-                "staged worker owns exactly map IDs zero through twenty-two");
+                    .SequenceEqual(Enumerable.Range(0, 23).Concat([27, 34, 38, 57])),
+                "staged worker owns the reviewed capitals, regions, suburbs, and Duel Arena");
             Check.Equal(
-                23,
+                27,
                 options.Game.WorldInstances.StaticOpenWorldInstances
                     .Select(static route => route.ProcessWorldInstanceId)
                     .Distinct()

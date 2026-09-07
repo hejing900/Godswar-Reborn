@@ -24,10 +24,8 @@ internal static partial class PostgresCharacterSnapshotReaderIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL character snapshot reader " +
+            throw new CheckSkippedException($"PostgreSQL character snapshot reader " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);

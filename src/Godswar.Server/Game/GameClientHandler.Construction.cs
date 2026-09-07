@@ -139,6 +139,12 @@ internal sealed partial class GameClientHandler
 
         _session = session;
         _store = gameStore;
+        _capitalShopPurchases = gameStore as ICapitalShopPurchaseStore ??
+            UnsupportedGameplayFeatures.Instance;
+        _monsterRewardExtras = gameStore as IMonsterRewardExtrasStore ??
+            UnsupportedGameplayFeatures.Instance;
+        _fighterLevelSeals = gameStore as IFighterLevelSealStore;
+        _weekendExperienceClaims = gameStore as IWeekendExperienceClaimStore;
         _realmCatalog = realmCatalog;
         _processRealmId = processRealmId ?? RealmId.Tempest;
         if (!_processRealmId.IsValid)

@@ -19,25 +19,19 @@ internal static class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-savvy hardening integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet-savvy hardening integration ({ConnectionStringVariable} is not set)");
         }
 
         if (!await IsMigrationAppliedAsync(
                 connectionString,
                 RequiredMigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-savvy hardening integration ({RequiredMigrationId} is required)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet-savvy hardening integration ({RequiredMigrationId} is required)");
         }
 
         if (await IsMigrationAppliedAsync(connectionString, MigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-savvy hardening integration ({MigrationId} is already applied)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet-savvy hardening integration ({MigrationId} is already applied)");
         }
 
         await using var dataSource =

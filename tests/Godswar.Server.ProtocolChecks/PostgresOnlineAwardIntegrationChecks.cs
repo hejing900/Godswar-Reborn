@@ -1,3 +1,4 @@
+using Godswar.Server.Infrastructure.Pets;
 using System.Text.RegularExpressions;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.OnlineAwards;
@@ -29,9 +30,7 @@ internal static partial class PostgresOnlineAwardIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(
@@ -39,18 +38,17 @@ internal static partial class PostgresOnlineAwardIntegrationChecks
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable B09/B12 database; " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable B09/B12 database; " +
                 $"received '{database}'");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);
         var items = await PostgresItemTemplateContentBootstrapper.LoadAsync(
             connectionString);
+        var pets = await PostgresPetContentBootstrapper.LoadAsync(connectionString, items);
         var balance = await new PostgresOnlineAwardBalanceSnapshotReader(
             dataSource,
-            items).ReadAsync();
+            items, pets).ReadAsync();
         AssertBaseline(balance);
         await AssertFoundationEvidenceAsync(dataSource, balance);
 
@@ -65,7 +63,7 @@ internal static partial class PostgresOnlineAwardIntegrationChecks
             new PostgresOutboxDispatcherOptions(),
             balance,
             calendar,
-            items);
+            items, pets);
         var historical = await AssertCommitReplayAndDailyFenceAsync(
             dataSource,
             executor,
@@ -87,13 +85,14 @@ internal static partial class PostgresOnlineAwardIntegrationChecks
         var currentBalance = await AssertManagementAsync(
             dataSource,
             items,
+            pets,
             balance);
         var restartedExecutor = new PostgresOnlineAwardCommandExecutor(
             dataSource,
             new PostgresOutboxDispatcherOptions(),
             currentBalance,
             calendar,
-            items);
+            items, pets);
         var historicalReplay = await restartedExecutor.ExecuteAsync(
             historical.Envelope);
         Check.True(

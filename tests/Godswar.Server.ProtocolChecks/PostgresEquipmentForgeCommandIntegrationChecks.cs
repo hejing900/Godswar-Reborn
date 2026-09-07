@@ -25,10 +25,8 @@ internal static partial class PostgresEquipmentForgeCommandIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL equipment-forge integration " +
+            throw new CheckSkippedException("PostgreSQL equipment-forge integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -38,11 +36,9 @@ internal static partial class PostgresEquipmentForgeCommandIntegrationChecks
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL equipment-forge integration " +
+                throw new CheckSkippedException("PostgreSQL equipment-forge integration " +
                     "requires a disposable B03/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

@@ -55,15 +55,16 @@ internal sealed partial class GameClientHandler
         }
 
         var targetMapId = checked((byte)resolution.TargetMapId);
-        return await TryBeginMapTransitionAsync(
+        var outcome = await TryBeginMapTransitionAsync(
             targetMapId,
             resolution.TargetArrival.X,
             resolution.TargetArrival.Z,
             resolution.Source,
             cancellationToken);
+        return outcome != SceneTransitionOutcome.RejectedWithoutRelocation;
     }
 
-    private async Task<bool> TryBeginMapTransitionAsync(
+    private async Task<SceneTransitionOutcome> TryBeginMapTransitionAsync(
         byte targetMapId,
         float targetX,
         float targetZ,
@@ -84,12 +85,12 @@ internal sealed partial class GameClientHandler
             !MapTraversalLimits.IsFiniteAndBounded(
                 new MapTraversalPosition(targetX, targetZ)))
         {
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         if (!TryCaptureCurrentPlayerOwnership(out var ownership))
         {
             RejectLostPlayerOwnership();
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
 
         await InterruptPendingSkillCastAsync(
@@ -97,7 +98,7 @@ internal sealed partial class GameClientHandler
             cancellationToken);
         if (!RevalidateCurrentPlayerOwnership(ownership))
         {
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
 
         var sourceMapId = _character.CurrentMap;
@@ -118,13 +119,13 @@ internal sealed partial class GameClientHandler
                     targetZ,
                     cancellationToken))
             {
-                return false;
+                return SceneTransitionOutcome.RejectedWithoutRelocation;
             }
         }
         catch (PlayerOwnershipValidationException)
         {
             RejectLostPlayerOwnership();
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         catch (Exception error)
             when (error is not OperationCanceledException ||
@@ -134,11 +135,11 @@ internal sealed partial class GameClientHandler
                 $"[map] transition persistence rejected " +
                 $"character={_character.Name} " +
                 $"map={sourceMapId}->{targetMapId}: {error.Message}");
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         if (!RevalidateCurrentPlayerOwnership(ownership))
         {
-            return false;
+            return SceneTransitionOutcome.CommittedRequiresReconnect;
         }
 
         bool transferred;
@@ -155,7 +156,7 @@ internal sealed partial class GameClientHandler
             when (error is not OperationCanceledException ||
                   !cancellationToken.IsCancellationRequested)
         {
-            await RestoreSourcePositionAfterRejectedTransferAsync(
+            var restored = await RestoreSourcePositionAfterRejectedTransferAsync(
                 accountId,
                 characterId,
                 sourceMapId,
@@ -164,12 +165,14 @@ internal sealed partial class GameClientHandler
                 $"registry transfer failed: {error.Message}",
                 ownership,
                 CancellationToken.None);
-            return false;
+            return restored
+                ? SceneTransitionOutcome.RejectedWithoutRelocation
+                : SceneTransitionOutcome.CommittedRequiresReconnect;
         }
 
         if (!transferred)
         {
-            await RestoreSourcePositionAfterRejectedTransferAsync(
+            var restored = await RestoreSourcePositionAfterRejectedTransferAsync(
                 accountId,
                 characterId,
                 sourceMapId,
@@ -178,7 +181,9 @@ internal sealed partial class GameClientHandler
                 "registry rejected the authoritative source state",
                 ownership,
                 CancellationToken.None);
-            return false;
+            return restored
+                ? SceneTransitionOutcome.RejectedWithoutRelocation
+                : SceneTransitionOutcome.CommittedRequiresReconnect;
         }
         if (!sourceWorldInstanceCaptured)
         {
@@ -196,7 +201,7 @@ internal sealed partial class GameClientHandler
                 cancellationToken))
         {
             _session.Disconnect();
-            return false;
+            return SceneTransitionOutcome.CommittedRequiresReconnect;
         }
 
         _positionDirty = false;
@@ -232,7 +237,7 @@ internal sealed partial class GameClientHandler
                 "MapTransitionSourceRemove");
             if (!RevalidateCurrentPlayerOwnership(ownership))
             {
-                return false;
+                return SceneTransitionOutcome.CommittedRequiresReconnect;
             }
 
             await _session.SendAsync(
@@ -259,10 +264,10 @@ internal sealed partial class GameClientHandler
             $"map={sourceMapId}->{targetMapId} " +
             $"arrival={targetX:F2},{targetZ:F2} " +
             $"source={source}");
-        return true;
+        return SceneTransitionOutcome.CommittedAwaitingReadiness;
     }
 
-    private async Task RestoreSourcePositionAfterRejectedTransferAsync(
+    private async Task<bool> RestoreSourcePositionAfterRejectedTransferAsync(
         int accountId,
         int characterId,
         byte sourceMapId,
@@ -274,7 +279,7 @@ internal sealed partial class GameClientHandler
     {
         if (!RevalidateCurrentPlayerOwnership(ownership))
         {
-            return;
+            return false;
         }
 
         try
@@ -294,6 +299,7 @@ internal sealed partial class GameClientHandler
                 $"[map] restored source position after rejected transition " +
                 $"character={_character?.Name ?? characterId.ToString()} " +
                 $"map={sourceMapId} reason={reason}");
+            return true;
         }
         catch (Exception compensationError)
         {
@@ -443,78 +449,4 @@ internal sealed partial class GameClientHandler
         }
     }
 
-    private sealed class PendingMapTransition(
-        byte sourceMapId,
-        byte targetMapId,
-        float targetX,
-        float targetZ)
-    {
-        private const int AwaitingReadiness = 0;
-        private const int Completing = 1;
-        private const int Completed = 2;
-        private const int TimedOut = 3;
-
-        private readonly object _timeoutGate = new();
-        private readonly CancellationTokenSource _timeoutCancellation =
-            new();
-        private int _state = AwaitingReadiness;
-
-        public byte SourceMapId { get; } = sourceMapId;
-
-        public byte TargetMapId { get; } = targetMapId;
-
-        public float TargetX { get; } = targetX;
-
-        public float TargetZ { get; } = targetZ;
-
-        public bool ClientReadyReceived { get; set; }
-
-        public bool PlayerDetailSent { get; set; }
-
-        public CancellationToken TimeoutCancellation =>
-            _timeoutCancellation.Token;
-
-        public bool TryStartCompletion()
-        {
-            if (Interlocked.CompareExchange(
-                    ref _state,
-                    Completing,
-                    AwaitingReadiness) != AwaitingReadiness)
-            {
-                return false;
-            }
-
-            lock (_timeoutGate)
-            {
-                _timeoutCancellation.Cancel();
-            }
-            return true;
-        }
-
-        public bool TryMarkTimedOut() =>
-            Interlocked.CompareExchange(
-                ref _state,
-                TimedOut,
-                AwaitingReadiness) == AwaitingReadiness;
-
-        public void MarkCompleted()
-        {
-            if (Interlocked.CompareExchange(
-                    ref _state,
-                    Completed,
-                    Completing) != Completing)
-            {
-                throw new InvalidOperationException(
-                    "Map transition completion state changed unexpectedly.");
-            }
-        }
-
-        public void DisposeTimeoutCancellation()
-        {
-            lock (_timeoutGate)
-            {
-                _timeoutCancellation.Dispose();
-            }
-        }
-    }
 }

@@ -121,9 +121,7 @@ internal static partial class EquipmentKindGuardChecks
         var connectionString = Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL equipment-kind guard ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL equipment-kind guard ({ConnectionStringVariable} is not set)");
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];

@@ -38,7 +38,7 @@ internal sealed partial class GameClientHandler
         var completed = false;
         try
         {
-            var result = await _store.PickupMonsterLootAsync(
+            var result = await _monsterRewardExtras.PickupMonsterLootAsync(
                 _account.Id,
                 _character.Id,
                 reservation.DeathEventId,

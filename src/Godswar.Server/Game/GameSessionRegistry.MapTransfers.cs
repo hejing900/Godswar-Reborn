@@ -34,7 +34,8 @@ internal sealed partial class GameSessionRegistry
 
         var target = GetOrCreateDefaultWorldInstance(
             targetMapId);
-        lock (_gate)
+        using (var mutation = AcquireMembershipMutation(
+                   session, targetInstance: target.InstanceId))
         {
             if (!_sessions.TryGetValue(
                     session,
@@ -49,7 +50,8 @@ internal sealed partial class GameSessionRegistry
                 existing,
                 target,
                 targetX,
-                targetZ);
+                targetZ,
+                mutation.Removal);
         }
     }
 
@@ -71,7 +73,8 @@ internal sealed partial class GameSessionRegistry
             return false;
         }
 
-        lock (_gate)
+        using (var mutation = AcquireMembershipMutation(
+                   session, targetInstance: target.InstanceId))
         {
             if (!_sessions.TryGetValue(
                     session,
@@ -87,7 +90,8 @@ internal sealed partial class GameSessionRegistry
                 existing,
                 target,
                 targetX,
-                targetZ);
+                targetZ,
+                mutation.Removal);
         }
     }
 
@@ -96,7 +100,8 @@ internal sealed partial class GameSessionRegistry
         GameSessionContext existing,
         WorldInstanceRuntime target,
         float targetX,
-        float targetZ)
+        float targetZ,
+        MapInstance.PlayerRemovalLease? removal)
     {
         if (target.Descriptor.LifecycleState !=
                 WorldInstanceLifecycleState.Active ||
@@ -144,7 +149,7 @@ internal sealed partial class GameSessionRegistry
                 target.MapId,
                 targetX,
                 targetZ);
-            RemoveFromMap(existing);
+            RemoveFromMap(existing, removal);
             sourceRemoved = true;
 
             character.CurrentMap = target.MapId;

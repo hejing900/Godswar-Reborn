@@ -324,6 +324,7 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateDuelArenaNpcContentRelease(),
         CreateDuelArenaDialogueRelease(),
         CreateDuelArenaInitialActions(),
-        CreateDuelArenaServices()
+        CreateDuelArenaServices(),
+        CreateRestoreItemViewAuthority()
     ];
 }

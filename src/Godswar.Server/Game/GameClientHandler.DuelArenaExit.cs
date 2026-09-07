@@ -19,9 +19,11 @@ internal sealed partial class GameClientHandler
         }
 
         ClearDuelArenaTransporterDialogueContext();
-        if (!await TryBeginMapTransitionAsync(destination.MapId,
+        var outcome = await TryBeginMapTransitionAsync(destination.MapId,
                 destination.X, destination.Z, "npc-duel-arena-doorkeeper-exit",
-                cancellationToken) && !_session.IsDisconnected)
+                cancellationToken);
+        if (outcome == SceneTransitionOutcome.RejectedWithoutRelocation &&
+            !_session.IsDisconnected)
         {
             await _session.SendAsync(
                 PacketBuilder.ServerNote("Leaving the Duel Arena is temporarily unavailable."),

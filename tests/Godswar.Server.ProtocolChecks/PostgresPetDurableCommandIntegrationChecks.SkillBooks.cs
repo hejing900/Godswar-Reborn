@@ -21,20 +21,16 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {SkillBookCheckName} " +
+            throw new CheckSkippedException($"{SkillBookCheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {SkillBookCheckName} requires a disposable " +
+            throw new CheckSkippedException($"{SkillBookCheckName} requires a disposable " +
                 $"B03/B12 database; received '{database}'");
-            return;
         }
 
         await new PostgresSchemaMigrationRunner(dataSource)

@@ -34,10 +34,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL official NPC content publication " +
+            throw new CheckSkippedException($"PostgreSQL official NPC content publication " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);

@@ -28,19 +28,15 @@ internal static partial class PostgresWarehouseCommandIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL warehouse integration " +
+            throw new CheckSkippedException("PostgreSQL warehouse integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL warehouse integration requires a " +
+            throw new CheckSkippedException("PostgreSQL warehouse integration requires a " +
                 $"disposable B03/B09 database; received '{database}'");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(dataSource);

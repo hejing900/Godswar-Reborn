@@ -19,10 +19,8 @@ internal static class PostgresRealmCalendarIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL realm calendar ({ConnectionStringVariable} " +
+            throw new CheckSkippedException($"PostgreSQL realm calendar ({ConnectionStringVariable} " +
                 "is not set)");
-            return;
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);

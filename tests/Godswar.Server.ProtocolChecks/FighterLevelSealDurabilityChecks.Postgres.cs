@@ -23,10 +23,8 @@ internal static partial class FighterLevelSealDurabilityChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} PostgreSQL transaction " +
+            throw new CheckSkippedException($"{CheckName} PostgreSQL transaction " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
@@ -35,10 +33,8 @@ internal static partial class FighterLevelSealDurabilityChecks
             .ExecuteScalarAsync()) ?? string.Empty;
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} PostgreSQL transaction requires a " +
+            throw new CheckSkippedException($"{CheckName} PostgreSQL transaction requires a " +
                 $"disposable B09/B12 database; received '{database}'");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);

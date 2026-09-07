@@ -24,6 +24,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
             $"Cooldown{runtimeMode}",
             playerRuntimeMode: runtimeMode);
         await fixture.BeginCastAsync();
+        await AssertMonsterClaimAsync(fixture);
         await fixture.Socket.ReadPacketAsync(32);
         await fixture.Socket.ReadPacketAsync(24);
         await fixture.Socket.ReadPacketAsync(12);
@@ -165,6 +166,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
         }
 
         await admitted;
+        await AssertMonsterClaimAsync(fixture);
         await fixture.Socket.ReadPacketAsync(32);
         await fixture.Socket.ReadPacketAsync(24);
         await fixture.Socket.ReadPacketAsync(12);

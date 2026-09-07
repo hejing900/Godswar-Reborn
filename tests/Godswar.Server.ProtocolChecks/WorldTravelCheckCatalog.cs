@@ -5,6 +5,12 @@ internal static class WorldTravelCheckCatalog
     public static readonly (string Name, Func<Task> Run)[] All =
     [
         ("Authoritative hidden live-map transfer", MapLiveTransferChecks.RunAsync),
+        (MapLiveTransferChecks.MutationLifetimeCheckName,
+            MapLiveTransferChecks.RunMutationLifetimeAsync),
+        (BackhaulSkillHandlerChecks.TransitionCommitCheckName,
+            BackhaulSkillHandlerChecks.RunTransitionCommitAsync),
+        (MapLiveTransferChecks.TerminalEgressCheckName,
+            MapLiveTransferChecks.RunTerminalEgressAsync),
         ("Native handler map-transition readiness", MapTransitionHandlerChecks.RunAsync),
         ("Native faction backhaul skill catalog", BackhaulSkillCatalogChecks.RunAsync),
         (FactionPortalSkillPolicyChecks.CheckName, FactionPortalSkillPolicyChecks.RunAsync),

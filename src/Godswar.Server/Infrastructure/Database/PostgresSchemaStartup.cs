@@ -40,9 +40,13 @@ internal static class PostgresSchemaStartup
                 attempt < MaximumAttempts &&
                 IsTransient(error))
             {
+                var details = PostgresStartupFailureDetails.FromException(error);
+                var sqlState = details.SqlState is { Length: 5 } code &&
+                    code.All(char.IsAsciiLetterOrDigit) ? code : "none";
                 Console.WriteLine(
                     "[db] waiting for PostgreSQL schema " +
-                    $"({attempt}/{MaximumAttempts}): {error.Message}");
+                    $"({attempt}/{MaximumAttempts}): " +
+                    $"{details.Cause.GetType().Name}; sqlstate={sqlState}");
                 await Task.Delay(
                     TimeSpan.FromSeconds(1),
                     cancellationToken);
@@ -50,8 +54,11 @@ internal static class PostgresSchemaStartup
         }
     }
 
-    private static bool IsTransient(Exception error) =>
-        error is NpgsqlException or TimeoutException or IOException ||
-        error.InnerException is not null &&
-        IsTransient(error.InnerException);
+    internal static bool IsTransient(Exception error) => error switch
+    {
+        OperationCanceledException => false,
+        NpgsqlException databaseError => databaseError.IsTransient,
+        TimeoutException => true,
+        _ => error.InnerException is not null && IsTransient(error.InnerException)
+    };
 }

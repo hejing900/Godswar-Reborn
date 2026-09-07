@@ -18,9 +18,7 @@ internal static partial class PostgresGearMentorIntegrationChecks
         var connectionString = Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL Gear Mentor integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL Gear Mentor integration ({ConnectionStringVariable} is not set)");
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];

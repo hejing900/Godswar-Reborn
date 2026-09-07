@@ -21,7 +21,15 @@ internal readonly record struct ReconciliationWorkerSnapshot(
     TimeSpan MaximumHealthyHeartbeatAge,
     ReconciliationRunStatus? LastRunStatus,
     long LastFindingCount,
-    bool LastRunTruncated);
+    bool LastRunTruncated,
+    bool HealthyBatchCompleted,
+    TimeSpan SweepAge)
+{
+    public bool IsReady => !Enabled ||
+        (State == ReconciliationWorkerState.Running &&
+         HealthyBatchCompleted &&
+         HeartbeatAge <= MaximumHealthyHeartbeatAge);
+}
 
 internal sealed class PostgresReconciliationWorker
 {
@@ -31,6 +39,8 @@ internal sealed class PostgresReconciliationWorker
     private readonly object _gate = new();
     private ReconciliationWorkerState _state;
     private bool _firstPassCompleted;
+    private bool _healthyBatchCompleted;
+    private long _lastSweepTimestamp;
     private long _lastHeartbeatTimestamp;
     private ReconciliationRunStatus? _lastRunStatus;
     private long _lastFindingCount;
@@ -66,28 +76,32 @@ internal sealed class PostgresReconciliationWorker
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var nextDelay = _options.PollInterval;
                 try
                 {
                     var report =
                         await _runner.RunScheduledAsync(
                             cancellationToken);
                     Record(report);
+                    nextDelay = NextDelay(report);
                 }
                 catch (NpgsqlException)
                     when (!cancellationToken.IsCancellationRequested)
                 {
+                    RecordUnhealthy();
                     _metrics.RecordWorkerFailure(
                         "database_unavailable");
                 }
                 catch (TimeoutException)
                     when (!cancellationToken.IsCancellationRequested)
                 {
+                    RecordUnhealthy();
                     _metrics.RecordWorkerFailure(
                         "database_timeout");
                 }
 
                 await Task.Delay(
-                    _options.PollInterval,
+                    nextDelay,
                     cancellationToken);
             }
         }
@@ -121,7 +135,11 @@ internal sealed class PostgresReconciliationWorker
                     TimeSpan.FromSeconds(15),
                 _lastRunStatus,
                 _lastFindingCount,
-                _lastRunTruncated);
+                _lastRunTruncated,
+                _healthyBatchCompleted,
+                _lastSweepTimestamp == 0
+                    ? TimeSpan.MaxValue
+                    : Stopwatch.GetElapsedTime(_lastSweepTimestamp));
         }
     }
 
@@ -133,16 +151,35 @@ internal sealed class PostgresReconciliationWorker
             _lastFindingCount = report.Findings.Sum(
                 finding => finding.Count);
             _lastRunTruncated = report.Truncated;
-            if (report.Status is ReconciliationRunStatus.Completed
-                    or ReconciliationRunStatus.Truncated)
+            _healthyBatchCompleted = IsHealthyBatch(report);
+            if (_healthyBatchCompleted)
             {
                 _lastHeartbeatTimestamp = Stopwatch.GetTimestamp();
-                if (report.Status ==
-                    ReconciliationRunStatus.Completed)
-                {
-                    _firstPassCompleted = true;
-                }
             }
+            if (report.Status == ReconciliationRunStatus.Completed)
+            {
+                _firstPassCompleted = true;
+                _lastSweepTimestamp = Stopwatch.GetTimestamp();
+            }
+        }
+    }
+
+    internal TimeSpan NextDelay(ReconciliationReport report) =>
+        report.Status == ReconciliationRunStatus.Truncated &&
+            IsHealthyBatch(report)
+            ? TimeSpan.FromSeconds(1)
+            : _options.PollInterval;
+
+    private static bool IsHealthyBatch(ReconciliationReport report) =>
+        report.AuthorityValidated &&
+        report.Status is ReconciliationRunStatus.Completed
+            or ReconciliationRunStatus.Truncated;
+
+    private void RecordUnhealthy()
+    {
+        lock (_gate)
+        {
+            _healthyBatchCompleted = false;
         }
     }
 

@@ -1,3 +1,4 @@
+using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.Items;
 using Godswar.Server.Application.OnlineAwards;
 using Godswar.Server.Infrastructure.OnlineAwards;
@@ -11,11 +12,12 @@ internal static partial class PostgresOnlineAwardIntegrationChecks
         AssertManagementAsync(
         NpgsqlDataSource dataSource,
         IItemTemplateCatalog items,
+        IPetContentCatalog pets,
         OnlineAwardBalanceSnapshot startupPinned)
     {
         var store = new PostgresOnlineAwardBalanceSettingsStore(
             dataSource,
-            items);
+            items, pets);
         var invalidNull = await store.TryPublishSuccessorAsync(new(
             startupPinned.Revision,
             "online-award-check",
@@ -116,7 +118,7 @@ internal static partial class PostgresOnlineAwardIntegrationChecks
 
         var current = await new PostgresOnlineAwardBalanceSnapshotReader(
             dataSource,
-            items).ReadAsync();
+            items, pets).ReadAsync();
         Check.True(
             current.Revision == 5 &&
             current.Sha256 == startupPinned.Sha256 &&

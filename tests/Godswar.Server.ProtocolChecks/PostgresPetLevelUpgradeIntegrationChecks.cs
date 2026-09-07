@@ -13,10 +13,8 @@ internal static partial class PostgresPetLevelUpgradeIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet level-up integration " +
+            throw new CheckSkippedException($"PostgreSQL pet level-up integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];
@@ -31,6 +29,8 @@ internal static partial class PostgresPetLevelUpgradeIntegrationChecks
                 new PostgresGameStore(connectionString);
             await storeA.EnsureSeedDataAsync();
             await storeB.EnsureSeedDataAsync();
+            await PostgresCharacterCreationContentFixture.EnsureGameplayPublishedAsync(
+                connectionString);
 
             fixture = await CreateFixtureAsync(
                 storeA,

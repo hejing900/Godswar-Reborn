@@ -27,7 +27,9 @@ internal static partial class B19ReconciliationWorkerChecks
         await CheckDisabledWorkerAsync();
         await CheckFirstPassReadinessAsync();
         await CheckCompletedFindingRemainsVisibleAsync();
-        await CheckTruncationIsProgressNotReadinessAsync();
+        await CheckTruncatedBatchReadinessAsync();
+        await CheckAuthorityMismatchReadinessAsync();
+        CheckContinuationDelay();
         await CheckTimeoutDoesNotHeartbeatAsync();
         await CheckFailureDoesNotHeartbeatAsync();
         CheckConfigurationFailsClosed();
@@ -74,9 +76,11 @@ internal static partial class B19ReconciliationWorkerChecks
             ready.Enabled &&
             ready.State == ReconciliationWorkerState.Running &&
             ready.LastRunStatus == ReconciliationRunStatus.Completed &&
+            ready.IsReady && ready.HealthyBatchCompleted &&
+            ready.SweepAge < TimeSpan.FromSeconds(2) &&
             ready.HeartbeatAge < TimeSpan.FromSeconds(2) &&
             ready.HeartbeatAge <= ready.MaximumHealthyHeartbeatAge,
-            "enabled worker becomes healthy only after its first pass");
+            "a completed sweep exposes both healthy work and sweep age");
         shutdown.Cancel();
         await run.WaitAsync(TimeSpan.FromSeconds(2));
         Check.Equal(
@@ -105,13 +109,14 @@ internal static partial class B19ReconciliationWorkerChecks
 
         Check.True(
             !timedOut.FirstPassCompleted &&
+            !timedOut.IsReady && !timedOut.HealthyBatchCompleted &&
             timedOut.HeartbeatAge == TimeSpan.MaxValue,
             "timed-out pass cannot establish a healthy heartbeat");
         shutdown.Cancel();
         await run.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
-    private static async Task CheckTruncationIsProgressNotReadinessAsync()
+    private static async Task CheckTruncatedBatchReadinessAsync()
     {
         var options = Options(enabled: true);
         options.MaximumCharactersPerRun = 1;
@@ -130,10 +135,12 @@ internal static partial class B19ReconciliationWorkerChecks
 
         Check.True(
             !truncated.FirstPassCompleted &&
+            truncated.HealthyBatchCompleted && truncated.IsReady &&
+            truncated.SweepAge == TimeSpan.MaxValue &&
             truncated.LastRunTruncated &&
             truncated.HeartbeatAge < TimeSpan.FromSeconds(2),
-            "a truncated pass refreshes liveness but cannot establish " +
-            "first-pass readiness");
+            "a validated bounded batch establishes readiness before the " +
+            "historical sweep completes");
         shutdown.Cancel();
         await run.WaitAsync(TimeSpan.FromSeconds(2));
     }
@@ -469,7 +476,7 @@ internal static partial class B19ReconciliationWorkerChecks
             CancellationToken cancellationToken)
         {
             Called.TrySetResult();
-            throw new TimeoutException("Expected B19 test failure.");
+            throw new Npgsql.NpgsqlException("Expected B19 database failure.");
         }
     }
 

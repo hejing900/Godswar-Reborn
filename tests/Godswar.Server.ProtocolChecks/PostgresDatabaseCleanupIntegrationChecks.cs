@@ -15,9 +15,7 @@ internal static class PostgresDatabaseCleanupIntegrationChecks
         var connectionString = Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL database-cleanup integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL database-cleanup integration ({ConnectionStringVariable} is not set)");
         }
 
         var inventoryBefore = await ReadInventoryFingerprintIfPresentAsync(connectionString);

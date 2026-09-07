@@ -21,14 +21,16 @@ internal static partial class FighterLevelSealDurabilityChecks
             root,
             "src",
             "Godswar.Server",
-            "State",
-            "PostgresGameStore.FighterLevelSeal.cs");
+            "Infrastructure",
+            "Progression",
+            "PostgresFighterLevelSealStore.FighterLevelSeal.cs");
         var evidence = await ReadSourceAsync(
             root,
             "src",
             "Godswar.Server",
-            "State",
-            "PostgresGameStore.FighterLevelSeal.Evidence.cs");
+            "Infrastructure",
+            "Progression",
+            "PostgresFighterLevelSealStore.Evidence.cs");
         var handler = await ReadSourceAsync(
             root,
             "src",

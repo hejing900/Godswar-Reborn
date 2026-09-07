@@ -244,7 +244,8 @@ internal sealed class PostgresApplicationDataRuntime :
                 outboxOptions,
                 onlineAwardBalance,
                 realmCalendar,
-                itemContent.Templates);
+                itemContent.Templates,
+                petContent);
         WarehouseSnapshots =
             new PostgresWarehouseSnapshotReader(_dataSource);
         WarehouseTransferCommands =

@@ -9,7 +9,10 @@ param(
 
     [string]$EndpointManifestPath,
 
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+
+    # Build, binary contracts and local native checks; no installed Origin DLL.
+    [switch]$UnitOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,7 +32,7 @@ $shimPath = if ($CandidateShimPath) {
 }
 $testPath = Join-Path $outputDirectory 'Godswar.NetShim.Checks.exe'
 
-if (-not $LegacyDllPath) {
+if (-not $UnitOnly -and -not $LegacyDllPath) {
     $installedLegacy = 'C:\Godswar Origin\NetLegacy.dll'
     $LegacyDllPath = if (
         Test-Path -LiteralPath $installedLegacy -PathType Leaf
@@ -55,21 +58,27 @@ if (-not $SkipBuild) {
     }
 }
 
-foreach ($requiredPath in @($LegacyDllPath, $shimPath, $testPath)) {
+& (Join-Path $PSScriptRoot 'TestWarehouseEndpointParity.ps1') -SelfTest | Out-Host
+$requiredPaths = @($shimPath, $testPath)
+if (-not $UnitOnly) { $requiredPaths += $LegacyDllPath }
+foreach ($requiredPath in $requiredPaths) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required file not found: $requiredPath"
     }
 }
-if ($EndpointManifestPath -and
+if (-not $UnitOnly -and $EndpointManifestPath -and
     -not (Test-Path -LiteralPath $EndpointManifestPath -PathType Leaf)) {
     throw "Endpoint manifest not found: $EndpointManifestPath"
 }
 
-$legacyHash = (
-    Get-FileHash -LiteralPath $LegacyDllPath -Algorithm SHA256
-).Hash
-if ($legacyHash -ne $expectedLegacyHash) {
-    throw "Unsupported legacy Net.dll hash: $legacyHash"
+$legacyHash = $null
+if (-not $UnitOnly) {
+    $legacyHash = (
+        Get-FileHash -LiteralPath $LegacyDllPath -Algorithm SHA256
+    ).Hash
+    if ($legacyHash -ne $expectedLegacyHash) {
+        throw "Unsupported legacy Net.dll hash: $legacyHash"
+    }
 }
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} `
@@ -141,6 +150,19 @@ if ($dependents -match '(?im)VCRUNTIME|MSVCP|UCRTBASE') {
 & $testPath
 if ($LASTEXITCODE -ne 0) {
     throw "Proxy unit checks failed with exit code $LASTEXITCODE."
+}
+
+if ($UnitOnly) {
+    [pscustomobject]@{
+        Result = 'Passed'
+        Mode = 'NativeUnit'
+        Architecture = 'x86'
+        Exports = 'NetClientCreate@1, NetServiceCreate@2'
+        ShimSha256 = (Get-FileHash -LiteralPath $shimPath -Algorithm SHA256).Hash
+        Runtime = 'Static'
+        InstalledClientAcceptance = 'Not requested'
+    }
+    return
 }
 
 $artifactRoot = Join-Path $repoRoot 'artifacts\network-shim'

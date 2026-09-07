@@ -66,9 +66,8 @@ $report = [ordered]@{
         requiredMajor = 17
         serverVersionNumber = $null
     }
-    expectedMigrationCount = 94
-    expectedMigrationHead =
-        '20260814_093_monster_combat_authority'
+    expectedMigrationCount = $null
+    expectedMigrationHead = $null
     checks = $checkResults
     scenarios = $scenarioResults
     cleanup = [ordered]@{
@@ -95,6 +94,18 @@ try {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         throw 'Docker is required for the B03 disposable PostgreSQL gate.'
     }
+
+    $catalogOutput = @(& dotnet $protocolChecksAssembly '--schema-metadata')
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to read the compiled schema migration catalog.'
+    }
+    $catalog = ($catalogOutput -join [Environment]::NewLine) | ConvertFrom-Json
+    if ($catalog.schemaVersion -ne 1 -or $catalog.migrationCount -lt 1 -or
+        $catalog.migrationHead -notmatch '^\d{8}_\d{3}_[a-z0-9_]+$') {
+        throw 'The compiled schema migration catalog metadata is invalid.'
+    }
+    $report.expectedMigrationCount = [int]$catalog.migrationCount
+    $report.expectedMigrationHead = [string]$catalog.migrationHead
 
     $commitOutput = @(& git -C $repositoryRoot rev-parse HEAD 2>$null)
     if ($LASTEXITCODE -eq 0 -and $commitOutput.Count -eq 1) {
@@ -304,7 +315,7 @@ try {
     $currentWatch.Stop()
     Add-ScenarioResult `
         -Name 'current-schema-idempotence' `
-        -InitialMigrationCount 94 `
+        -InitialMigrationCount ([int]$historicalState.count) `
         -FinalState $currentState `
         -DurationMs ([long]$currentWatch.Elapsed.TotalMilliseconds) `
         -FixtureKind 'restored-prefix-008-upgrade'
@@ -318,7 +329,7 @@ try {
         -Name 'PostgreSQL migration-prefix fixture' `
         -GeneralConnectionString (
             New-TestConnectionString $databaseNames.SmokeTemplate) `
-        -MigrationPrefix '20260814_093_monster_combat_authority'
+        -MigrationPrefix $report.expectedMigrationHead
 
     $databaseNames['HatchEvidenceTemplate'] =
         "godswar_b03_${runToken}_hatch_evidence_template"
@@ -334,50 +345,7 @@ try {
     # setup. Clone a schema-only database rather than the empty-install
     # scenario above, whose production-like startup deliberately publishes
     # the official content pointers.
-    $smokeCheckNames = @(
-        'PostgreSQL forward-only database cleanup',
-        'PostgreSQL official NPC content publication',
-        'PostgreSQL official NPC dialogue publication',
-        'PostgreSQL item-template publication',
-        'PostgreSQL immutable pet-content publication',
-        'PostgreSQL pinned world-content baseline',
-        'PostgreSQL consistent character snapshot reader',
-        'PostgreSQL B20F authoritative loadout projection',
-        'PostgreSQL authoritative Class Suit transaction',
-        'PostgreSQL focused progression and world-boss persistence',
-        'PostgreSQL focused account persistence adapter',
-        'PostgreSQL talent command precondition',
-        'PostgreSQL talent inbox/outbox transaction',
-        'PostgreSQL developer-item grant transaction',
-        'PostgreSQL durable developer bag-clear transaction',
-        'PostgreSQL durable Make Attribute Stone transaction',
-        'PostgreSQL durable Gear Mentor material conversions',
-        'PostgreSQL durable Gear Mentor Decompose transaction',
-        'PostgreSQL durable Gear Enhancement transactions',
-        'PostgreSQL durable equipment-forge transactions',
-        'PostgreSQL durable kit-bag item-delete transactions',
-        'PostgreSQL durable kit-bag item-move transactions',
-        'PostgreSQL durable equipment/bag transfer transactions',
-        'PostgreSQL durable Holy Stone transactions',
-        'PostgreSQL authoritative Holy Suit transactions',
-        'PostgreSQL durable Zodiac skill-grid activation',
-        'PostgreSQL durable Zodiac skill-grid upgrade',
-        'PostgreSQL durable Zodiac skill-grid selection',
-        'PostgreSQL character-creation economy baseline',
-        'PostgreSQL versioned character checkpoints',
-        'PostgreSQL durable character lifecycle commands',
-        'PostgreSQL exactly-once monster reward settlement',
-        'PostgreSQL durable online progression intervals',
-        'PostgreSQL retry-safe pet value commands',
-        'PostgreSQL outbox dispatcher recovery and ordering',
-        'PostgreSQL equipment-forge race and preservation',
-        'PostgreSQL Zodiac level-up race',
-        'PostgreSQL authoritative pet level-up',
-        'PostgreSQL pet-egg hatch transaction',
-        'PostgreSQL immutable pet hatch-rank evidence integration',
-        'PostgreSQL learned pet-skill content publication integration',
-        'PostgreSQL immutable pet Merge-savvy lookup migration'
-    )
+    $smokeCheckNames = @(Get-B03RepositorySmokeCheckNames)
     for ($smokeIndex = 0;
          $smokeIndex -lt $smokeCheckNames.Count;
          $smokeIndex++) {

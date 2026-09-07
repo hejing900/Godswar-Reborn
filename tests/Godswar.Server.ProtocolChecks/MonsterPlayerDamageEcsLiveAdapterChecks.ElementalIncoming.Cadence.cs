@@ -56,7 +56,7 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
                 registry.GetPlayerLifeRevision(socket.Session),
                 events.Miss),
             CancellationToken.None);
-        await socket.ReadPacketAsync(24);
+        await ReadMonsterImpactPrefixAsync(socket, mode, monsterObjectId);
         var baseMiss = await socket.ReadPacketAsync(30);
         Check.True(
             character.CurrentHp == beforeBaseMiss &&
@@ -97,7 +97,7 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
                 socket.Session,
                 update,
                 CancellationToken.None);
-            await socket.ReadPacketAsync(24);
+            await ReadMonsterImpactPrefixAsync(socket, mode, monsterObjectId);
             var damage = await socket.ReadPacketAsync(30);
             var reported = BinaryPrimitives.ReadUInt32LittleEndian(
                 damage.AsSpan(24, 4));

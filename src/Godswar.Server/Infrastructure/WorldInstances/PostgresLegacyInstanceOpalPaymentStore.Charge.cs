@@ -1,3 +1,4 @@
+using Godswar.Server.Infrastructure.Warehouse;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.State;
 using Npgsql;
@@ -85,18 +86,14 @@ internal sealed partial class PostgresLegacyInstanceOpalPaymentStore
         CancellationToken cancellationToken)
     {
         await using var command = CreateCommand(
-            """
+            $"""
             SELECT
                 item.id,
                 item.slot_index,
                 item.stack,
                 to_jsonb(item)::text,
-                compact.compact_entry
+                {WarehouseItemStateCodec.SelectCompactColumns}
             FROM public.character_items item
-            JOIN public.character_item_compact_entries compact
-              ON compact.user_id = item.user_id
-             AND compact.item_location = item.item_location
-             AND compact.slot_index = item.slot_index
             WHERE item.user_id = @characterId
               AND item.item_location = 1
               AND item.prop_id = @opalItemTemplateId
@@ -118,7 +115,7 @@ internal sealed partial class PostgresLegacyInstanceOpalPaymentStore
             return null;
         }
         var stack = reader.GetInt16(2);
-        var beforeCompact = reader.GetString(4);
+        var beforeCompact = WarehouseItemStateCodec.ReadCompactItem(reader, 4).ToCompactString();
         var afterCompact = stack == 1
             ? "[]"
             : (CompactItemEntry.Parse(beforeCompact) with

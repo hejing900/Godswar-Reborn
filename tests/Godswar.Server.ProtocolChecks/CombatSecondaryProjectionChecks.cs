@@ -329,7 +329,7 @@ internal static partial class CombatSecondaryProjectionChecks
                 "await PublishPveLifeAbsorptionAsync(",
                 StringComparison.Ordinal);
             var reward = source.IndexOf(
-                "await PublishMonsterKillRewardAsync(",
+                "await pendingReward.PublishAsync(",
                 StringComparison.Ordinal);
             Check.True(
                 commit >= 0 &&

@@ -169,6 +169,7 @@ internal static partial class CharacterLifecycleCommandContractChecks
                     null,
                     Guid.NewGuid())),
             "stored evidence rejects one-sided retention timestamps");
+        CheckReceiptHashContracts();
     }
 
     private static CharacterLifecycleReceipt Receipt(

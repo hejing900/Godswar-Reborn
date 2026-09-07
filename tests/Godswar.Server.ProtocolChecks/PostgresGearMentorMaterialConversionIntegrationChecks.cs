@@ -27,10 +27,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL material-conversion integration " +
+            throw new CheckSkippedException("PostgreSQL material-conversion integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -40,11 +38,9 @@ internal static partial class
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL material-conversion integration " +
+                throw new CheckSkippedException("PostgreSQL material-conversion integration " +
                     "requires a disposable B03/B08/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

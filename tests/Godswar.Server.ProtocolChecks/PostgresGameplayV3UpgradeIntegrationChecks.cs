@@ -29,10 +29,8 @@ internal static partial class PostgresGameplayV3UpgradeIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL gameplay v3 upgrade " +
+            throw new CheckSkippedException($"PostgreSQL gameplay v3 upgrade " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);

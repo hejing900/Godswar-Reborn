@@ -122,14 +122,19 @@ internal sealed partial class GameClientHandler
         }
 
         var transitioned = destination.TargetMapId is >= byte.MinValue and
-                <= byte.MaxValue &&
-            await TryBeginMapTransitionAsync(
+                <= byte.MaxValue
+            ? await TryBeginMapTransitionAsync(
                 checked((byte)destination.TargetMapId),
                 destination.TargetX,
                 destination.TargetZ,
                 $"npc-battlefield-transporter:{route.NpcKey}:{subId}",
-                cancellationToken);
-        if (!transitioned)
+                cancellationToken)
+            : SceneTransitionOutcome.RejectedWithoutRelocation;
+        if (transitioned == SceneTransitionOutcome.CommittedRequiresReconnect)
+        {
+            return;
+        }
+        if (transitioned == SceneTransitionOutcome.RejectedWithoutRelocation)
         {
             await _session.SendAsync(
                 PacketBuilder.ServerNote(

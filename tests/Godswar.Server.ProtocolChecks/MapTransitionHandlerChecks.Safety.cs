@@ -365,10 +365,10 @@ internal static partial class MapTransitionHandlerChecks
                 targetZ,
                 "medusa-route-regression",
                 CancellationToken.None
-            ]) as Task<bool>
+            ]) as Task<SceneTransitionOutcome>
             ?? throw new InvalidOperationException(
                 "Direct map-transition handler returned no decision.");
-        return await task;
+        return await task != SceneTransitionOutcome.RejectedWithoutRelocation;
     }
 
     private static GameSessionRegistry CreateRegistry() =>

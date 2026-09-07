@@ -66,23 +66,10 @@ the schema manifest plus published NPC content. The periodic service does not
 scan the two global `character_*_reconciliation` views; the disposable
 recovery gate checks those views independently.
 
-Results are `Completed`, `Truncated`, or `TimedOut`. Truncated and timed-out
-reports are not clean receipts. The periodic runner keeps serialized,
-process-local keyset continuation across scheduled invocations. Completed
-character, outbox-event, and outbox-position scopes are latched while the
-remaining scopes advance; event and position pages alternate under the shared
-outbox budget. A complete logical sweep resets all cursors for the next sweep.
-Findings are accumulated across the whole sweep, so a clean final page cannot
-hide an earlier mismatch. Timeout, failure, or caller cancellation commits no
-speculative cursor or finding state.
-
-The worker's first-pass readiness requires one complete logical sweep.
-Truncated progress may refresh an already-established heartbeat but cannot
-establish first-pass readiness. The continuation is not durable authority; a
-process restart safely starts a new sweep from the beginning. The row caps
-bound selected characters/events/positions, while statement and run deadlines
-bound time. A selected character's accumulated ledger history is not
-independently row-capped.
+Readiness requires valid schema/content and a healthy bounded batch; a full
+history sweep is tracked separately. See [reconciliation readiness and scan
+progress](b19-reconciliation-readiness.md) for continuation, timeout, and
+full-sweep semantics.
 
 Finding names are a 32-value finite protocol set. They include
 wallet/inventory baseline, identity, revision, balance/item, and ledger-chain
@@ -94,8 +81,9 @@ category requires code and metric review.
 
 Before investigating a mismatch:
 
-1. Confirm the database has exactly 46 migrations through
-   `20260801_045_item_material_recipe_content_release`.
+1. Compare the database migration IDs and checksums with this release's
+   catalog. The protocol-check executable's `--schema-metadata` option reports
+   its current migration count and head; do not use a historical count.
 2. Confirm PostgreSQL readiness and outbox/checkpoint worker health.
 3. Drain the affected character or realm before considering a mutation.
 4. Record a bounded report receipt and the finite mismatch category. Do not

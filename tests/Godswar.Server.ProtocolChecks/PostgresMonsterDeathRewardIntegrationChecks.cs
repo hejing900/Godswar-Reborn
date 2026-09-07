@@ -26,10 +26,8 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL monster reward integration " +
+            throw new CheckSkippedException("PostgreSQL monster reward integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safety =
@@ -42,10 +40,8 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
                 string.Empty;
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL monster reward integration " +
+                throw new CheckSkippedException("PostgreSQL monster reward integration " +
                     $"requires a disposable test database; received '{databaseName}'");
-                return;
             }
         }
 
@@ -266,6 +262,7 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         string scenario)
     {
         var token = Guid.NewGuid().ToString("N")[..12];
+        var scenarioCode = scenario[..Math.Min(scenario.Length, 15)];
         await using var connection =
             new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -283,7 +280,7 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         {
             account.Parameters.AddWithValue(
                 "username",
-                $"b12_{scenario}_{token}");
+                $"b12_{scenarioCode}_{token}");
             accountId = Convert.ToInt32(
                 await account.ExecuteScalarAsync());
         }
@@ -321,7 +318,7 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
             character.Parameters.AddWithValue("accountId", accountId);
             character.Parameters.AddWithValue(
                 "name",
-                $"B12{scenario}{token}");
+                $"B12{scenarioCode}{token}");
             characterId = Convert.ToInt32(
                 await character.ExecuteScalarAsync());
         }

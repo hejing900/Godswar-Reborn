@@ -18,6 +18,17 @@ internal sealed record GameSessionContext(
     bool WorldReady,
     long WorldRevision)
 {
+    private readonly bool _worldReady = WorldReady;
+
+    // Preserve authored scene readiness in the record while terminal session
+    // state immediately revokes every reader's live-world eligibility. Physical
+    // membership cleanup can then wait for outstanding delivery leases safely.
+    public bool WorldReady
+    {
+        get => _worldReady && !Session.IsDisconnected;
+        init => _worldReady = value;
+    }
+
     /// <summary>
     /// Registry-local membership lineage. Routine character revisions keep
     /// this value; join/rejoin/instance transfer always advances it.

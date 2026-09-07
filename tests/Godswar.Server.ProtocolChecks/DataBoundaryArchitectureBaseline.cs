@@ -84,15 +84,6 @@ internal static class DataBoundaryArchitectureBaseline
 
     public static readonly ReferenceAllowance[] StoreFieldReferences =
     [
-        new(
-            "Application/Characters/CharacterCheckpointCoordinator.cs",
-            2),
-        new(
-            "Application/Characters/CharacterCheckpointCoordinator.Direct.cs",
-            2),
-        new(
-            "Application/Characters/CharacterCheckpointCoordinator.Worker.cs",
-            2),
         new("Game/GameClientHandler.CharacterCheckpoints.cs", 2),
         new("Game/GameClientHandler.Construction.cs", 1),
         new("Game/GameClientHandler.cs", 1),
@@ -130,12 +121,12 @@ internal static class DataBoundaryArchitectureBaseline
         new("State/PostgresGameStore.CharacterLookup.cs", 3),
         new("State/PostgresGameStore.Characters.Persistence.cs", 12),
         new("State/PostgresGameStore.Crafting.cs", 7),
-        new("State/PostgresGameStore.cs", 5),
+        new("State/PostgresGameStore.cs", 4),
         new("State/PostgresGameStore.Inventory.Grants.cs", 9),
         new("State/PostgresGameStore.Inventory.HolyStones.cs", 11),
         new("State/PostgresGameStore.Inventory.Movement.cs", 12),
-        new("State/PostgresGameStore.Inventory.Persistence.cs", 29),
-        new("State/PostgresGameStore.Inventory.Projection.cs", 26),
+        new("State/PostgresGameStore.Inventory.Persistence.cs", 24),
+        new("State/PostgresGameStore.Inventory.Projection.cs", 23),
         new("State/PostgresGameStore.PetEggs.Audit.cs", 4),
         new("State/PostgresGameStore.PetEggs.cs", 10),
         new("State/PostgresGameStore.PetLevel.cs", 16),

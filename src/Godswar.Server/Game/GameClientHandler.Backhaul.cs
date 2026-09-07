@@ -259,7 +259,7 @@ internal sealed partial class GameClientHandler
                 definition.TargetZ,
                 transitionSource,
                 cancellationToken);
-        if (!transitioned)
+        if (transitioned == SceneTransitionOutcome.RejectedWithoutRelocation)
         {
             await RefundBackhaulManaAsync(
                 character,
@@ -276,6 +276,10 @@ internal sealed partial class GameClientHandler
 
         _nextBackhaulCastAt[definition.SkillId] =
             DateTimeOffset.UtcNow + definition.Cooldown;
+        if (transitioned == SceneTransitionOutcome.CommittedRequiresReconnect)
+        {
+            return;
+        }
         Console.WriteLine(
             $"[backhaul] transition started character={characterName} " +
             $"skill={definition.SkillId} " +

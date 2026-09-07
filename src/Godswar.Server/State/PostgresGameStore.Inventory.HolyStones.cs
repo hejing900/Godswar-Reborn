@@ -1,3 +1,4 @@
+using static Godswar.Server.Infrastructure.Inventory.PostgresCompactItemWriter;
 using Godswar.Server.Game;
 using System.Data.Common;
 using Npgsql;

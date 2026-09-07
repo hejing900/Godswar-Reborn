@@ -27,19 +27,15 @@ internal static partial class PostgresLegacyInstanceDailyEntryChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable database; " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable database; " +
                 $"received '{database}'");
-            return;
         }
 
         var migrationRunner = new PostgresSchemaMigrationRunner(dataSource);

@@ -19,10 +19,10 @@ internal sealed record ItemTemplatePublicationResult(
 internal static partial class PostgresItemTemplateBaselinePublisher
 {
     private const long PublicationLockId = 0x4954454D53434F4E;
+    // The revision hashes the complete manifest; this bounded provenance label
+    // identifies the current additions without restating every prior family.
     private const string PublicationSource =
-        "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
-        "zephyr-v1+mount-speed-v3+pets-v5+nameplates-v1+warehouse-v1+" +
-        "opal-v1";
+        "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1";
 
     public static async Task<ItemTemplatePublicationResult>
         EnsurePublishedAsync(

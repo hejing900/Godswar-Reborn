@@ -141,9 +141,10 @@ internal static partial class PetPresenceProtocolChecks
             executor);
         await fixture.InvokeAsync(
             CreateActionPacket(opcode, PetId, operationId));
-        var packets = fixture.Transport.ReadLegacyPackets();
         var expectedPacketCount = expectedOperation ==
             PetPresenceOperation.Take ? 3 : 1;
+        var packets = await fixture.Transport.ReadLegacyPacketsAsync(
+            expectedPacketCount);
         Check.Equal(
             expectedPacketCount,
             packets.Count,

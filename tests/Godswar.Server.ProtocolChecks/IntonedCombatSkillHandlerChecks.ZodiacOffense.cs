@@ -73,6 +73,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
             fixture.Character.ZodiacSkillGridSkillIds[4] =
                 ZodiacSkillGridCatalog.NoSelectedSkill;
         }
+        await AssertMonsterClaimAsync(fixture);
         _ = await fixture.Socket.ReadPacketAsync(32);
         _ = await fixture.Socket.ReadPacketAsync(24);
         var mana = await fixture.Socket.ReadPacketAsync(12);

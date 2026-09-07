@@ -151,7 +151,13 @@ internal static partial class TrainingDummyEntitlementChecks
             "PacketBuilder.RemoveWorldObjects(objectId)," +
             "cancellationToken,_session," +
             "\"TrainingDummyPreSpawnReset\");}" +
-            "varspawnRecipients=await_registry.BroadcastToMapAsync(";
+            "varspawnPacket=PacketBuilder.PlayerWorldSpawn(" +
+            "_character,objectId,statusSnapshot.Effects," +
+            "pkMode:_registry.TrainingDummySpawnPkMode(_character));" +
+            "varspawnRecipients=" +
+            "await_registry.TryBroadcastMedusaWorldSpawnRefreshAsync(" +
+            "_session,cancellationToken,\"PlayerWorldSpawn\")??" +
+            "await_registry.BroadcastToMapAsync(";
         var compactBroadcasts = string.Concat(
             broadcasts.Where(character => !char.IsWhiteSpace(character)));
         Check.True(

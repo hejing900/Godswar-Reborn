@@ -55,7 +55,7 @@ internal static class B20FStartupAndProjectionArchitectureChecks
             "ServerWorldContentComposition.TryLoadAsync",
             StringComparison.Ordinal);
         var coordination = program.IndexOf(
-            "ServerRuntimeContentComposition.CreateCoordinationAsync",
+            "runtimeContent.CreateCoordinationAsync",
             StringComparison.Ordinal);
         Check.True(
             schema >= 0 &&

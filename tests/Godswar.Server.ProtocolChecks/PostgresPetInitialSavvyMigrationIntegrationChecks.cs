@@ -20,25 +20,19 @@ internal static partial class PostgresPetInitialSavvyMigrationIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet initial-savvy migration integration ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet initial-savvy migration integration ({ConnectionStringVariable} is not set)");
         }
 
         if (!await IsMigrationAppliedAsync(
                 connectionString,
                 RequiredMigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet initial-savvy migration integration ({RequiredMigrationId} is required)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet initial-savvy migration integration ({RequiredMigrationId} is required)");
         }
 
         if (await IsMigrationAppliedAsync(connectionString, MigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet initial-savvy migration integration ({MigrationId} is already applied)");
-            return;
+            throw new CheckSkippedException($"PostgreSQL pet initial-savvy migration integration ({MigrationId} is already applied)");
         }
 
         await using var dataSource =
@@ -457,98 +451,4 @@ internal static partial class PostgresPetInitialSavvyMigrationIntegrationChecks
                    ?? throw new InvalidOperationException(
                        "PostgreSQL fixture command returned null."));
     }
-
-    private static async Task ExecuteAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        string sql,
-        params (string Name, object Value)[] parameters)
-    {
-        await using var command =
-            new NpgsqlCommand(sql, connection, transaction);
-        foreach (var parameter in parameters)
-        {
-            command.Parameters.AddWithValue(
-                parameter.Name,
-                parameter.Value);
-        }
-
-        await command.ExecuteNonQueryAsync();
-    }
-
-    private static async Task<bool> IsMigrationAppliedAsync(
-        string connectionString,
-        string migrationId)
-    {
-        if (!await RelationExistsAsync(
-                connectionString,
-                "public.schema_migrations"))
-        {
-            return false;
-        }
-
-        await using var connection =
-            new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
-        await using var command = new NpgsqlCommand(
-            """
-            SELECT EXISTS (
-                SELECT 1
-                FROM public.schema_migrations
-                WHERE migration_id = @migrationId
-            );
-            """,
-            connection);
-        command.Parameters.AddWithValue("migrationId", migrationId);
-        return (bool)(await command.ExecuteScalarAsync()
-                      ?? throw new InvalidOperationException(
-                          "Migration-presence check returned null."));
-    }
-
-    private static async Task<bool> RelationExistsAsync(
-        string connectionString,
-        string qualifiedName)
-    {
-        await using var connection =
-            new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
-        await using var command = new NpgsqlCommand(
-            "SELECT to_regclass(@qualifiedName) IS NOT NULL;",
-            connection);
-        command.Parameters.AddWithValue("qualifiedName", qualifiedName);
-        return (bool)(await command.ExecuteScalarAsync()
-                      ?? throw new InvalidOperationException(
-                          "Relation-presence check returned null."));
-    }
-
-    private static async Task<long> CountFixtureAccountsAsync(
-        string connectionString,
-        string username)
-    {
-        await using var connection =
-            new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
-        await using var command = new NpgsqlCommand(
-            """
-            SELECT count(*)
-            FROM public.accounts
-            WHERE username = @username;
-            """,
-            connection);
-        command.Parameters.AddWithValue("username", username);
-        return (long)(await command.ExecuteScalarAsync()
-                      ?? throw new InvalidOperationException(
-                          "Fixture-cleanup check returned null."));
-    }
-
-    private sealed record Fixture(
-        int OwnerId,
-        long ZeroPetId,
-        long ProgressedPetId);
-
-    private sealed record BeforeSnapshot(
-        string ZeroPetStableJson,
-        string ZeroStatsStableJson,
-        string ProgressedPetJson,
-        string ProgressedStatsJson);
 }

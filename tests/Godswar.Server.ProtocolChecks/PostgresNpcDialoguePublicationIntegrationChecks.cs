@@ -18,10 +18,8 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL NPC dialogue publication " +
+            throw new CheckSkippedException("PostgreSQL NPC dialogue publication " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);
@@ -117,7 +115,7 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
         NpcDialoguePublicationResult result)
     {
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedRevision,
+            PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision,
             result.Revision,
             "dialogue release revision");
         Check.Equal(
@@ -344,6 +342,11 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
                     "legacy dialogue text decoy inserted");
             }
 
+            var repeatedPublication = await PostgresNpcDialogueBaselinePublisher
+                .EnsurePublishedAsync(connectionString);
+            Check.True(!repeatedPublication.Created,
+                "sealed publication restart does not reread mutable dialogue seeds");
+            AssertPublication(repeatedPublication);
             var refreshed =
                 await PostgresWorldContentReaderLoader.LoadAsync(
                     connectionString);

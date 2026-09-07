@@ -15,10 +15,8 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL item-template publication " +
+            throw new CheckSkippedException("PostgreSQL item-template publication " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);

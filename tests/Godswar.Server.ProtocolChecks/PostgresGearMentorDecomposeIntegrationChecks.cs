@@ -25,10 +25,8 @@ internal static partial class PostgresGearMentorDecomposeIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL Decompose integration " +
+            throw new CheckSkippedException("PostgreSQL Decompose integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -38,11 +36,9 @@ internal static partial class PostgresGearMentorDecomposeIntegrationChecks
                 await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL Decompose integration requires a " +
+                throw new CheckSkippedException("PostgreSQL Decompose integration requires a " +
                     "disposable B03/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

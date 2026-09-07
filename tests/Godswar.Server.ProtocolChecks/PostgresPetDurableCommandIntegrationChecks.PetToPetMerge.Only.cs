@@ -18,10 +18,8 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {PetMergeRankCheckName} " +
+            throw new CheckSkippedException($"{PetMergeRankCheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -29,10 +27,8 @@ internal static partial class
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {PetMergeRankCheckName} requires a disposable " +
+            throw new CheckSkippedException($"{PetMergeRankCheckName} requires a disposable " +
                 $"B03/B12 database; received '{database}'");
-            return;
         }
 
         await new PostgresSchemaMigrationRunner(dataSource)

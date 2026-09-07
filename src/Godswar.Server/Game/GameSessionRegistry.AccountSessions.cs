@@ -49,11 +49,18 @@ internal sealed partial class GameSessionRegistry
         ArgumentNullException.ThrowIfNull(session);
         session.RegisterEgressTerminalObserver(RemoveEgressTerminalSession);
 
-        lock (_gate)
+        while (true)
         {
+            _accountSessions.TryGetValue(accountId, out var observed);
+            using var mutation = AcquireMembershipMutation(
+                observed?.Session ?? session);
             _accountSessions.TryGetValue(
                 accountId,
                 out var existing);
+            if (!ReferenceEquals(existing, observed))
+            {
+                continue;
+            }
             if (existing is null ||
                 ReferenceEquals(existing.Session, session))
             {
@@ -74,10 +81,11 @@ internal sealed partial class GameSessionRegistry
                     ReserveDetachedPlayerWorldLocked(context);
                 try
                 {
-                    if (!RemoveCore(
+                    if (!RemoveCoreLocked(
                             replacedSession,
                             expectedOwnership: null,
-                            preservePlayerStatus: false))
+                            preservePlayerStatus: false,
+                            mutation.Removal))
                     {
                         throw new InvalidOperationException(
                             "The replaced world session could not be detached.");

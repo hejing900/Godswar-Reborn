@@ -19,10 +19,8 @@ internal static partial class PetEggHatchPersistenceChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet-egg hatch persistence " +
+            throw new CheckSkippedException($"PostgreSQL pet-egg hatch persistence " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         var token = Guid.NewGuid().ToString("N")[..12];
@@ -44,6 +42,8 @@ internal static partial class PetEggHatchPersistenceChecks
                         new FixedPetHatchRankRollSource(89));
             await storeA.EnsureSeedDataAsync();
             await storeB.EnsureSeedDataAsync();
+            await PostgresCharacterCreationContentFixture.EnsureGameplayPublishedAsync(
+                connectionString);
             CheckEggTemplates(storeA.ItemContent.Templates);
 
             var account = await storeA.LoginOrCreateAccountAsync(

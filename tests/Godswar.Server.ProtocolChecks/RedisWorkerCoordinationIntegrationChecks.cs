@@ -24,10 +24,8 @@ internal static partial class RedisWorkerCoordinationIntegrationChecks
                 ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} " +
+            throw new CheckSkippedException($"{CheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         var environment = $"worker_test_{Guid.NewGuid():N}"[..29];

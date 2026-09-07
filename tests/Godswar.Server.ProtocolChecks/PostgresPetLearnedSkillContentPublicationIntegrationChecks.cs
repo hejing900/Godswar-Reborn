@@ -23,9 +23,7 @@ internal static class PostgresPetLearnedSkillContentPublicationIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
@@ -171,10 +169,8 @@ internal static class PostgresPetLearnedSkillContentPublicationIntegrationChecks
             return true;
         }
 
-        Console.WriteLine(
-            $"SKIP {CheckName} requires a disposable B03/B12 database; " +
+        throw new CheckSkippedException($"{CheckName} requires a disposable B03/B12 database; " +
             $"received '{database}'");
-        return false;
     }
 
     private static async Task AssertPublishedRowsAsync(

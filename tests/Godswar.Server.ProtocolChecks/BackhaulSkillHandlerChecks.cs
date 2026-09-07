@@ -1,6 +1,8 @@
+using Godswar.Server.Domain.Characters;
 using System.Buffers.Binary;
 using System.Reflection;
 using Godswar.Server.Application.Accounts;
+using Godswar.Server.Application.Coordination;
 using Godswar.Server.Game;
 using Godswar.Server.Networking;
 using Godswar.Server.Packets;
@@ -257,7 +259,8 @@ internal static partial class BackhaulSkillHandlerChecks
         IGameStore store,
         GameSessionRegistry registry,
         GameCharacter character,
-        TimeSpan? backhaulSkillCastTime = null)
+        TimeSpan? backhaulSkillCastTime = null,
+        IPlayerCoordinationLeaseIssuer? playerCoordination = null)
     {
         var handler = new GameClientHandler(
             session,
@@ -268,6 +271,7 @@ internal static partial class BackhaulSkillHandlerChecks
             mapTransitionReadyTimeout: TimeSpan.FromSeconds(5),
             backhaulSkillCastTime:
                 backhaulSkillCastTime ?? TimeSpan.Zero,
+            playerCoordination: playerCoordination,
             petContent: PetContentTestCatalog.Instance);
         SetField(
             handler,

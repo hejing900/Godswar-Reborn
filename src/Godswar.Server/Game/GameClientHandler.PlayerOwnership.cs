@@ -30,7 +30,8 @@ internal sealed partial class GameClientHandler
         out PlayerOwnershipFence ownership)
     {
         ownership = default;
-        if (_account is null ||
+        if (_session.IsDisconnected ||
+            _account is null ||
             _character is null ||
             (_playerCoordination?.IsEnabled == true &&
              _playerCoordinationLease?.IsCurrent != true) ||
@@ -49,6 +50,10 @@ internal sealed partial class GameClientHandler
 
     private bool AuthorizeAuthenticatedPacket()
     {
+        if (_session.IsDisconnected)
+        {
+            return false;
+        }
         if (!_accountSessionRegistered)
         {
             return true;
@@ -95,6 +100,10 @@ internal sealed partial class GameClientHandler
         string operation)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operation);
+        if (_session.IsDisconnected)
+        {
+            return false;
+        }
         if (!_accountSessionRegistered)
         {
             // Protocol fixtures and pre-cutover compatibility handlers do not
@@ -129,7 +138,8 @@ internal sealed partial class GameClientHandler
     private bool RevalidateCurrentPlayerOwnership(
         PlayerOwnershipFence ownership)
     {
-        if (ownership.IsValid &&
+        if (!_session.IsDisconnected &&
+            ownership.IsValid &&
             _account is not null &&
             _character is not null &&
             (_playerCoordination?.IsEnabled != true ||

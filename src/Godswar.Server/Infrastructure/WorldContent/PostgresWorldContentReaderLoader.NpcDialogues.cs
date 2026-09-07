@@ -75,10 +75,10 @@ internal static partial class PostgresWorldContentReaderLoader
                 WorldContentRevisionHasher.HashNpcDialogues(texts, routes);
             if (computed.EntryCount !=
                     checked(header.TextCount + header.RouteCount) ||
-                !string.Equals(
-                    computed.Sha256,
+                !WorldContentRevisionHasher.MatchesNpcDialogueRelease(
                     header.Revision,
-                    StringComparison.Ordinal))
+                    computed,
+                    header.SpawnRevision))
             {
                 throw new WorldContentUnavailableException(
                     "npc-dialogues",

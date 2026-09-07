@@ -23,19 +23,15 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         var database = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(database))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable B03/B09/B11/B12 " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable B03/B09/B11/B12 " +
                 $"database; received '{database}'");
-            return;
         }
 
         await PostgresSchemaStartup.InitializeAsync(connectionString);
@@ -82,7 +78,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         var publication = await PostgresNpcDialogueBaselinePublisher
             .EnsurePublishedAsync(connectionString);
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedRevision,
+            PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision,
             publication.Revision,
             "V21 dialogue revision is published");
         Check.True(
@@ -90,7 +86,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
             "published live V15 predecessor is promoted to V21");
         Check.True(
             string.Equals(
-                NpcDialogueBaselineV21.ExpectedRevision,
+                PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision,
                 await ReadPublishedRevisionAsync(dataSource),
                 StringComparison.Ordinal),
             "V21 becomes the current dialogue publication");
@@ -238,6 +234,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         var repeat = await PostgresNpcDialogueBaselinePublisher
             .EnsurePublishedAsync(connectionString);
         Check.True(!repeat.Created, "V21 repeat publication is a no-op");
+        await CheckLegacyV21ReleaseUpgradeAsync(dataSource, connectionString);
     }
 
     private static async Task<string?> ReadPublishedRevisionAsync(

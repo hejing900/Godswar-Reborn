@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.Characters;
 using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.Net;

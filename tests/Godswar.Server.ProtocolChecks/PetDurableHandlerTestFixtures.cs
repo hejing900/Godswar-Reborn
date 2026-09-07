@@ -73,7 +73,7 @@ internal sealed partial class PetDurableHandlerFixture : IAsyncDisposable
             session,
             liveCharacter.AccountId,
             liveCharacter,
-            worldReady: false);
+            worldReady: true);
         var snapshot = CreateSnapshot(
             persistedCharacter,
             persistedPets,
@@ -423,7 +423,7 @@ internal partial class DelegatingPetDurableCommandExecutor :
         new($"The pet fixture did not configure {operation}.");
 }
 
-internal sealed class PetDurableCaptureTransport :
+internal sealed partial class PetDurableCaptureTransport :
     ILegacyByteTransport,
     ISecureControlChannel,
     ISecureCommandResultTransport
@@ -513,6 +513,7 @@ internal sealed class PetDurableCaptureTransport :
         {
             _legacyWriteChunks.Add(source.ToArray());
             _legacyWrites.Write(source.Span);
+            SignalLegacyWriteLocked();
         }
         return ValueTask.CompletedTask;
     }

@@ -40,6 +40,12 @@ internal static class PlayerOwnershipArchitectureChecks
         "PostgresMakeAttributeStoneCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Pets/" +
         "PostgresPetDurableCommandExecutor.cs",
+        "src/Godswar.Server/Infrastructure/OnlineAwards/" +
+        "PostgresOnlineAwardCommandExecutor.cs",
+        "src/Godswar.Server/Infrastructure/Warehouse/" +
+        "PostgresWarehouseExpansionCommandExecutor.cs",
+        "src/Godswar.Server/Infrastructure/Warehouse/" +
+        "PostgresWarehouseTransferCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Progression/" +
         "PostgresDeveloperProgressionCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Progression/" +
@@ -59,7 +65,7 @@ internal static class PlayerOwnershipArchitectureChecks
     public static Task RunAsync()
     {
         var repositoryRoot = FindRepositoryRoot();
-        Check.Equal(21, ExecutorPaths.Length,
+        Check.Equal(24, ExecutorPaths.Length,
             "reviewed durable executor fence inventory");
         AssertExactExecutorInventory(repositoryRoot);
 
@@ -101,6 +107,7 @@ internal static class PlayerOwnershipArchitectureChecks
         AssertLegacyZodiacUpgradeFailsClosed(repositoryRoot);
         AssertLeaveBroadcastFence(repositoryRoot);
         AssertGameplayPacketFence(repositoryRoot);
+        AssertCurrentWorldBroadcastFence(repositoryRoot);
         AssertGameplayEffectFences(repositoryRoot);
         AssertLegacyMutationCompatibilityPolicy();
 
@@ -234,6 +241,25 @@ internal static class PlayerOwnershipArchitectureChecks
         }
     }
 
+    private static void AssertCurrentWorldBroadcastFence(string repositoryRoot)
+    {
+        const string path =
+            "src/Godswar.Server/Game/GameClientHandler.WorldBroadcast.cs";
+        var method = MethodSlice(
+            ReadSource(repositoryRoot, path),
+            "private async Task BroadcastToCurrentMapAsync");
+        const string guard = "if (!RevalidateCurrentWorldEffectOwnership(";
+        var guardOffset = method.IndexOf(guard, StringComparison.Ordinal);
+        Check.True(guardOffset >= 0, "world broadcasts retain their ownership rejection guard");
+        AssertOrdered(
+            method[guardOffset..],
+            path,
+            guard,
+            "\"chat_broadcast\"",
+            "return;",
+            "_registry.BroadcastToCurrentWorldInstanceAsync(");
+    }
+
     private static void AssertGameplayEffectFences(
         string repositoryRoot)
     {
@@ -241,7 +267,7 @@ internal static class PlayerOwnershipArchitectureChecks
             StringComparer.Ordinal)
         {
             ["src/Godswar.Server/Game/" +
-             "GameClientHandler.Progression.cs"] =
+             "GameClientHandler.WorldBroadcast.cs"] =
             [
                 "chat_broadcast",
                 "RevalidateCurrentWorldEffectOwnership"

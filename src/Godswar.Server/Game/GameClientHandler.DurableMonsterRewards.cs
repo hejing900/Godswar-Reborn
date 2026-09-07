@@ -152,7 +152,7 @@ internal sealed partial class GameClientHandler
             return settlement;
         }
 
-        var result = await _store.ApplyPetMonsterKillExperienceAsync(
+        var result = await _monsterRewardExtras.ApplyPetMonsterKillExperienceAsync(
             _account.Id,
             _character.Id,
             settlement.DeathEventId,

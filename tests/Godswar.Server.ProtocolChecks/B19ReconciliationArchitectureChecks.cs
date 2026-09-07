@@ -256,20 +256,14 @@ internal static class B19ReconciliationArchitectureChecks
             "Operations",
             "ServerReadinessMonitor.cs"));
         Check.True(
-            readiness.Contains(
-                "reconciliation is not { Enabled: true }",
+            readiness.Contains("reconciliation?.IsReady ?? true",
                 StringComparison.Ordinal) &&
-            readiness.Contains(
-                "reconciliation.Value.FirstPassCompleted",
+            worker.Contains("HealthyBatchCompleted &&",
                 StringComparison.Ordinal) &&
-            readiness.Contains(
-                "reconciliation.Value.HeartbeatAge <=",
-                StringComparison.Ordinal) &&
-            readiness.Contains(
-                "reconciliation.Value.MaximumHealthyHeartbeatAge",
+            worker.Contains("HeartbeatAge <= MaximumHealthyHeartbeatAge",
                 StringComparison.Ordinal),
             "disabled reconciliation is neutral while enabled readiness " +
-            "requires a fresh completed first pass");
+            "requires a fresh validated bounded batch");
 
         var composition = File.ReadAllText(Path.Combine(
             root,

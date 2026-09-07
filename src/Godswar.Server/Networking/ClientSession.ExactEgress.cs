@@ -3,6 +3,51 @@ namespace Godswar.Server.Networking;
 internal sealed partial class ClientSession
 {
     private Action<ClientSession>? _egressTerminalObserver;
+    private readonly object _terminalCleanupGate = new();
+    private Task? _terminalCleanup;
+
+    internal Task TerminalCleanupCompletion
+    {
+        get
+        {
+            lock (_terminalCleanupGate)
+            {
+                return _terminalCleanup ?? Task.CompletedTask;
+            }
+        }
+    }
+
+    internal void ScheduleTerminalCleanup(
+        Action<ClientSession>? fallback = null)
+    {
+        lock (_terminalCleanupGate)
+        {
+            if (_terminalCleanup is not null || !IsDisconnected)
+            {
+                return;
+            }
+            var observer = Volatile.Read(ref _egressTerminalObserver) ?? fallback;
+            if (observer is null)
+            {
+                return;
+            }
+
+            // A failed publication can retain its own viewer lease. Revoke
+            // readiness synchronously, then let that caller unwind before
+            // physical membership removal. Disposal observes this one task.
+            _terminalCleanup = Task.Run(() =>
+            {
+                try
+                {
+                    observer(this);
+                }
+                catch
+                {
+                    // The connection owner retains idempotent cleanup.
+                }
+            });
+        }
+    }
 
     internal void RegisterEgressTerminalObserver(
         Action<ClientSession> observer)
@@ -76,7 +121,7 @@ internal sealed partial class ClientSession
         }
         try
         {
-            Volatile.Read(ref _egressTerminalObserver)?.Invoke(this);
+            ScheduleTerminalCleanup();
         }
         catch
         {

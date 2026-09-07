@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.Characters;
 using System.Buffers.Binary;
 using Godswar.Server.Game;
 using Godswar.Server.Networking;

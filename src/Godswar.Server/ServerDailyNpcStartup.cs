@@ -1,3 +1,4 @@
+using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.FactionCrier;
 using Godswar.Server.Application.OnlineAwards;
 using Godswar.Server.Infrastructure.OnlineAwards;
@@ -10,6 +11,7 @@ internal static class ServerDailyNpcStartup
     public static async Task<ServerDailyNpcBalances> LoadBalancesAsync(
         ServerOptions options,
         GameplayItemContent itemContent,
+        IPetContentCatalog petContent,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -20,6 +22,7 @@ internal static class ServerDailyNpcStartup
         var online = PostgresOnlineAwardBalanceSnapshotReader.LoadAsync(
             options.Storage.PostgresConnectionString,
             itemContent.Templates,
+            petContent,
             cancellationToken);
         await Task.WhenAll(faction, online);
         return new(await faction, await online);

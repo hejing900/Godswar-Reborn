@@ -15,10 +15,8 @@ internal static partial class PostgresOutboxDispatcherIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL outbox dispatcher integration " +
+            throw new CheckSkippedException("PostgreSQL outbox dispatcher integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =

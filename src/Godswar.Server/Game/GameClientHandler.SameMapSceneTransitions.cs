@@ -6,7 +6,7 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
-    private async Task<bool> TryBeginSameMapSceneTransitionAsync(
+    private async Task<SceneTransitionOutcome> TryBeginSameMapSceneTransitionAsync(
         float targetX,
         float targetZ,
         string source,
@@ -22,12 +22,12 @@ internal sealed partial class GameClientHandler
             !MapTraversalLimits.IsFiniteAndBounded(
                 new MapTraversalPosition(targetX, targetZ)))
         {
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         if (!TryCaptureCurrentPlayerOwnership(out var ownership))
         {
             RejectLostPlayerOwnership();
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         var sourceMapId = _character.CurrentMap;
         if (!_registry.TryGetSessionWorldInstanceId(
@@ -37,7 +37,7 @@ internal sealed partial class GameClientHandler
                 sourceMapId,
                 sourceWorldInstanceId))
         {
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
 
         await InterruptPendingSkillCastAsync(
@@ -49,7 +49,7 @@ internal sealed partial class GameClientHandler
                 sourceMapId,
                 sourceWorldInstanceId))
         {
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
 
         try
@@ -60,13 +60,13 @@ internal sealed partial class GameClientHandler
                     targetZ,
                     cancellationToken))
             {
-                return false;
+                return SceneTransitionOutcome.RejectedWithoutRelocation;
             }
         }
         catch (PlayerOwnershipValidationException)
         {
             RejectLostPlayerOwnership();
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         catch (Exception error)
             when (error is not OperationCanceledException ||
@@ -75,7 +75,7 @@ internal sealed partial class GameClientHandler
             Console.WriteLine(
                 $"[map] same-scene persistence rejected source={source}: " +
                 error.Message);
-            return false;
+            return SceneTransitionOutcome.RejectedWithoutRelocation;
         }
         if (!RevalidateCurrentPlayerOwnership(ownership) ||
             continuationGuard?.Invoke() == false ||
@@ -87,7 +87,7 @@ internal sealed partial class GameClientHandler
             // old live position would split authority; reconnecting enters
             // the persisted destination cleanly.
             _session.Disconnect();
-            return false;
+            return SceneTransitionOutcome.CommittedRequiresReconnect;
         }
 
         if (!_registry.TryHideForSameWorldSceneTransition(
@@ -98,7 +98,7 @@ internal sealed partial class GameClientHandler
                 out _))
         {
             _session.Disconnect();
-            return false;
+            return SceneTransitionOutcome.CommittedRequiresReconnect;
         }
 
         _character.PositionX = targetX;
@@ -161,7 +161,7 @@ internal sealed partial class GameClientHandler
             $"[map] same-scene change queued character={_character.Name} " +
             $"map={sourceMapId} arrival={targetX:F2},{targetZ:F2} " +
             $"source={source}");
-        return true;
+        return SceneTransitionOutcome.CommittedAwaitingReadiness;
     }
 
     private bool HasSameMapSceneAuthority(

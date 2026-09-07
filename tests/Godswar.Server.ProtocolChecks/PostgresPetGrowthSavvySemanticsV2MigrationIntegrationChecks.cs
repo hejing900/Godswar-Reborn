@@ -21,18 +21,14 @@ internal static partial class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet growth/Savvy v2 integration " +
+            throw new CheckSkippedException($"PostgreSQL pet growth/Savvy v2 integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         if (await IsMigrationAppliedAsync(connectionString, MigrationId))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pet growth/Savvy v2 integration " +
+            throw new CheckSkippedException($"PostgreSQL pet growth/Savvy v2 integration " +
                 $"({MigrationId} is already applied)");
-            return;
         }
 
         await using var dataSource =

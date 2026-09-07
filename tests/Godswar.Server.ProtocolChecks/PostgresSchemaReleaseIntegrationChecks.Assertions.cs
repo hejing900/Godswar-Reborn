@@ -125,7 +125,7 @@ internal static partial class PostgresSchemaReleaseIntegrationChecks
         {
             Check.Equal(
                 before.AccountCharacterFingerprint,
-                after.AccountCharacterFingerprint
+                after.ProjectedAccountCharacterFingerprint
                 ?? throw new InvalidOperationException(
                     "Account or character state disappeared during migration."),
                 "schema release preserves account and character identity rows");

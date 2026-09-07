@@ -109,10 +109,12 @@ internal sealed partial class GameSessionRegistry
             session,
             accountId,
             ownership);
+        session.RegisterEgressTerminalObserver(RemoveEgressTerminalSession);
 
         GameSessionContext context;
         GameSessionContext? previous;
-        lock (_gate)
+        using (var mutation = AcquireMembershipMutation(
+                   session, targetInstance: runtime.InstanceId))
         {
             if (session.IsDisconnected)
             {
@@ -163,7 +165,7 @@ internal sealed partial class GameSessionRegistry
 
                 if (instanceChanged)
                 {
-                    RemoveFromMap(previous!);
+                    RemoveFromMap(previous!, mutation.Removal);
                     sourceRemoved = true;
                 }
 

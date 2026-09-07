@@ -30,10 +30,8 @@ internal static class
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} " +
+            throw new CheckSkippedException($"{CheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -41,10 +39,8 @@ internal static class
         var databaseName = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(databaseName))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable B03/B12 " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable B03/B12 " +
                 $"database; received '{databaseName}'");
-            return;
         }
 
         await using (var store =

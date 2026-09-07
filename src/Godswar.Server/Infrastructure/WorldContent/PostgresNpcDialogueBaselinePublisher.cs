@@ -20,7 +20,14 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
 {
     private const int PublicationLockNamespace = 1_193_657_936;
     private const int PublicationLockKey = 1_448_298_802;
-    private const string Publisher = "server-baseline-v21";
+    private const string Publisher = "server-baseline-v21-manifest-v1";
+
+    public static string CurrentReleaseRevision =>
+        WorldContentRevisionHasher.HashNpcDialogueRelease(
+            new WorldContentFamilyRevision("npc-dialogues",
+                NpcDialogueBaselineV21.ExpectedRevision,
+                NpcDialogueBaselineV21.ExpectedHashedEntryCount),
+            NpcDialogueBaselineV21.ExpectedSpawnRevision).Sha256;
 
     public static async Task<NpcDialoguePublicationResult>
         EnsurePublishedAsync(
@@ -55,20 +62,13 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             connection,
             transaction,
             cancellationToken);
-        if (current is not null && string.Equals(
-                current.Revision,
-                NpcDialogueBaselineV21.ExpectedRevision,
-                StringComparison.Ordinal))
-        {
-            await transaction.CommitAsync(cancellationToken);
-            return current with { Created = false };
-        }
         if (current is not null &&
-            !IsSupportedPreviousRevision(current.Revision))
+            !IsSupportedPreviousRevision(current.Revision) &&
+            current.Revision != CurrentReleaseRevision)
         {
             throw new InvalidDataException(
                 "The published NPC dialogue revision is neither a reviewed " +
-                "V1-V20 predecessor nor the reviewed V21 release.");
+                "V1-V21 predecessor nor the reviewed dependency-bound release.");
         }
 
         var spawnRevision = await ReadCurrentSpawnRevisionAsync(
@@ -87,6 +87,18 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
                 "currently published NPC spawn revision.");
         }
 
+        if (current is not null && current.Revision == CurrentReleaseRevision)
+        {
+            // A sealed publication must remain independent of mutable seed
+            // tables after its initial construction.
+            var published = new WorldContentFamilyRevision("npc-dialogues",
+                current.Revision, NpcDialogueBaselineV21.ExpectedHashedEntryCount);
+            await VerifyStoredReleaseAsync(connection, transaction, published,
+                spawnRevision.Revision, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return current with { Created = false };
+        }
+
         var texts = NpcDialogueBaselineV21.ApplyTextOverrides(
             await ReadOfficialNpcTextsAsync(
                 connection,
@@ -94,7 +106,9 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
                 spawnRevision.Revision,
                 cancellationToken));
         var routes = NpcDialogueBaselineV21.CreateRoutes();
-        var revision = ValidateBaseline(texts, routes);
+        var payload = ValidateBaseline(texts, routes);
+        var revision = WorldContentRevisionHasher.HashNpcDialogueRelease(
+            payload, spawnRevision.Revision);
 
         var releaseCreated = await InsertReleaseAsync(
             connection,
@@ -451,5 +465,9 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         string.Equals(
             revision,
             NpcDialogueBaselineV20.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV21.ExpectedRevision,
             StringComparison.Ordinal);
 }

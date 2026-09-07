@@ -31,19 +31,15 @@ internal static partial class
             ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} ({ConnectionStringVariable} is not set)");
-            return;
+            throw new CheckSkippedException($"{CheckName} ({ConnectionStringVariable} is not set)");
         }
 
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         var databaseName = await ReadDatabaseNameAsync(dataSource);
         if (!DisposableDatabasePattern.IsMatch(databaseName))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} requires a disposable database; " +
+            throw new CheckSkippedException($"{CheckName} requires a disposable database; " +
                 $"received '{databaseName}'");
-            return;
         }
 
         await new PostgresSchemaMigrationRunner(dataSource)

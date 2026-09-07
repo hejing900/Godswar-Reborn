@@ -61,6 +61,8 @@ internal sealed class PetDurableRawHandlerFixture : IAsyncDisposable
             session,
             liveCharacter.AccountId,
             liveCharacter);
+        registry.JoinPlayerMap(
+            session, liveCharacter.AccountId, liveCharacter, worldReady: true);
         var snapshot = PetDurableHandlerFixture.CreateSnapshot(
             persistedCharacter,
             persistedPets,

@@ -19,6 +19,7 @@ internal static partial class B19ReconciliationRunnerChecks
         await CheckInterruptedContinuationRollbackAsync();
         await CheckCancellationAndRestartAsync();
         await CheckTimeoutAsync();
+        await CheckTimeoutPreservesCompletedPagesAsync();
     }
 
     private static async Task CheckKeysetAggregationAsync()

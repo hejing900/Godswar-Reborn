@@ -142,7 +142,7 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        var result = await _store.PurchaseCapitalShopItemAsync(
+        var result = await _capitalShopPurchases.PurchaseCapitalShopItemAsync(
             _account.Id,
             _character.Id,
             Guid.NewGuid(),

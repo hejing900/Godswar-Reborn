@@ -28,10 +28,8 @@ internal static partial class PostgresWorldContentReaderIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP PostgreSQL pinned world-content baseline " +
+            throw new CheckSkippedException($"PostgreSQL pinned world-content baseline " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await PostgresRelationalContentBaselineBootstrapper.EnsureAsync(

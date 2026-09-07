@@ -1,4 +1,6 @@
 #include "OriginWarehousePageHost.h"
+#include "OriginWarehousePageUi.h"
+#include "WarehouseNpcEndpoints.h"
 
 #include <Windows.h>
 
@@ -13,10 +15,6 @@ constexpr std::uint16_t NpcDialogPageOpcode = 10068;
 constexpr std::uint16_t NpcFunctionActionResponseOpcode = 10070;
 constexpr std::uint16_t WarehouseSnapshotOpcode = 10034;
 constexpr std::uint16_t WarehouseTransferOpcode = 10059;
-constexpr std::uint32_t AthensWarehouseNpc = 5164;
-constexpr std::uint32_t SpartaWarehouseNpc = 47750;
-constexpr std::uint32_t AthensWarehouseManagerNpc = 5273;
-constexpr std::uint32_t SpartaWarehouseManagerNpc = 5131;
 constexpr std::uint32_t PageProjectionMarker = 0x57485000;
 constexpr std::uint32_t PageProjectionMask = 0xFFFFFF00;
 constexpr int PageProjectionBoxCountShift = 4;
@@ -129,15 +127,6 @@ void WriteSigned16(std::uint8_t* bytes, int value) noexcept {
 
 bool IsPhysicalWarehouseSlot(int slot) noexcept {
     return slot >= 0 && slot < PhysicalPageCapacity;
-}
-
-bool IsWarehouseNpc(std::uint32_t npcId) noexcept {
-    return npcId == AthensWarehouseNpc || npcId == SpartaWarehouseNpc;
-}
-
-bool IsRelatedManager(std::uint32_t npcId) noexcept {
-    return npcId == AthensWarehouseManagerNpc ||
-        npcId == SpartaWarehouseManagerNpc;
 }
 
 bool TryReadPacketHeader(
@@ -269,7 +258,7 @@ bool TryReadExpansionSuccess(
         const auto result = static_cast<int>(Read32(packet + 12));
         if (Read16(packet) != ResultPacketBytes ||
             Read16(packet + 2) != NpcFunctionActionResponseOpcode ||
-            !IsRelatedManager(Read32(packet + 4)) ||
+            !IsRelatedWarehouseManager(Read32(packet + 4)) ||
             static_cast<int>(Read32(packet + 8)) != ManagerDialogIndex ||
             result < FirstSuccessSubId || result > LastSuccessSubId) {
             return false;
@@ -285,7 +274,11 @@ bool TryReadExpansionSuccess(
 } // namespace
 
 OriginWarehousePageHost::OriginWarehousePageHost() noexcept
-    : enabled_(warehouse_page_host_detail::EnsureRuntimePatched()) {
+    : OriginWarehousePageHost(GetOriginWarehousePageUi()) {
+}
+
+OriginWarehousePageHost::OriginWarehousePageHost(WarehousePageUi& ui) noexcept
+    : ui_(ui), enabled_(ui_.IsAvailable()) {
 }
 
 void OriginWarehousePageHost::Reset() noexcept {
@@ -338,12 +331,12 @@ void OriginWarehousePageHost::ObserveClientPacket(
         if (IsWarehouseNpc(npcId)) {
             Reset();
             warehouseNpcId_ = npcId;
-        } else if (!IsRelatedManager(npcId)) {
+        } else if (!IsRelatedWarehouseManager(npcId)) {
             Reset();
         }
     } else if (opcode == NpcDialogOpenOpcode &&
                !IsWarehouseNpc(npcId) &&
-               !IsRelatedManager(npcId)) {
+               !IsRelatedWarehouseManager(npcId)) {
         Reset();
     }
 }
@@ -383,8 +376,7 @@ void OriginWarehousePageHost::ObserveServerMessage(
             &slotCount)) {
         return;
     }
-    static_cast<void>(warehouse_page_host_detail::
-        TryClearProjectedStorageChunk(firstSlot, slotCount));
+    static_cast<void>(ui_.ClearStorageChunk(firstSlot, slotCount));
     snapshotInProgress_ = true;
     if (isTail) {
         readySnapshotPage_ = page;
@@ -399,7 +391,7 @@ bool OriginWarehousePageHost::TryBuildPageRequest(
     if (requestBytes != nullptr) {
         *requestBytes = 0;
     }
-    enabled_ = warehouse_page_host_detail::EnsureRuntimePatched();
+    enabled_ = ui_.IsAvailable();
     if (!enabled_ || warehouseNpcId_ == 0 || requestBytes == nullptr) {
         return false;
     }
@@ -412,12 +404,11 @@ bool OriginWarehousePageHost::TryBuildPageRequest(
         // applied. Restore the logical tab only after the tail was delivered,
         // so that reset is not mistaken for a fresh SB-1 click.
         if (visiblePage_ != 0) {
-            if (!warehouse_page_host_detail::TrySelectPage(visiblePage_)) {
+            if (!ui_.SelectPage(visiblePage_)) {
                 return false;
             }
             if (visiblePage_ >= unlockedPageCount_ &&
-                !warehouse_page_host_detail::
-                    TryShowEmptyProjectedStoragePage()) {
+                !ui_.ShowEmptyStoragePage()) {
                 return false;
             }
         }
@@ -431,21 +422,20 @@ bool OriginWarehousePageHost::TryBuildPageRequest(
     }
 
     if (dragSourcePage_ >= 0 &&
-        !warehouse_page_host_detail::IsWarehouseDragActive()) {
+        !ui_.IsDragActive()) {
         dragSourcePage_ = -1;
     }
 
     int nativePage = -1;
-    if (!warehouse_page_host_detail::TryReadSelectedPage(&nativePage)) {
+    if (!ui_.ReadSelectedPage(&nativePage)) {
         return false;
     }
     if (nativePage != visiblePage_) {
-        if (warehouse_page_host_detail::IsWarehouseDragActive()) {
+        if (ui_.IsDragActive()) {
             dragSourcePage_ = visiblePage_;
         }
         if (nativePage >= unlockedPageCount_) {
-            if (!warehouse_page_host_detail::
-                    TryShowEmptyProjectedStoragePage()) {
+            if (!ui_.ShowEmptyStoragePage()) {
                 return false;
             }
             visiblePage_ = nativePage;

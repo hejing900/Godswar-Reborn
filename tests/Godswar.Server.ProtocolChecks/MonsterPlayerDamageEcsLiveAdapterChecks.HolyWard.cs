@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Godswar.Server.Application.World;
 using Godswar.Server.Game;
 using Godswar.Server.State;
@@ -210,8 +211,22 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
             activeAt + MonsterMapRuntime.TickInterval,
             CancellationToken.None);
 
-        await socket.ReadPacketAsync(24);
+        for (var impactIndex = 0; impactIndex < 2; impactIndex++)
+        {
+            var impact = await socket.ReadPacketAsync(24);
+            Check.True(
+                BinaryPrimitives.ReadUInt16LittleEndian(impact.AsSpan(2)) == 10046 &&
+                BinaryPrimitives.ReadUInt32LittleEndian(impact.AsSpan(4)) == monsterObjectId &&
+                BinaryPrimitives.ReadUInt32LittleEndian(impact.AsSpan(8)) == 0x1448 &&
+                BinaryPrimitives.ReadUInt32LittleEndian(impact.AsSpan(12)) == 2000,
+                $"live monster miss publishes native impact {impactIndex + 1} before damage");
+        }
         var damagePacket = await socket.ReadPacketAsync(30);
+        Check.True(
+            BinaryPrimitives.ReadUInt16LittleEndian(damagePacket.AsSpan(2)) == 0x272A &&
+            BinaryPrimitives.ReadUInt32LittleEndian(damagePacket.AsSpan(4)) == monsterObjectId &&
+            BinaryPrimitives.ReadUInt32LittleEndian(damagePacket.AsSpan(20)) == 0x1448,
+            "live monster miss damage identifies the attacking monster and local player");
         Check.Equal(
             uint.MaxValue,
             System.Buffers.Binary.BinaryPrimitives

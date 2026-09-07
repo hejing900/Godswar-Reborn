@@ -24,10 +24,8 @@ internal static partial class
                 ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                $"SKIP {CheckName} " +
+            throw new CheckSkippedException($"{CheckName} " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using var dataSource =
@@ -78,20 +76,22 @@ internal static partial class
                 index_row.indisunique,
                 pg_get_expr(
                     index_row.indpred,
-                    index_row.indrelid)
+                    index_row.indrelid),
+                pg_get_indexdef(index_row.indexrelid)
             FROM pg_index index_row
             JOIN pg_class index_class
               ON index_class.oid = index_row.indexrelid
-            WHERE index_class.relname =
-                'ux_character_base_active_account_slot';
+            WHERE index_row.indrelid = 'public.character_base'::regclass
+              AND index_class.relname =
+                'ux_character_base_active_account_realm_slot';
             """);
         await using var reader = await command.ExecuteReaderAsync();
         Check.True(
             await reader.ReadAsync(),
-            "active account-slot index exists");
+            "active account-realm-slot index exists");
         Check.True(
             reader.GetBoolean(0),
-            "active account-slot index is unique");
+            "active account-realm-slot index is unique");
         Check.True(
             reader.GetString(1).Contains(
                 "lifecycle_state",
@@ -99,10 +99,15 @@ internal static partial class
             reader.GetString(1).Contains(
                 "active",
                 StringComparison.Ordinal),
-            "account-slot uniqueness is limited to active characters");
+            "account-realm-slot uniqueness is limited to active characters");
+        Check.True(
+            reader.GetString(2).Contains(
+                "(account_id, server_id, character_slot)",
+                StringComparison.Ordinal),
+            "active slot uniqueness is scoped to account and realm");
         Check.True(
             !await reader.ReadAsync(),
-            "active account-slot index exists exactly once");
+            "active account-realm-slot index exists exactly once");
     }
 
     private static async Task AssertActiveSlotAndTombstonesAsync(
@@ -177,6 +182,7 @@ internal static partial class
             SELECT count(*)::integer
             FROM public.character_base
             WHERE account_id = @accountId
+              AND server_id = 1
               AND character_slot = 0
               AND lifecycle_state = 'deleted';
             """,
@@ -191,11 +197,12 @@ internal static partial class
                 dataSource,
                 """
                 SELECT character_lifecycle_version
-                FROM public.accounts
-                WHERE id = @accountId;
+                FROM public.account_realm
+                WHERE account_id = @accountId
+                  AND realm_id = 1;
                 """,
                 fixture.AccountId),
-            "account-slot lifecycle version never resets across replacements");
+            "account-realm-slot lifecycle version never resets across replacements");
 
         await AssertUniqueViolationAsync(
             async () =>

@@ -151,7 +151,7 @@ internal sealed partial class GameSessionRegistry
                 ExactStatusFailClosedReason);
             try
             {
-                Remove(recipient);
+                recipient.ScheduleTerminalCleanup(RemoveEgressTerminalSession);
             }
             catch
             {

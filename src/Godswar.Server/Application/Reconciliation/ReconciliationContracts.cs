@@ -279,7 +279,8 @@ internal sealed record ReconciliationReport(
     int CharacterRowsScanned,
     int OutboxRowsScanned,
     bool Truncated,
-    IReadOnlyList<ReconciliationCategoryCount> Findings);
+    IReadOnlyList<ReconciliationCategoryCount> Findings,
+    bool AuthorityValidated = false);
 
 internal interface IReconciliationRepairer
 {

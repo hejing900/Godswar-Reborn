@@ -179,13 +179,7 @@ internal sealed class ServerReadinessMonitor
             _options.MaximumWorkerHeartbeatAge);
         var reconciliation =
             _postgres?.GetReconciliationSnapshot();
-        var reconciliationReady =
-            reconciliation is not { Enabled: true } ||
-            (reconciliation.Value.State ==
-                ReconciliationWorkerState.Running &&
-             reconciliation.Value.FirstPassCompleted &&
-             reconciliation.Value.HeartbeatAge <=
-                reconciliation.Value.MaximumHealthyHeartbeatAge);
+        var reconciliationReady = reconciliation?.IsReady ?? true;
         _state.SetDependency(
             ServerReadinessDependency.PersistenceWorkers,
             progressionReady &&

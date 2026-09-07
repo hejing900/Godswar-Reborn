@@ -28,10 +28,8 @@ internal static partial class PostgresClassSuitCommandIntegrationChecks
             Environment.GetEnvironmentVariable(ConnectionStringVariable);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            Console.WriteLine(
-                "SKIP PostgreSQL Class Suit integration " +
+            throw new CheckSkippedException("PostgreSQL Class Suit integration " +
                 $"({ConnectionStringVariable} is not set)");
-            return;
         }
 
         await using (var safetySource =
@@ -40,11 +38,9 @@ internal static partial class PostgresClassSuitCommandIntegrationChecks
             var databaseName = await ReadDatabaseNameAsync(safetySource);
             if (!DisposableDatabasePattern.IsMatch(databaseName))
             {
-                Console.WriteLine(
-                    "SKIP PostgreSQL Class Suit integration requires a " +
+                throw new CheckSkippedException("PostgreSQL Class Suit integration requires a " +
                     "disposable B03/B08/B09 database; " +
                     $"received '{databaseName}'");
-                return;
             }
         }
 

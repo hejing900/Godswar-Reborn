@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.Characters;
 using System.Collections.Immutable;
 using System.Text.Json;
 using Godswar.Server.Application.Characters;
