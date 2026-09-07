@@ -12,8 +12,8 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
         "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
         "zephyr-v1+mount-speed-v3+pets-v3";
     private const int CaptureToolItemId = 10084;
-    private const string OfficialPetItemsV5Revision =
-        "9A6D6087087937D57DAED7DD93871F02CAED74124166A5CC1EB69D86DBACD121";
+    private const string OfficialOpalV1Revision =
+        "B757C74890CA130E97CFF44DEBEF4A51D84746FD322E632A861E31261AAF90A1";
 
     private static async Task AssertOfficialPetItemsV3UpgradeAsync(
         NpgsqlDataSource dataSource,
@@ -26,6 +26,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
         var historicalExclusions = focusBookIds.Concat(nameplateIds)
             .Append(WarehouseItemContentBaseline.StorageBoxKeyItemId)
             .Append(CaptureToolItemId)
+            .Append(LegacyInstanceOpalItemContentBaseline.ItemId)
             .ToArray();
         var definitions = original.All
             .Where(item => !historicalExclusions.Contains(
@@ -81,14 +82,14 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             await using var reader = await command.ExecuteReaderAsync();
             Check.True(
                 await reader.ReadAsync() &&
-                reader.GetInt32(0) == 1772 &&
+                reader.GetInt32(0) == 1773 &&
                 reader.GetString(1).EndsWith(
-                    "pets-v5+nameplates-v1+warehouse-v1",
+                    "pets-v5+nameplates-v1+warehouse-v1+opal-v1",
                     StringComparison.Ordinal) &&
                 reader.GetInt32(2) == 6,
                 "exact pets-v3 upgrade publishes all six Focus books");
             Check.True(
-                upgraded.Revision == OfficialPetItemsV5Revision &&
+                upgraded.Revision == OfficialOpalV1Revision &&
                 await ReadCompleteRevisionFingerprintAsync(
                     dataSource,
                     computed) == predecessorFingerprint,

@@ -9,6 +9,8 @@ internal sealed partial class GameSessionRegistry
     internal bool TryHideForSameWorldSceneTransition(
         ClientSession session,
         PlayerOwnershipFence ownership,
+        byte expectedMapId,
+        WorldInstanceId expectedWorldInstanceId,
         out WorldInstanceId worldInstanceId)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -18,6 +20,9 @@ internal sealed partial class GameSessionRegistry
             if (!_sessions.TryGetValue(session, out var existing) ||
                 !existing.WorldReady ||
                 existing.Ownership != ownership ||
+                existing.MapId != expectedMapId ||
+                existing.WorldInstanceId != expectedWorldInstanceId ||
+                existing.Character.CurrentMap != expectedMapId ||
                 !IsCurrentAccountSession(
                     existing.AccountId,
                     session,

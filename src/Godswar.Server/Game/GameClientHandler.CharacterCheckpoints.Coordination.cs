@@ -1,4 +1,5 @@
 using Godswar.Server.Application.Coordination;
+using Godswar.Server.Domain.World.Instances;
 
 namespace Godswar.Server.Game;
 
@@ -132,7 +133,7 @@ internal sealed partial class GameClientHandler
     }
 
     private bool IsCurrentLocalDungeon(byte mapId) =>
-        mapId is 200 or 204 &&
+        DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(mapId) &&
         _registry.TryGetSessionWorldInstanceId(
             _session,
             out var instanceId) &&

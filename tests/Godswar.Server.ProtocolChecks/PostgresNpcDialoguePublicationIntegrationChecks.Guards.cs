@@ -45,7 +45,7 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
                 release.Parameters.AddWithValue("revision", revision);
                 release.Parameters.AddWithValue(
                     "spawn_revision",
-                    NpcDialogueBaselineV1.ExpectedSpawnRevision);
+                    NpcDialogueBaselineV21.ExpectedSpawnRevision);
                 _ = await release.ExecuteNonQueryAsync();
             }
 
@@ -113,7 +113,7 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
                 setup.Parameters.AddWithValue("revision", revision);
                 setup.Parameters.AddWithValue(
                     "spawn_revision",
-                    NpcDialogueBaselineV1.ExpectedSpawnRevision);
+                    NpcDialogueBaselineV21.ExpectedSpawnRevision);
                 _ = await setup.ExecuteNonQueryAsync();
             }
 

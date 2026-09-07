@@ -83,6 +83,8 @@
     <ClCompile Include="NetworkShimTestSuite.cpp" />
     <ClCompile Include="OpaqueDuplexPumpTests.cpp" />
     <ClCompile Include="OpaqueDuplexPumpLifecycleTests.cpp" />
+    <ClCompile Include="OriginFighterExperienceHostTests.cpp" />
+    <ClCompile Include="RawFighterLevelSealProjectionBridgeTests.cpp" />
     <ClCompile Include="SchannelClientStreamTests.cpp" />
     <ClCompile Include="SecureClientRuntimeTests.cpp" />
     <ClCompile Include="SecureClientSessionTests.cpp" />
@@ -92,6 +94,11 @@
     <ClCompile Include="SecureEquipmentBagTransferIdentityTests.cpp" />
     <ClCompile Include="SecureEquipmentBagTransferParserTests.cpp" />
     <ClCompile Include="SecureEquipmentBagTransferRegistryTests.cpp" />
+    <ClCompile Include="SecureFactionCrierIdentityTests.cpp" />
+    <ClCompile Include="SecureFactionCrierParserTests.cpp" />
+    <ClCompile Include="SecureFactionCrierRegistryTests.cpp" />
+    <ClCompile Include="SecureFighterLevelSealIdentityTests.cpp" />
+    <ClCompile Include="SecureOnlineAwardIdentityTests.cpp" />
     <ClCompile Include="SecureWarehouseIdentityTests.cpp" />
     <ClCompile Include="SecureWarehouseParserTests.cpp" />
     <ClCompile Include="SecureWarehouseRegistryTests.cpp" />
@@ -152,8 +159,10 @@
     <ClCompile Include="WinSocketByteStreamTests.cpp" />
     <ClCompile Include="..\src\AvatarPreviewGate.cpp" />
     <ClCompile Include="..\src\OriginAvatarPreviewHost.cpp" />
+    <ClCompile Include="..\src\OriginFighterExperienceHost.cpp" />
     <ClCompile Include="..\src\OriginWarehousePageHost.cpp" />
     <ClCompile Include="..\src\OriginWarehousePageHost.Patches.cpp" />
+    <ClCompile Include="..\src\RawFighterLevelSealProjectionBridge.cpp" />
     <ClCompile Include="..\src\BoundedChunkQueue.cpp" />
     <ClCompile Include="..\src\DevelopmentTlsCertificate.cpp" />
     <ClCompile Include="..\src\EndpointManifest.cpp" />
@@ -195,6 +204,8 @@
     <ClInclude Include="NetworkShimTestSuite.h" />
     <ClInclude Include="OpaqueDuplexPumpTests.h" />
     <ClInclude Include="OpaqueDuplexPumpLifecycleTests.h" />
+    <ClInclude Include="OriginFighterExperienceHostTests.h" />
+    <ClInclude Include="RawFighterLevelSealProjectionBridgeTests.h" />
     <ClInclude Include="SchannelClientStreamTests.h" />
     <ClInclude Include="SecureClientRuntimeTests.h" />
     <ClInclude Include="SecureClientSessionTests.h" />
@@ -217,6 +228,10 @@
     <ClInclude Include="SecureEconomyIdentityTests.h" />
     <ClInclude Include="SecureEquipmentBagTransferIdentityTests.h" />
     <ClInclude Include="SecureEquipmentBagTransferTestSupport.h" />
+    <ClInclude Include="SecureFactionCrierIdentityTests.h" />
+    <ClInclude Include="SecureFactionCrierTestSupport.h" />
+    <ClInclude Include="SecureFighterLevelSealIdentityTests.h" />
+    <ClInclude Include="SecureOnlineAwardIdentityTests.h" />
     <ClInclude Include="SecureWarehouseIdentityTests.h" />
     <ClInclude Include="SecureWarehouseTestSupport.h" />
     <ClInclude Include="SecureGameControlTests.h" />
@@ -275,7 +290,9 @@
     <ClInclude Include="..\src\NativeClientCoordinator.h" />
     <ClInclude Include="..\src\NativeNetworkLimits.h" />
     <ClInclude Include="..\src\NetClientProxy.h" />
+    <ClInclude Include="..\src\OriginFighterExperienceHost.h" />
     <ClInclude Include="..\src\OriginWarehousePageHost.h" />
+    <ClInclude Include="..\src\RawFighterLevelSealProjectionBridge.h" />
     <ClInclude Include="..\src\OpaqueDuplexPump.h" />
     <ClInclude Include="..\src\SocketHandle.h" />
     <ClInclude Include="..\src\SchannelClientStream.h" />
@@ -293,6 +310,9 @@
     <ClInclude Include="..\src\SecurePetCommandIdentity.h" />
     <ClInclude Include="..\src\SecurePetBindCommandIdentity.h" />
     <ClInclude Include="..\src\SecureEquipmentBagTransferIdentity.h" />
+    <ClInclude Include="..\src\SecureFactionCrierCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureFighterLevelSealCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureOnlineAwardCommandIdentity.h" />
     <ClInclude Include="..\src\SecureForgeCommandIdentity.h" />
     <ClInclude Include="..\src\SecureHolyStoneCommandIdentity.h" />
     <ClInclude Include="..\src\SecureKitBagItemDeleteIdentity.h" />

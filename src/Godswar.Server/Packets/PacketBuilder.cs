@@ -7,7 +7,6 @@ namespace Godswar.Server.Packets;
 
 internal static partial class PacketBuilder
 {
-    private const int OriginalServerUtcOffsetSeconds = -8 * 60 * 60;
     private const int EnterPlayerDatabaseIdOffset = 4;
     private const int CharacterNameOffsetInEnterTemplate = 8;
     private const int EnterTalentExperienceOffset = 96;
@@ -64,7 +63,7 @@ internal static partial class PacketBuilder
     private const int PlayerDetailSilverOffset = 116;
     private const int PlayerDetailGoldOffset = 120;
     private const ushort TalentRankListOpcode = 0x273A;
-    private const ushort TalentSkillUnlockListOpcode = 0x2739;
+    private const ushort ActiveSkillInfoOpcode = 0x2739;
     private const ushort SkillListOpcode = 0x27D4;
     private const ushort SkillDamageOpcode = 0x273D;
     private const ushort SkillCastImpactOpcode = 0x273E;

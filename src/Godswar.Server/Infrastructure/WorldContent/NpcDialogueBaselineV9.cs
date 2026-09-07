@@ -10,6 +10,9 @@ namespace Godswar.Server.Infrastructure.WorldContent;
 /// </summary>
 internal static class NpcDialogueBaselineV9
 {
+    private static readonly ImmutableArray<int> LegacyInstanceCallerMenu =
+        [InstanceCallerProtocol.MedusaRootSubId];
+
     public const int ExpectedTextCount = 383;
     public const int ExpectedProfileCount = 11;
     public const int ExpectedRouteCount = 22;
@@ -30,7 +33,7 @@ internal static class NpcDialogueBaselineV9
             InstanceCallerProtocol.DialogIndex,
             NpcDialogueBehavior.InstanceCaller,
             InstanceCallerProtocol.InitialRequestSubId,
-            InstanceCallerProtocol.InitialMenuSubIds.ToImmutableArray())
+            LegacyInstanceCallerMenu)
     ];
 
     public static ImmutableArray<NpcDialogueBindingBaseline> Bindings { get; } =

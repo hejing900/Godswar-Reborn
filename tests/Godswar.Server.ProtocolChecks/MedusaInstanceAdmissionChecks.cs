@@ -233,7 +233,7 @@ internal static class MedusaInstanceAdmissionChecks
     private static async Task CheckDefaultReconnectFailsClosedAsync()
     {
         await using var registry = new GameSessionRegistry();
-        foreach (var mapId in new byte[] { 200, 204 })
+        foreach (var mapId in new byte[] { 200, 204, 205, 207 })
         {
             await using var socket =
                 await RuntimePolicySessionSocket.CreateAsync();
@@ -248,10 +248,22 @@ internal static class MedusaInstanceAdmissionChecks
                     character,
                     worldReady: true,
                     joinedAt: StartedAt),
-                $"saved Medusa map {mapId} cannot reconnect through an unbound default runtime");
+                "saved dynamic-dungeon map cannot reconnect through an " +
+                $"unbound default runtime: {mapId}");
+            Check.Throws<InvalidOperationException>(
+                () => registry.JoinMap(
+                    socket.Session,
+                    character.AccountId,
+                    character,
+                    objectId: checked((uint)(0x7800 + mapId)),
+                    worldReady: true,
+                    joinedAt: StartedAt),
+                "generic map-only join cannot create a default dynamic " +
+                $"dungeon runtime: {mapId}");
             Check.Throws<InvalidOperationException>(
                 () => registry.GetRequiredPlayerObjectId(socket.Session),
-                $"rejected Medusa map {mapId} fallback leaves no partial world membership");
+                "rejected dynamic-dungeon fallback leaves no partial world " +
+                $"membership: {mapId}");
         }
     }
 
@@ -286,7 +298,7 @@ internal static class MedusaInstanceAdmissionChecks
                 "GameSessionRegistry world options were not pinned.");
         var route = pinned.StaticOpenWorldInstances.Single();
 
-        foreach (var mapId in new short[] { 200, 204 })
+        foreach (var mapId in new short[] { 200, 204, 205, 207 })
         {
             route.MapId = mapId;
             await using var socket =
@@ -312,7 +324,8 @@ internal static class MedusaInstanceAdmissionChecks
 
             Check.True(
                 !registry.AcceptsGatewayAdmission(admission),
-                $"gateway rejects a hostile static Medusa map {mapId} route even after options validation");
+                "gateway rejects a hostile static dynamic-dungeon route " +
+                $"even after options validation: {mapId}");
             Check.Throws<InvalidOperationException>(
                 () => registry.JoinGatewayWorld(
                     socket.Session,
@@ -322,7 +335,8 @@ internal static class MedusaInstanceAdmissionChecks
                     admission,
                     worldReady: true,
                     joinedAt: StartedAt),
-                $"gateway cannot materialize a static Medusa map {mapId} runtime");
+                "gateway cannot materialize a static dynamic-dungeon " +
+                $"runtime: {mapId}");
             Check.Throws<InvalidOperationException>(
                 () => registry.GetRequiredPlayerObjectId(socket.Session),
                 $"rejected gateway map {mapId} leaves no partial membership");

@@ -115,8 +115,11 @@ enum class SecureLegacyCommandFamily : std::uint16_t {
     PetBind = 53,
     PetSoulContract = 54,
     PetManagerUtility = 55,
+    FactionCrier = 56,
+    OnlineAward = 57,
     WarehouseTransfer = 58,
     WarehouseExpansion = 59,
+    FighterLevelSeal = 60,
 };
 
 struct SecureLegacyCommandResult final {
@@ -127,6 +130,9 @@ struct SecureLegacyCommandResult final {
     std::uint32_t resultCode = 0;
     std::uint64_t inventoryRevision = 0;
     std::uint8_t operationId[16]{};
+    bool hasFighterExperienceProjection = false;
+    std::uint32_t currentExperience = 0;
+    std::uint32_t maximumExperience = 0;
 };
 
 inline constexpr std::size_t SecureClientPrefaceBytes = 72;
@@ -147,7 +153,9 @@ inline constexpr std::size_t SecureRealtimeMovementInputPayloadBytes =
 inline constexpr std::size_t SecureLegacyCommandOperationPayloadBytes = 24;
 inline constexpr std::uint8_t SecureLegacyCommandOperationVersion = 1;
 inline constexpr std::size_t SecureLegacyCommandResultPayloadBytes = 32;
+inline constexpr std::size_t SecureLegacyCommandResultV2PayloadBytes = 40;
 inline constexpr std::uint8_t SecureLegacyCommandResultVersion = 1;
+inline constexpr std::uint8_t SecureLegacyCommandResultV2Version = 2;
 inline constexpr std::uint16_t SecureLegacyMaximumPacketBytes = 8'196;
 inline constexpr std::uint16_t SecureProtocolMajor = 1;
 inline constexpr std::uint16_t SecureProtocolMinor = 0;

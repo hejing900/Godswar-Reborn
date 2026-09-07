@@ -13,6 +13,7 @@ internal static partial class MapTransitionHandlerChecks
         await CheckPendingOpcodePolicyAsync();
         await CheckCompletionCancelsTimeoutAsync();
         await CheckRejectedTransferCompensatesOnceAsync();
+        await CheckDynamicDungeonTransferFailsBeforeCheckpointAsync();
     }
 
     private static async Task CheckPendingOpcodePolicyAsync()
@@ -282,6 +283,92 @@ internal static partial class MapTransitionHandlerChecks
             "failed compensation disconnects the session");
 
         await StopHandlerAsync(handler);
+    }
+
+    private static async Task
+        CheckDynamicDungeonTransferFailsBeforeCheckpointAsync()
+    {
+        await using var actorSocket =
+            await RuntimePolicySessionSocket.CreateAsync();
+        var actor = CreateCharacter(
+            CharacterId + 40,
+            AccountId + 40,
+            "DungeonRouteActor",
+            SpartaMapId,
+            x: 190f,
+            z: -120f);
+        var store = new MapTransitionStore(actor);
+        var registry = CreateRegistry();
+        GameHandlerOwnershipTestFences.Bind(
+            registry,
+            actorSocket.Session,
+            actor.AccountId,
+            actor);
+        registry.JoinMap(
+            actorSocket.Session,
+            actor.AccountId,
+            actor,
+            WorldObjectIds.ForPlayer(actor.Id),
+            worldReady: true,
+            joinedAt: TestTime);
+        var handler = CreateEnteredHandler(
+            actorSocket.Session,
+            store,
+            registry,
+            actor);
+
+        foreach (var mapId in new byte[] { 200, 204, 205, 207 })
+        {
+            Check.True(
+                !await InvokeDirectMapTransitionAsync(
+                    handler,
+                    mapId,
+                    targetX: 1f,
+                    targetZ: 1f) &&
+                actor.CurrentMap == SpartaMapId &&
+                store.PositionWriteAttempts == 0 &&
+                registry.GetMapPopulation(mapId) == 0,
+                "handler rejects map-only dynamic-dungeon target " +
+                $"{mapId} before checkpoint persistence or runtime creation");
+        }
+
+        await StopHandlerAsync(handler);
+        registry.Remove(actorSocket.Session);
+    }
+
+    private static async Task<bool> InvokeDirectMapTransitionAsync(
+        GameClientHandler handler,
+        byte targetMapId,
+        float targetX,
+        float targetZ)
+    {
+        var method = typeof(GameClientHandler).GetMethod(
+            "TryBeginMapTransitionAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            types:
+            [
+                typeof(byte),
+                typeof(float),
+                typeof(float),
+                typeof(string),
+                typeof(CancellationToken)
+            ],
+            modifiers: null)
+            ?? throw new InvalidOperationException(
+                "Direct map-transition handler was not found.");
+        var task = method.Invoke(
+            handler,
+            [
+                targetMapId,
+                targetX,
+                targetZ,
+                "medusa-route-regression",
+                CancellationToken.None
+            ]) as Task<bool>
+            ?? throw new InvalidOperationException(
+                "Direct map-transition handler returned no decision.");
+        return await task;
     }
 
     private static GameSessionRegistry CreateRegistry() =>

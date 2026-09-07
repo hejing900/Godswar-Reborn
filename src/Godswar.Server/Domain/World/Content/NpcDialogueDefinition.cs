@@ -31,5 +31,10 @@ internal enum NpcDialogueBehavior
     OnlineAward = 9,
     WarehouseManager = 10,
     InstanceCaller = 11,
-    CreditExchange = 12
+    CreditExchange = 12,
+    CapturedCapital = 13,
+    Transporter = 14,
+    BattlefieldTransporter = 15,
+    DuelArenaTransporter = 16,
+    DuelArenaServices = 17
 }

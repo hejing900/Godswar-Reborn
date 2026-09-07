@@ -107,9 +107,6 @@ internal sealed partial class
                 PlayerExperienceCatalog.MaximumLevel ||
             character.Experience is
                 < 0 or > PlayerExperienceCatalog.MaximumStoredExperience ||
-            (character.LevelSealed &&
-             character.Level !=
-                 PlayerExperienceCatalog.FighterLevelSealLevel) ||
             character.TalentExperience is < 0 or >= 100 ||
             character.TalentPoints < 0 ||
             character.Revision < 0)

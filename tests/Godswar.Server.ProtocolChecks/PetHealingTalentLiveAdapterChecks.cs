@@ -11,6 +11,8 @@ internal static partial class PetHealingTalentLiveAdapterChecks
 
     public static async Task RunAsync()
     {
+        CheckPreCharacterFailureRestoresIncomingReplay();
+        CheckPetCooldownFailureRestoresIncomingTransaction();
         await CheckWitheredHealingAsync();
         await using var socket =
             await RuntimePolicySessionSocket.CreateAsync();

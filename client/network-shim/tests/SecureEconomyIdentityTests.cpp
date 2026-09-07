@@ -2,6 +2,9 @@
 
 #include "SecureClassSuitIdentityTests.h"
 #include "SecureEquipmentBagTransferIdentityTests.h"
+#include "SecureFactionCrierIdentityTests.h"
+#include "SecureFighterLevelSealIdentityTests.h"
+#include "SecureOnlineAwardIdentityTests.h"
 #include "SecureWarehouseIdentityTests.h"
 #include "SecureForgeCommandIdentityTests.h"
 #include "SecureForgeResultIdentityTests.h"
@@ -18,6 +21,9 @@
 int RunSecureEconomyIdentityTests() {
     return RunSecureClassSuitIdentityTests() +
         RunSecureEquipmentBagTransferIdentityTests() +
+        RunSecureFactionCrierIdentityTests() +
+        RunSecureFighterLevelSealIdentityTests() +
+        RunSecureOnlineAwardIdentityTests() +
         RunSecureWarehouseIdentityTests() +
         RunSecureForgeCommandIdentityTests() +
         RunSecureForgeResultIdentityTests() +

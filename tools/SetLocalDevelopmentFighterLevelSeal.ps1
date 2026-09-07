@@ -22,8 +22,9 @@ param(
     [string]$DatabaseUser = "godswar"
 )
 
-# Offline LocalDevelopment fixture only. The in-game Level Sealer protocol and
-# its eventual 10,000 Gold transaction are deliberately not implemented here.
+# Offline LocalDevelopment fixture only. The live NPC seals for free and
+# charges 10,000 Bound Gold to unseal; this helper intentionally changes only
+# the seal flag while the server is stopped.
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
@@ -156,9 +157,9 @@ BEGIN
             'Character % has checkpoint owner %; cleanly release it first',
             v_character_id, v_checkpoint_owner;
     END IF;
-    IF $desiredSql AND v_level <> 89 THEN
+    IF v_level NOT BETWEEN 1 AND 200 THEN
         RAISE EXCEPTION
-            'Character % is level %; the original Level Sealer accepts only level 89',
+            'Character % has unsupported fighter level %',
             v_character_id, v_level;
     END IF;
 

@@ -7,7 +7,7 @@ using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class CapitalNpcServiceProtocolChecks
+internal static partial class CapitalNpcServiceProtocolChecks
 {
     public const string CheckName =
         "Captured capital NPC dialogue and shop catalogs";
@@ -17,6 +17,9 @@ internal static class CapitalNpcServiceProtocolChecks
         CheckEndpointsAndExchangePages();
         CheckOpenPackets();
         CheckShopCatalogs();
+        CheckCapturedDialogRoutes();
+        CheckSuppressedSpawns();
+        LevelSealerSpawnCompatibilityChecks.Run();
         CheckPurchaseIntentAndOfferAuthority();
         CheckBindingGoldMigration();
         return Task.CompletedTask;
@@ -33,7 +36,25 @@ internal static class CapitalNpcServiceProtocolChecks
             ("Sparta_087", 5084, CapitalNpcServiceKind.BoundGoldVendor),
             ("Athens_087", 5226, CapitalNpcServiceKind.BoundGoldVendor),
             ("Sparta_068", 5065, CapitalNpcServiceKind.BindingGoldShop),
-            ("Athens_068", 5207, CapitalNpcServiceKind.BindingGoldShop)
+            ("Athens_068", 5207, CapitalNpcServiceKind.BindingGoldShop),
+            ("Sparta_084", 5081, CapitalNpcServiceKind.FestivalEnvoy),
+            ("Athens_084", 5223, CapitalNpcServiceKind.FestivalEnvoy),
+            ("Sparta_130", 5127, CapitalNpcServiceKind.SacredSealer),
+            ("Athens_130", 5269, CapitalNpcServiceKind.SacredSealer),
+            ("Sparta_131", 5128, CapitalNpcServiceKind.HolyStoneRedeemer),
+            ("Athens_131", 5270, CapitalNpcServiceKind.HolyStoneRedeemer),
+            ("Sparta_053", 5050, CapitalNpcServiceKind.HalloweenEnvoy),
+            ("Athens_053", 5192, CapitalNpcServiceKind.HalloweenEnvoy),
+            ("Sparta_089", 5086, CapitalNpcServiceKind.PetMerchant),
+            ("Athens_089", 5228, CapitalNpcServiceKind.PetMerchant),
+            ("Sparta_034", 44345, CapitalNpcServiceKind.SkillVendor),
+            ("Athens_036", 5175, CapitalNpcServiceKind.SkillVendor),
+            ("Sparta_036", 5033, CapitalNpcServiceKind.PropsVendor),
+            ("Athens_021", 5160, CapitalNpcServiceKind.PropsVendor),
+            ("Sparta_123", 5120, CapitalNpcServiceKind.PrizeChest),
+            ("Athens_123", 5262, CapitalNpcServiceKind.PrizeChest),
+            ("Sparta_142", 5139, CapitalNpcServiceKind.LevelSealer),
+            ("Athens_142", 5281, CapitalNpcServiceKind.LevelSealer)
         ];
 
         var published = NpcContentBaselineV1.LoadDefinitions();
@@ -82,18 +103,22 @@ internal static class CapitalNpcServiceProtocolChecks
         var shop = PacketBuilder.NpcShopDialogOpenAck(
             5084,
             "Sparta_087");
+        var chest = PacketBuilder.NpcPrizeChestDialogOpenAck(
+            5120,
+            "Sparta_123");
 
         Check.True(
             IsOpen(description, 5066, flags: 0, packedDialog: 0) &&
-            IsOpen(shop, 5084, flags: 4, packedDialog: 0),
-            "Teaching Manager and vendor advertise their captured window types");
+            IsOpen(shop, 5084, flags: 4, packedDialog: 0) &&
+            IsOpen(chest, 5120, flags: 0x40, packedDialog: 0),
+            "description, shop, and Prize Chest advertise captured window types");
     }
 
     private static void CheckShopCatalogs()
     {
         var bound = PacketBuilder.CapitalNpcShopCatalog(
             5084,
-            12_345,
+            new CapitalNpcShopBalances(111, 12_345, 222),
             CapitalNpcServiceKind.BoundGoldVendor);
         var boundFrames = ReadCatalogFrames(bound);
         Check.True(
@@ -115,7 +140,7 @@ internal static class CapitalNpcServiceProtocolChecks
 
         var binding = PacketBuilder.CapitalNpcShopCatalog(
             5065,
-            54_321,
+            new CapitalNpcShopBalances(111, 222, 54_321),
             CapitalNpcServiceKind.BindingGoldShop);
         var bindingFrames = ReadCatalogFrames(binding);
         Check.True(
@@ -135,7 +160,7 @@ internal static class CapitalNpcServiceProtocolChecks
 
         var replay = ReadCatalogFrames(PacketBuilder.CapitalNpcShopCatalog(
             5226,
-            7,
+            new CapitalNpcShopBalances(6, 7, 8),
             CapitalNpcServiceKind.BoundGoldVendor));
         Check.True(
             replay.All(frame => IsCatalogHeader(
@@ -149,6 +174,62 @@ internal static class CapitalNpcServiceProtocolChecks
                 shopType: 2,
                 balance: 12_345)),
             "catalog reuse patches a clone and cannot corrupt prior responses");
+
+        var capturedBalances = new CapitalNpcShopBalances(321, 456, 654);
+        var pet = ReadCatalogFrames(PacketBuilder.CapitalNpcShopCatalog(
+            5086,
+            capturedBalances,
+            CapitalNpcServiceKind.PetMerchant));
+        var skills = ReadCatalogFrames(PacketBuilder.CapitalNpcShopCatalog(
+            44345,
+            capturedBalances,
+            CapitalNpcServiceKind.SkillVendor));
+        var props = ReadCatalogFrames(PacketBuilder.CapitalNpcShopCatalog(
+            5033,
+            capturedBalances,
+            CapitalNpcServiceKind.PropsVendor));
+        Check.True(
+            pet.Count == 7 &&
+            pet.Sum(static frame => frame[10]) == 78 &&
+            pet.All(frame => IsCatalogHeader(
+                frame, 5086, shopType: 3, balance: 321)) &&
+            ReadItemId(pet[0], 0) == 10000 &&
+            skills.Count == 8 &&
+            skills.Sum(static frame => frame[10]) == 86 &&
+            skills.All(frame => IsCatalogHeader(
+                frame, 44345, shopType: 4, balance: 654)) &&
+            ReadItemId(skills[0], 0) == 5445 &&
+            props.Count == 5 &&
+            props.Sum(static frame => frame[10]) == 35 &&
+            IsCatalogHeader(
+                props[0], 5033, shopType: 3, balance: 321) &&
+            props.Skip(1).All(frame => IsCatalogHeader(
+                frame, 5033, shopType: 4, balance: 654)) &&
+            ReadItemId(props[0], 0) == 3100 &&
+            props.SelectMany(ReadItemIds).All(static id => id != 14085),
+            "Pet, Skill, and Props catalogs reproduce compatible captured stock");
+    }
+
+    private static void CheckSuppressedSpawns()
+    {
+        var published = NpcContentBaselineV1.LoadDefinitions();
+        foreach (var key in new[]
+                 {
+                     "Sparta_028", "Sparta_029", "Sparta_037", "Sparta_038"
+                 })
+        {
+            Check.True(
+                CapitalNpcServiceProtocol.IsSuppressedSpawn(
+                    published.Single(npc => npc.NpcKey == key)),
+                $"{key} is removed from the live Sparta NPC catalog");
+        }
+
+        Check.True(
+            !CapitalNpcServiceProtocol.IsSuppressedSpawn(
+                Npc("Sparta_028", 5026)) &&
+            !CapitalNpcServiceProtocol.IsSuppressedSpawn(
+                Npc("Athens_028", 5167)),
+            "suppression requires the exact unwanted Sparta identity");
     }
 
     private static bool IsOpen(
@@ -272,6 +353,8 @@ internal static class CapitalNpcServiceProtocolChecks
                 null),
             "captured purchase resolves its server-owned item and price");
 
+        CheckCapturedShopOfferAuthority();
+
         Check.True(
             CapitalNpcServiceProtocol.TryGetShopCurrency(
                 CapitalNpcServiceKind.BoundGoldVendor,
@@ -281,10 +364,47 @@ internal static class CapitalNpcServiceProtocolChecks
                 CapitalNpcServiceKind.BindingGoldShop,
                 out var shopCurrency) &&
             shopCurrency == CapitalNpcShopCurrency.BindingGold &&
+            CapitalNpcServiceProtocol.TryGetShopCurrency(
+                CapitalNpcServiceKind.PetMerchant,
+                out var petCurrency) &&
+            petCurrency == CapitalNpcShopCurrency.Silver &&
+            CapitalNpcServiceProtocol.TryGetShopCurrency(
+                CapitalNpcServiceKind.SkillVendor,
+                out var skillCurrency) &&
+            skillCurrency == CapitalNpcShopCurrency.BindingGold &&
+            !CapitalNpcServiceProtocol.TryGetShopCurrency(
+                CapitalNpcServiceKind.PropsVendor,
+                out _) &&
             !CapitalNpcServiceProtocol.TryGetShopCurrency(
                 CapitalNpcServiceKind.TeachingManager,
                 out _),
-            "Bound Gold Vendor spends Gold and B-GOLD Shop spends B-Gold");
+            "uniform shop services expose their currency while mixed Props " +
+            "requires frame-level resolution");
+
+        Check.True(
+            CapitalNpcServiceProtocol.TryGetShopCurrency(
+                (byte)2,
+                out var wireGold) &&
+            wireGold == CapitalNpcShopCurrency.Gold &&
+            CapitalNpcServiceProtocol.TryGetShopCurrency(
+                (byte)3,
+                out var wireSilver) &&
+            wireSilver == CapitalNpcShopCurrency.Silver &&
+            CapitalNpcServiceProtocol.TryGetShopCurrency(
+                (byte)4,
+                out var wireBindingGold) &&
+            wireBindingGold == CapitalNpcShopCurrency.BindingGold &&
+            !CapitalNpcServiceProtocol.TryGetShopCurrency((byte)5, out _) &&
+            CapitalNpcServiceProtocol.IsShop(
+                CapitalNpcServiceKind.PetMerchant) &&
+            CapitalNpcServiceProtocol.IsShop(
+                CapitalNpcServiceKind.SkillVendor) &&
+            CapitalNpcServiceProtocol.IsShop(
+                CapitalNpcServiceKind.PropsVendor) &&
+            !CapitalNpcServiceProtocol.IsShop(
+                CapitalNpcServiceKind.TeachingManager),
+            "catalog wire types and all purchase-capable services are " +
+            "recognized explicitly");
 
         Check.True(
             !PacketBuilder.TryResolveCapitalNpcShopOffer(

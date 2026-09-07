@@ -123,9 +123,15 @@ bool IsCommandFamily(
         family ==
             SecureLegacyCommandFamily::PetManagerUtility ||
         family ==
+            SecureLegacyCommandFamily::FactionCrier ||
+        family ==
+            SecureLegacyCommandFamily::OnlineAward ||
+        family ==
             SecureLegacyCommandFamily::WarehouseTransfer ||
         family ==
-            SecureLegacyCommandFamily::WarehouseExpansion;
+            SecureLegacyCommandFamily::WarehouseExpansion ||
+        family ==
+            SecureLegacyCommandFamily::FighterLevelSeal;
 }
 
 bool HasValidRevision(
@@ -134,6 +140,21 @@ bool HasValidRevision(
     return disposition !=
             SecureLegacyCommandDisposition::Applied ||
         inventoryRevision != 0;
+}
+
+bool HasValidFighterExperienceProjection(
+    const SecureLegacyCommandResult& result) noexcept {
+    if (!result.hasFighterExperienceProjection) {
+        return result.currentExperience == 0 &&
+            result.maximumExperience == 0;
+    }
+    return result.commandFamily ==
+            SecureLegacyCommandFamily::FighterLevelSeal &&
+        (result.disposition ==
+                SecureLegacyCommandDisposition::Applied ||
+            result.disposition ==
+                SecureLegacyCommandDisposition::Replayed) &&
+        result.maximumExperience != 0;
 }
 
 void WriteUInt16(
@@ -196,14 +217,18 @@ bool TryEncodeSecureLegacyCommandResult(
     const SecureLegacyCommandResult& result,
     void* destination,
     std::size_t destinationBytes) noexcept {
+    const std::size_t payloadBytes =
+        result.hasFighterExperienceProjection
+            ? SecureLegacyCommandResultV2PayloadBytes
+            : SecureLegacyCommandResultPayloadBytes;
     if (destination == nullptr ||
-        destinationBytes <
-            SecureLegacyCommandResultPayloadBytes ||
+        destinationBytes < payloadBytes ||
         !IsDisposition(result.disposition) ||
         !IsCommandFamily(result.commandFamily) ||
         !HasValidRevision(
             result.disposition,
             result.inventoryRevision) ||
+        !HasValidFighterExperienceProjection(result) ||
         IsAllZero(
             result.operationId,
             sizeof(result.operationId))) {
@@ -214,8 +239,10 @@ bool TryEncodeSecureLegacyCommandResult(
     std::memset(
         output,
         0,
-        SecureLegacyCommandResultPayloadBytes);
-    output[0] = SecureLegacyCommandResultVersion;
+        payloadBytes);
+    output[0] = result.hasFighterExperienceProjection
+        ? SecureLegacyCommandResultV2Version
+        : SecureLegacyCommandResultVersion;
     output[1] =
         static_cast<std::uint8_t>(result.disposition);
     WriteUInt16(
@@ -227,6 +254,10 @@ bool TryEncodeSecureLegacyCommandResult(
         output + 16,
         result.operationId,
         sizeof(result.operationId));
+    if (result.hasFighterExperienceProjection) {
+        WriteUInt32(output + 32, result.currentExperience);
+        WriteUInt32(output + 36, result.maximumExperience);
+    }
     return true;
 }
 
@@ -234,10 +265,9 @@ bool TryDecodeSecureLegacyCommandResult(
     const void* source,
     std::size_t sourceBytes,
     SecureLegacyCommandResult* result) noexcept {
-    if (source == nullptr ||
-        sourceBytes !=
-            SecureLegacyCommandResultPayloadBytes ||
-        result == nullptr) {
+    if (source == nullptr || result == nullptr ||
+        (sourceBytes != SecureLegacyCommandResultPayloadBytes &&
+         sourceBytes != SecureLegacyCommandResultV2PayloadBytes)) {
         return false;
     }
 
@@ -249,7 +279,13 @@ bool TryDecodeSecureLegacyCommandResult(
     decoded.commandFamily =
         static_cast<SecureLegacyCommandFamily>(
             ReadUInt16(input + 2));
-    if (input[0] != SecureLegacyCommandResultVersion ||
+    const bool isV1 =
+        input[0] == SecureLegacyCommandResultVersion &&
+        sourceBytes == SecureLegacyCommandResultPayloadBytes;
+    const bool isV2 =
+        input[0] == SecureLegacyCommandResultV2Version &&
+        sourceBytes == SecureLegacyCommandResultV2PayloadBytes;
+    if ((!isV1 && !isV2) ||
         !IsDisposition(decoded.disposition) ||
         !IsCommandFamily(decoded.commandFamily) ||
         !HasValidRevision(
@@ -265,6 +301,14 @@ bool TryDecodeSecureLegacyCommandResult(
         decoded.operationId,
         input + 16,
         sizeof(decoded.operationId));
+    if (isV2) {
+        decoded.hasFighterExperienceProjection = true;
+        decoded.currentExperience = ReadUInt32(input + 32);
+        decoded.maximumExperience = ReadUInt32(input + 36);
+        if (!HasValidFighterExperienceProjection(decoded)) {
+            return false;
+        }
+    }
     *result = decoded;
     return true;
 }

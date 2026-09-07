@@ -90,7 +90,8 @@ internal sealed partial class GameSessionRegistry
         ArgumentNullException.ThrowIfNull(admission);
         return admission.TargetNodeId ==
                 _worldInstanceOptions.ProcessServerNodeId &&
-            admission.MapId.Value is not (200 or 204) &&
+            !DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(
+                admission.MapId.Value) &&
             _worldInstanceOptions.TryFindStaticOpenWorld(
                 admission.RealmId,
                 admission.MapId,
@@ -188,6 +189,14 @@ internal sealed partial class GameSessionRegistry
     private WorldInstanceRuntime GetOrCreateDefaultWorldInstance(
         byte legacyMapId)
     {
+        if (DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(
+                legacyMapId))
+        {
+            throw new InvalidOperationException(
+                "Dynamic-dungeon maps require an exact world-instance " +
+                "identity; default open-world fallback is forbidden.");
+        }
+
         var realmId = _worldInstanceOptions.ProcessRealmId;
         var mapId = WorldMapId.FromLegacy(legacyMapId);
         var hasAssignedInstance =

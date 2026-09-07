@@ -323,10 +323,10 @@ internal static partial class Program
         Check.Equal(0u, ReadUInt32(skillList, 12), "Light Chop skill ID zero remains valid");
         Check.Equal(0x101u, ReadUInt32(skillList, 16), "Light Chop level flag");
 
-        var unlocks = PacketBuilder.TalentSkillUnlockList(warriorSkills);
-        Check.Equal((ushort)10041, ReadUInt16(unlocks, 2), "skill-unlock opcode");
-        Check.Equal(1u, ReadUInt32(unlocks, 8), "skill-unlock count");
-        Check.Equal(0u, ReadUInt32(unlocks, 12), "skill unlock preserves ID zero");
+        var activeSkills = PacketBuilder.ActiveSkillInfo(warriorSkills);
+        Check.Equal((ushort)10041, ReadUInt16(activeSkills, 2), "active-skill info opcode");
+        Check.Equal(1u, ReadUInt32(activeSkills, 8), "active-skill info count");
+        Check.Equal(0u, ReadUInt32(activeSkills, 12), "active-skill info preserves ID zero");
         var listedIds = Enumerable.Range(0, (int)ReadUInt32(skillList, 8))
             .Select(index => ReadUInt32(skillList, 12 + (index * 12)))
             .ToArray();
@@ -347,27 +347,72 @@ internal static partial class Program
         {
             await using var store = new JsonGameStore(dataPath);
             await store.EnsureSeedDataAsync();
-            var account = await store.LoginOrCreateAccountAsync("skill-check", "");
-            var warrior = await store.CreateCharacterAsync(
-                account.Id,
-                new GameCharacter
-                {
-                    Name = "JsonWarrior",
-                    Profession = 0,
-                    Camp = GameDefaults.SpartaCamp
-                });
-            var skills = await store.GetSkillStatesAsync(account.Id, warrior.Id);
-            Check.Equal(2, skills.Count, "JSON warrior receives starter combat and temporary Ride skills");
-            Check.True(
-                skills.Any(skill => skill.SkillId == 0 && skill.Level == 1),
-                "JSON warrior learns Light Chop 1");
-            Check.True(
-                skills.Any(skill => skill.SkillId == MountCatalog.RideSkillId && skill.Level == 1),
-                "JSON warrior receives the temporary Ride compatibility grant");
+            await CheckJsonFactionStarterAsync(
+                store,
+                "skill-check-sparta",
+                "JsonSpartaWarrior",
+                GameDefaults.SpartaCamp,
+                FactionPortalSkillPolicy.SpartaCapitalPortalSkillId,
+                FactionPortalSkillPolicy.AthensCapitalPortalSkillId);
+            await CheckJsonFactionStarterAsync(
+                store,
+                "skill-check-athens",
+                "JsonAthensWarrior",
+                GameDefaults.AthensCamp,
+                FactionPortalSkillPolicy.AthensCapitalPortalSkillId,
+                FactionPortalSkillPolicy.SpartaCapitalPortalSkillId);
         }
         finally
         {
             Directory.Delete(dataPath, recursive: true);
         }
+    }
+
+    private static async Task CheckJsonFactionStarterAsync(
+        JsonGameStore store,
+        string username,
+        string characterName,
+        byte camp,
+        uint expectedPortalSkillId,
+        uint opposingPortalSkillId)
+    {
+        var account = await store.LoginOrCreateAccountAsync(username, "");
+        var warrior = await store.CreateCharacterAsync(
+            account.Id,
+            new GameCharacter
+            {
+                Name = characterName,
+                Profession = 0,
+                Camp = camp
+            });
+        var skills = await store.GetSkillStatesAsync(
+            account.Id,
+            warrior.Id);
+        Check.Equal(
+            3,
+            skills.Count,
+            $"JSON camp {camp} warrior receives combat, Ride, and faction portal skills");
+        Check.True(
+            skills.Any(skill => skill.SkillId == 0 && skill.Level == 1),
+            $"JSON camp {camp} warrior learns Light Chop 1");
+        Check.True(
+            skills.Any(skill =>
+                skill.SkillId == MountCatalog.RideSkillId &&
+                skill.Level == 1),
+            $"JSON camp {camp} warrior receives the Ride compatibility grant");
+        Check.True(
+            skills.Any(skill =>
+                skill.SkillId == checked((int)expectedPortalSkillId) &&
+                skill.Level == 1) &&
+            skills.All(skill =>
+                skill.SkillId != checked((int)opposingPortalSkillId)),
+            $"JSON camp {camp} warrior receives only its faction capital portal");
+
+        var snapshot = await store.ReadAsync(account.Id);
+        Check.True(
+            snapshot.Character?.Skills.Any(skill =>
+                skill.SkillId == checked((int)expectedPortalSkillId) &&
+                skill.Level == 1) == true,
+            $"JSON camp {camp} snapshot projects its faction capital portal");
     }
 }

@@ -287,13 +287,10 @@ internal static partial class PostgresCharacterRuntimeItemProjectionSql
             cb.name,
             cb.profession,
             cb.fighter_job_lv AS level,
-            GREATEST(1, ROUND(cb."MaxHP" + COALESCE(stats.max_hp, 0)))::integer AS max_hp,
-            GREATEST(0, ROUND(cb."MaxMP" + COALESCE(stats.max_mp, 0)))::integer AS max_mp,
-            LEAST(GREATEST(cb."curHP", 0), GREATEST(1, ROUND(cb."MaxHP" + COALESCE(stats.max_hp, 0)))::integer) AS current_hp,
-            LEAST(GREATEST(cb."curMP", 0), GREATEST(0, ROUND(cb."MaxMP" + COALESCE(stats.max_mp, 0)))::integer) AS current_mp,
-            ROUND(COALESCE(stats.physical_attack, 0))::integer AS physical_attack,
+            {{DonatorMaximumHealthSelects}}
+            {{DonatorPhysicalAttackSelect}}
             ROUND(COALESCE(stats.physical_defense, 0))::integer AS physical_defense,
-            ROUND(COALESCE(stats.magic_attack, 0))::integer AS magic_attack,
+            {{DonatorMagicAttackSelect}}
             ROUND(COALESCE(stats.magic_defense, 0))::integer AS magic_defense,
             ROUND(COALESCE(stats.hit, 0))::integer AS hit,
             ROUND(COALESCE(stats.dodge, 0))::integer AS dodge,
@@ -338,6 +335,7 @@ internal static partial class PostgresCharacterRuntimeItemProjectionSql
             {{OwnerMergeInternalStatSelects}}
         FROM character_base cb
         LEFT JOIN stat_totals stats ON stats.user_id = cb.id
+        {{DonatorBenefitJoins}}
         {{RankLateralJoinForCharacterAlias}}
         {{PostgresCharacterWeaponCombatProjectionSql.LateralJoinForCharacterAlias}}
         WHERE cb.account_id = @accountId

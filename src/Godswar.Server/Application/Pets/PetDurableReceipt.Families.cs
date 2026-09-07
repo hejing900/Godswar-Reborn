@@ -87,6 +87,12 @@ internal sealed partial record PetDurableReceipt
             PetDurableReceiptStatus.PetSkillBookTraitRequirementNotMet or
             PetDurableReceiptStatus.PetSkillBookNoOpenSlot or
             PetDurableReceiptStatus.PetSkillBookInvalidState or
+            PetDurableReceiptStatus.PlayerSkillLearned or
+            PetDurableReceiptStatus.PlayerSkillBookWrongClass or
+            PetDurableReceiptStatus.PlayerSkillBookLevelRestricted or
+            PetDurableReceiptStatus.PlayerSkillBookAlreadyLearned or
+            PetDurableReceiptStatus.PlayerSkillBookPriorTierRequired or
+            PetDurableReceiptStatus.PlayerSkillBookInvalidState or
             PetDurableReceiptStatus.PetNotTaken or
             PetDurableReceiptStatus.PetExperienceAdded or
             PetDurableReceiptStatus.PetExperienceRestrictedPetUnbound or

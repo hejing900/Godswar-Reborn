@@ -13,15 +13,13 @@ using Godswar.Server.Operations;
 using Godswar.Server.Operations.Observability;
 using Godswar.Server.Security.Authentication;
 using Godswar.Server.State;
-
-using var controlledHostEvidence =
-    ControlledHostPrivacyEvidence.TryInstallFromEnvironment();
+using var controlledHostEvidence = ControlledHostPrivacyEvidence
+    .TryInstallFromEnvironment();
 
 if (await ServerStartupCommandDispatcher.TryRunAsync(args))
 {
     return;
 }
-
 var optionsPath = args.Length > 0 ? args[0] : "appsettings.json";
 if (!ServerRuntimeBootstrap.TryLoadOptions(
         optionsPath,
@@ -30,58 +28,76 @@ if (!ServerRuntimeBootstrap.TryLoadOptions(
 {
     return;
 }
-
 using var observability = ServerObservabilityRuntime.Start(
     options.Operations.Management.MaximumResponseBytes,
     installConsoleBoundary: controlledHostEvidence is null);
 LegacyPersistenceMetrics.EnsureInitialized();
 observability.RecordLifecycle("server", "starting");
-
 try
 {
-    var legacyAuthenticationAccess =
-        LegacyAuthenticationAccess.Create(runtimeProfile);
-    var phase4AcceptanceFaults =
-        SecurePhase4AcceptanceFaults.Create(
-            options.Secure.Phase4AcceptanceFaults);
-    await PostgresSchemaStartup.InitializeAsync(
-        options.Storage.PostgresConnectionString);
-    await PostgresRelationalContentBaselineBootstrapper.EnsureAsync(
-        options.Storage.PostgresConnectionString);
+    var legacyAuthenticationAccess = LegacyAuthenticationAccess.Create(
+        runtimeProfile);
+    var phase4AcceptanceFaults = SecurePhase4AcceptanceFaults.Create(
+        options.Secure.Phase4AcceptanceFaults);
+    var postgres = options.Storage.PostgresConnectionString;
+    await PostgresSchemaStartup.InitializeAsync(postgres);
+    await PostgresRelationalContentBaselineBootstrapper.EnsureAsync(postgres);
     var (realmCalendars, realmCalendar) =
         await ServerRealmCalendarStartup.LoadForProcessAsync(options);
-    var runtimeContent = await ServerRuntimeContentComposition
-        .LoadStartupContentAsync(options);
-    if (runtimeContent is null)
+    var itemContent = await ServerItemContentComposition.LoadAsync(options);
+    var petContent = await ServerPetContentComposition.LoadAsync(
+        options,
+        itemContent.Templates);
+    var petOwnerMergeContent = await ServerPetOwnerMergeContentComposition
+        .LoadAsync(options);
+    var petLearnedSkillContent =
+        await ServerRuntimeContentComposition.LoadLearnedSkillsAsync(options);
+    var holyBalance =
+        await ServerRuntimeContentComposition.LoadHolySpiritBalanceAsync(options);
+    var dailyNpcs = await
+        ServerDailyNpcStartup.LoadBalancesAsync(options, itemContent);
+    var worldContent = await ServerWorldContentComposition.TryLoadAsync(options);
+    if (worldContent is null)
     {
         return;
     }
-    var (worldContent, itemContent, petContent,
-        petOwnerMergeContent, petLearnedSkillContent,
-        holyBalance, warehousePolicy,
-        gameplayCatalogs) = runtimeContent;
-    var gameplayContentRevision =
-        worldContent.Manifest.Gameplay.Sha256;
+    var runtimeContent = await ServerRuntimeBootstrapContext.LoadAsync(
+        options, worldContent, itemContent, petContent, petOwnerMergeContent,
+        petLearnedSkillContent, holyBalance, dailyNpcs);
+    RuntimeContentCompatibilityValidator.Validate(itemContent.Templates,
+        worldContent.Gameplay);
+    var gameplayCatalogs = GameplayRuntimeCatalogs.Create(
+        worldContent.Gameplay,
+        runtimeContent.MonsterRewardPolicy);
+    var gameplayContentRevision = worldContent.Manifest.Gameplay.Sha256;
     await using IGameStore store = new PostgresGameStore(
-        options.Storage.PostgresConnectionString,
+        postgres,
         itemContent,
         gameplayContentRevision,
         petContent,
         petLearnedSkillContent: petLearnedSkillContent,
         holySpiritBalance: holyBalance,
         realmId: options.Game.WorldInstances.ProcessRealmId);
-    await using var postgresApplicationDataRuntime =
-        ServerRuntimeContentComposition.CreateApplicationData(
-            options, worldContent, itemContent, petContent,
-            petOwnerMergeContent, petLearnedSkillContent,
-            holyBalance,
-            warehousePolicy,
-            realmCalendar);
-    var accountPersistence = ServerAccountPersistenceComposition.Create(
-        postgresApplicationDataRuntime);
+    await using var applicationData =
+        runtimeContent.CreateApplicationData(realmCalendar);
+    var accountPersistence =
+        ServerAccountPersistenceComposition.Create(applicationData);
+    await using AccountAuthenticationService? rawAuthentication =
+        legacyAuthenticationAccess is not null
+            ? AccountAuthenticationService.CreateLegacyRaw(
+                accountPersistence.Credentials,
+                accountPersistence.Presence,
+                options.Authentication)
+            : null;
+    await using AccountAuthenticationService? secureAuthentication =
+        options.Secure.Enabled
+            ? new AccountAuthenticationService(
+                accountPersistence.Credentials,
+                accountPersistence.Presence,
+                options.Authentication)
+            : null;
     var gameplayPersistence =
-        ServerGameplayPersistenceComposition.Create(
-            postgresApplicationDataRuntime);
+        ServerGameplayPersistenceComposition.Create(applicationData);
     using var shutdown = new CancellationTokenSource();
     var controlledHostShutdown =
         ControlledHostShutdownControl.TryCreateFromEnvironment(
@@ -89,18 +105,9 @@ try
             controlledHostEvidence is not null,
             shutdown);
     await using var coordination =
-        await ServerRuntimeContentComposition.CreateCoordinationAsync(
-            options,
-            worldContent,
-            itemContent,
-            petContent,
-            petOwnerMergeContent,
-            petLearnedSkillContent,
-            holyBalance,
-            warehousePolicy,
+        await runtimeContent.CreateCoordinationAsync(
             realmCalendars,
             shutdown.Token);
-
     await using var characterCheckpoints =
         new CharacterCheckpointCoordinator(
             gameplayPersistence.CharacterCheckpoints,
@@ -111,9 +118,11 @@ try
         options.Game.Monsters.Runtime,
         options.Game.Players.Runtime,
         characterCheckpoints,
-        postgresApplicationDataRuntime.ProgressionIntervalSettlementCommands,
+        applicationData.ProgressionIntervalSettlementCommands,
         zodiacLevelStore: gameplayPersistence.ZodiacLevels,
         experienceBoosts: gameplayPersistence.ExperienceBoosts,
+        characterRuntimeProjections:
+            gameplayPersistence.CharacterRuntime,
         requiresDurablePlayerPersistence: true,
         worldInstanceOptions: options.Game.WorldInstances,
         gameplayCatalogs: gameplayCatalogs,
@@ -132,7 +141,7 @@ try
         options.Game.DeveloperCommands,
         characterCheckpoints,
         gameplayPersistence,
-        postgresApplicationDataRuntime,
+        applicationData,
         realmCalendar,
         coordination.Worker,
         gameplayCatalogs,
@@ -159,12 +168,14 @@ try
             admission,
             session => new LoginClientHandler(
                 session,
-                accountPersistence.LegacyLogin,
                 options,
+                rawAuthentication ??
+                    throw new InvalidOperationException(
+                        "Raw login authentication is unavailable."),
                 legacyAuthenticationAccess:
                     legacyAuthenticationAccess,
                 realmCatalog:
-                    postgresApplicationDataRuntime.RealmCatalog),
+                    applicationData.RealmCatalog),
             session => gameHandlerFactory.Create(
                 session,
                 legacyAuthenticationAccess:
@@ -254,8 +265,8 @@ try
         options.Operations.Readiness,
         characterCheckpoints,
         registry,
-        postgresApplicationDataRuntime,
-        postgresApplicationDataRuntime.OutboxEnabled,
+        applicationData,
+        applicationData.OutboxEnabled,
         options.Game.ZodiacEnergy.Enabled,
         secureUdpRuntime,
         coordination.Worker,
@@ -263,13 +274,6 @@ try
     using var progressionRetryMetrics =
         new DurableProgressionRetryMetrics(
             registry.GetDurableProgressionRetrySnapshot);
-    await using AccountAuthenticationService? secureAuthentication =
-        options.Secure.Enabled
-            ? new AccountAuthenticationService(
-                accountPersistence.Credentials,
-                accountPersistence.Presence,
-                options.Authentication)
-            : null;
     using TlsHandshakeGate? secureHandshakeGate =
         options.Secure.Enabled
             ? new TlsHandshakeGate(options.Network.MaxConcurrentTlsHandshakes)
@@ -295,13 +299,14 @@ try
             admission,
             session => new LoginClientHandler(
                 session,
-                accountPersistence.LegacyLogin,
                 options,
-                secureAuthentication,
+                secureAuthentication ??
+                    throw new InvalidOperationException(
+                        "Secure login authentication is unavailable."),
                 secureGameTickets,
                 secureGameTarget,
                 realmCatalog:
-                    postgresApplicationDataRuntime.RealmCatalog),
+                    applicationData.RealmCatalog),
             transportFactory: secureTransportFactory);
     var secureGameServer = secureTransportFactory is null
         ? null
@@ -345,33 +350,25 @@ try
                     shutdown.Token);
         }
 
-        criticalTasks.Start(
-            CriticalTaskKind.MonsterWorld,
-            registry.RunMonsterRoamingAsync);
-        criticalTasks.Start(
-            CriticalTaskKind.PlayerRecovery,
-            registry.RunPlayerRecoveryAsync);
-        criticalTasks.Start(
-            CriticalTaskKind.ExperienceBoostReconciliation,
-            registry.RunExperienceBoostStatusReconciliationAsync);
+        criticalTasks.Start(CriticalTaskKind.MonsterWorld, registry.RunMonsterRoamingAsync);
+        criticalTasks.Start(CriticalTaskKind.PlayerRecovery, registry.RunPlayerRecoveryAsync);
+        criticalTasks.Start(CriticalTaskKind.ExperienceBoostReconciliation, registry.RunExperienceBoostStatusReconciliationAsync);
         if (options.Game.ZodiacEnergy.Enabled)
         {
             criticalTasks.Start(
                 CriticalTaskKind.ZodiacEnergyAccrual,
                 registry.RunZodiacEnergyAccrualAsync);
         }
-        criticalTasks.Start(
-            CriticalTaskKind.DurableProgressionRetry,
-            registry.RunDurableProgressionRetryAsync);
-        if (postgresApplicationDataRuntime.OutboxEnabled)
+        criticalTasks.Start(CriticalTaskKind.DurableProgressionRetry, registry.RunDurableProgressionRetryAsync);
+        criticalTasks.Start(CriticalTaskKind.LegacyInstanceOpalRecovery, applicationData.RunLegacyInstanceOpalRecoveryAsync);
+        if (applicationData.OutboxEnabled)
         {
-            criticalTasks.Start(
-                CriticalTaskKind.OutboxDispatcher,
-                postgresApplicationDataRuntime.RunOutboxAsync);
+            criticalTasks.Start(CriticalTaskKind.OutboxDispatcher,
+                applicationData.RunOutboxAsync);
         }
         ServerReconciliationComposition.StartWorkerIfEnabled(
             criticalTasks,
-            postgresApplicationDataRuntime);
+            applicationData);
 
         if (secureUdpRuntime is not null)
         {
@@ -384,23 +381,15 @@ try
         {
             endpointServers.Add(loginServer);
             endpointServers.Add(gameServer);
-            criticalTasks.Start(
-                CriticalTaskKind.LoginListener,
-                loginServer.RunAsync);
-            criticalTasks.Start(
-                CriticalTaskKind.GameListener,
-                gameServer.RunAsync);
+            criticalTasks.Start(CriticalTaskKind.LoginListener, loginServer.RunAsync);
+            criticalTasks.Start(CriticalTaskKind.GameListener, gameServer.RunAsync);
         }
         if (secureLoginServer is not null && secureGameServer is not null)
         {
             endpointServers.Add(secureLoginServer);
             endpointServers.Add(secureGameServer);
-            criticalTasks.Start(
-                CriticalTaskKind.LoginListener,
-                secureLoginServer.RunAsync);
-            criticalTasks.Start(
-                CriticalTaskKind.GameListener,
-                secureGameServer.RunAsync);
+            criticalTasks.Start(CriticalTaskKind.LoginListener, secureLoginServer.RunAsync);
+            criticalTasks.Start(CriticalTaskKind.GameListener, secureGameServer.RunAsync);
         }
         if (workerBackhaulRuntime is not null)
         {
@@ -468,20 +457,10 @@ try
                 ? "ready"
                 : "running_not_ready");
 
-        if (controlledHostShutdown is not null)
-        {
-            var controlTask =
-                controlledHostShutdown.RunAsync(shutdown.Token);
-            auxiliaryTasks.Add(controlTask);
-            _ = controlTask.ContinueWith(
-                static (_, state) =>
-                    ((CancellationTokenSource)state!).Cancel(),
-                shutdown,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted |
-                    TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-        }
+        ServerRuntimeShutdown.StartControlledHostShutdown(
+            controlledHostShutdown,
+            shutdown,
+            auxiliaryTasks);
 
         await Task.WhenAll(
             criticalTasks.Items.Concat(auxiliaryTasks));

@@ -1,8 +1,11 @@
 using Godswar.Server.Application.Coordination;
+using Godswar.Server.Application.FactionCrier;
 using Godswar.Server.Application.Inventory;
 using Godswar.Server.Application.Items;
+using Godswar.Server.Application.OnlineAwards;
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.Realms;
+using Godswar.Server.Application.Rewards;
 using Godswar.Server.Application.World;
 using Godswar.Server.Application.Warehouse;
 using Godswar.Server.Infrastructure;
@@ -56,6 +59,7 @@ internal static partial class ServerRuntimeContentComposition
         PinnedPetLearnedSkillContentCatalog learnedSkills,
         HolySpiritBalanceSnapshot holySpiritBalance,
         WarehouseExpansionPolicySnapshot warehouseExpansionPolicy,
+        ServerDailyNpcBalances dailyNpcBalances,
         RealmCalendar realmCalendar) =>
         new(
             options.Storage.PostgresConnectionString,
@@ -70,6 +74,8 @@ internal static partial class ServerRuntimeContentComposition
             learnedSkills,
             holySpiritBalance,
             warehouseExpansionPolicy,
+            dailyNpcBalances.FactionCrier,
+            dailyNpcBalances.OnlineAward,
             options.Storage.Reconciliation);
 
     public static async ValueTask<ServerCoordinationComposition>
@@ -79,16 +85,20 @@ internal static partial class ServerRuntimeContentComposition
             GameplayItemContent items,
             PinnedPetContentCatalog pets,
             PinnedPetOwnerMergeContentCatalog petOwnerMerge,
-        PinnedPetLearnedSkillContentCatalog learnedSkills,
-        HolySpiritBalanceSnapshot holySpiritBalance,
-        WarehouseExpansionPolicySnapshot warehouseExpansionPolicy,
-        RealmCalendarCatalog realmCalendars,
+            PinnedPetLearnedSkillContentCatalog learnedSkills,
+            HolySpiritBalanceSnapshot holySpiritBalance,
+            WarehouseExpansionPolicySnapshot warehouseExpansionPolicy,
+            MonsterRewardPolicySnapshot monsterRewardPolicy,
+            ServerDailyNpcBalances dailyNpcBalances,
+            RealmCalendarCatalog realmCalendars,
             CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(learnedSkills);
         ArgumentNullException.ThrowIfNull(holySpiritBalance);
         ArgumentNullException.ThrowIfNull(warehouseExpansionPolicy);
+        ArgumentNullException.ThrowIfNull(monsterRewardPolicy);
+        ArgumentNullException.ThrowIfNull(dailyNpcBalances);
         ArgumentNullException.ThrowIfNull(realmCalendars);
         var fingerprint = RuntimeContentFingerprint.Create(
             world.Manifest.Revision,
@@ -97,10 +107,11 @@ internal static partial class ServerRuntimeContentComposition
             petOwnerMerge.Revision.Sha256,
             learnedSkills.Revision.Sha256,
             holySpiritBalance.CoordinationRevision(),
-            new string('0', 64),
+            dailyNpcBalances.FactionCrier.CoordinationRevision(),
             realmCalendars.CoordinationRevision,
-            new string('0', 64),
-            warehouseExpansionPolicy.CoordinationRevision());
+            dailyNpcBalances.OnlineAward.CoordinationRevision(),
+            warehouseExpansionPolicy.CoordinationRevision(),
+            monsterRewardPolicy.CoordinationRevision());
         return await ServerCoordinationComposition.CreateAsync(
             options,
             fingerprint,

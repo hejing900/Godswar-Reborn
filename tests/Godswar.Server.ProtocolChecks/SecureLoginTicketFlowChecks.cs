@@ -71,8 +71,8 @@ internal static class SecureLoginTicketFlowChecks
             endpointRole: NetworkEndpointRole.Login);
         var handler = new LoginClientHandler(
             session,
-            new PrincipalLookupStore(),
-            new ServerOptions());
+            new ServerOptions(),
+            new FixedPasswordAccountAuthenticator());
         var method = typeof(LoginClientHandler).GetMethod(
             "HandleLoginAsync",
             System.Reflection.BindingFlags.Instance |
@@ -165,7 +165,6 @@ internal static class SecureLoginTicketFlowChecks
             endpointRole: NetworkEndpointRole.Login);
         var handler = new LoginClientHandler(
             session,
-            accountStore,
             new ServerOptions(),
             authentication,
             ticketStore,

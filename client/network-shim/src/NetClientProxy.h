@@ -3,13 +3,24 @@
 #include "AvatarPreviewGate.h"
 #include "LegacyClientApi.h"
 #include "NativeClientCoordinator.h"
+#include "OriginFighterExperienceHost.h"
 #include "OriginWarehousePageHost.h"
+#include "RawFighterLevelSealProjectionBridge.h"
 #include "SecureClientRuntime.h"
 #include "SecureClientSession.h"
 
 #include <Windows.h>
 
 namespace godswar::network {
+
+namespace net_client_proxy_detail {
+
+bool IsRawFighterProjectionEligible(
+    SecureClientRuntimeState runtimeState,
+    const NativeClientSnapshot& client,
+    bool originHostSupported) noexcept;
+
+} // namespace net_client_proxy_detail
 
 // Mirrors the stock ABI's single-owner lifecycle. Release is the exclusive
 // final call and must not overlap another virtual method.
@@ -55,6 +66,8 @@ private:
     bool ConnectSecure(const ClientBridgePlan& plan) noexcept;
     bool TryBuildSecureConfiguration(
         SecureClientSessionConfiguration* configuration) noexcept;
+    bool IsRawPassThroughConnected() const noexcept;
+    bool ApplyPendingFighterExperienceProjections() noexcept;
     void StopSecureSession() noexcept;
 
     ILegacyNetClient* legacyClient_;
@@ -63,7 +76,9 @@ private:
     SecureClientSession* secureSession_ = nullptr;
     NativeProxyId proxyId_;
     AvatarPreviewGate avatarPreviewGate_;
+    OriginFighterExperienceHost fighterExperienceHost_;
     OriginWarehousePageHost warehousePageHost_;
+    RawFighterLevelSealProjectionBridge rawFighterProjectionBridge_;
     SRWLOCK secureSendLock_{};
 };
 

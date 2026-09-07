@@ -111,6 +111,10 @@ internal sealed class GameCharacter
 
     public uint[] OwnedTitleIds { get; set; } = [];
 
+    public long FactionCrierRevision { get; set; }
+
+    public long OnlineAwardRevision { get; set; }
+
     public int MaxHp { get; set; } = 1500;
 
     public int MaxMp { get; set; } = 177;

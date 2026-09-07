@@ -88,16 +88,22 @@ internal sealed partial class PostgresGameStore
                 currencyBalance);
         }
 
-        var occupied = await LockCapitalShopBagAsync(
+        var stackCap = Math.Clamp(
+            policy.Value.StackCap,
+            (short)1,
+            (short)byte.MaxValue);
+        var bag = await LockCapitalShopBagAsync(
             connection,
             transaction,
             characterId,
+            offer.Item,
+            stackCap,
             cancellationToken);
-        var inserts = PlanCapitalShopInserts(
-            occupied,
+        var inventoryPlan = PlanCapitalShopMutation(
+            bag,
             quantity,
-            Math.Clamp(policy.Value.StackCap, (short)1, (short)byte.MaxValue));
-        if (inserts is null)
+            stackCap);
+        if (inventoryPlan is null)
         {
             await transaction.CommitAsync(cancellationToken);
             return new(
@@ -111,12 +117,12 @@ internal sealed partial class PostgresGameStore
             character.Value.InventoryRevision + 1);
         var balanceAfter = checked(
             currencyBalance - checked((int)totalCost));
-        var mutations = await InsertCapitalShopItemsAsync(
+        var mutations = await ApplyCapitalShopItemsAsync(
             connection,
             transaction,
             characterId,
             offer.Item,
-            inserts,
+            inventoryPlan,
             cancellationToken);
         var inboxId = await InsertCapitalShopEvidenceAsync(
             connection,
@@ -164,9 +170,16 @@ internal sealed partial class PostgresGameStore
             characterId,
             cancellationToken) ?? throw new InvalidDataException(
                 "Purchased shop state could not be reloaded.");
-        var refreshedBalance = offer.Currency == CapitalNpcShopCurrency.Gold
-            ? refreshed.Gold
-            : refreshed.BindingGold;
+        var refreshedBalance = offer.Currency switch
+        {
+            CapitalNpcShopCurrency.Silver => refreshed.Silver,
+            CapitalNpcShopCurrency.Gold => refreshed.Gold,
+            CapitalNpcShopCurrency.BindingGold => refreshed.BindingGold,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(offer),
+                offer.Currency,
+                "Unsupported capital shop currency.")
+        };
         if (refreshedBalance != balanceAfter)
         {
             throw new InvalidDataException(
@@ -188,7 +201,7 @@ internal sealed partial class PostgresGameStore
     {
         await using var command = new NpgsqlCommand(
             """
-            SELECT "Stone", "BindingGold",
+            SELECT "Money", "Stone", "BindingGold",
                    wallet_revision, inventory_revision
             FROM public.character_base
             WHERE id = @characterId AND account_id = @accountId
@@ -205,133 +218,30 @@ internal sealed partial class PostgresGameStore
             ? new CapitalShopLockedCharacter(
                 reader.GetInt32(0),
                 reader.GetInt32(1),
-                reader.GetInt64(2),
-                reader.GetInt64(3))
+                reader.GetInt32(2),
+                reader.GetInt64(3),
+                reader.GetInt64(4))
             : null;
     }
 
-    private static async Task<bool[]> LockCapitalShopBagAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        int characterId,
-        CancellationToken cancellationToken)
-    {
-        var occupied = new bool[KitBagProjectionSlots];
-        await using var command = new NpgsqlCommand(
-            """
-            SELECT slot_index
-            FROM public.character_items
-            WHERE user_id = @characterId AND item_location = 1
-              AND slot_index BETWEEN 0 AND 95
-            ORDER BY slot_index, id
-            FOR UPDATE;
-            """,
-            connection,
-            transaction);
-        command.Parameters.AddWithValue("characterId", characterId);
-        await using var reader =
-            await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            var slot = reader.GetInt16(0);
-            if (occupied[slot])
-            {
-                throw new InvalidDataException(
-                    "The locked kit bag contains duplicate slots.");
-            }
-            occupied[slot] = true;
-        }
-        return occupied;
-    }
-
-    private static IReadOnlyList<CapitalShopInsert>?
-        PlanCapitalShopInserts(
-        bool[] occupied,
-        int quantity,
-        short stackCap)
-    {
-        var remaining = quantity;
-        var inserts = new List<CapitalShopInsert>();
-        for (short slot = 0;
-             slot < occupied.Length && remaining > 0;
-             slot++)
-        {
-            if (occupied[slot])
-            {
-                continue;
-            }
-            var stack = checked((short)Math.Min(remaining, stackCap));
-            inserts.Add(new CapitalShopInsert(slot, stack));
-            remaining -= stack;
-        }
-        return remaining == 0 ? inserts : null;
-    }
-
-    private static async Task<IReadOnlyList<CapitalShopMutation>>
-        InsertCapitalShopItemsAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        int characterId,
-        CompactItemEntry offeredItem,
-        IReadOnlyList<CapitalShopInsert> inserts,
-        CancellationToken cancellationToken)
-    {
-        var mutations = new List<CapitalShopMutation>(inserts.Count);
-        foreach (var insert in inserts)
-        {
-            await InsertCharacterItemIntoEmptySlotAsync(
-                connection,
-                transaction,
-                characterId,
-                ItemLocationKitBag,
-                insert.Slot,
-                offeredItem with { Stack = insert.Stack },
-                cancellationToken);
-            await using var command = new NpgsqlCommand(
-                """
-                SELECT id, to_jsonb(character_items)::text
-                FROM public.character_items
-                WHERE user_id = @characterId AND item_location = 1
-                  AND slot_index = @slot
-                FOR UPDATE;
-                """,
-                connection,
-                transaction);
-            command.Parameters.AddWithValue("characterId", characterId);
-            command.Parameters.AddWithValue("slot", insert.Slot);
-            await using var reader =
-                await command.ExecuteReaderAsync(cancellationToken);
-            if (!await reader.ReadAsync(cancellationToken))
-            {
-                throw new InvalidDataException(
-                    "A purchased item insert returned no durable row.");
-            }
-            mutations.Add(new CapitalShopMutation(
-                reader.GetInt64(0),
-                insert.Slot,
-                reader.GetString(1)));
-        }
-        return mutations;
-    }
-
     private readonly record struct CapitalShopLockedCharacter(
+        int Silver,
         int Gold,
         int BindingGold,
         long WalletRevision,
         long InventoryRevision)
     {
         public int GetBalance(CapitalNpcShopCurrency currency) =>
-            currency == CapitalNpcShopCurrency.Gold
-                ? Gold
-                : BindingGold;
+            currency switch
+            {
+                CapitalNpcShopCurrency.Silver => Silver,
+                CapitalNpcShopCurrency.Gold => Gold,
+                CapitalNpcShopCurrency.BindingGold => BindingGold,
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(currency),
+                    currency,
+                    "Unsupported capital shop currency.")
+            };
     }
 
-    private readonly record struct CapitalShopInsert(
-        short Slot,
-        short Stack);
-
-    private readonly record struct CapitalShopMutation(
-        long ItemInstanceId,
-        short Slot,
-        string AfterState);
 }

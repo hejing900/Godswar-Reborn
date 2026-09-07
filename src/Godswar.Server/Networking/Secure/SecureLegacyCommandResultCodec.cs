@@ -10,17 +10,20 @@ internal static class SecureLegacyCommandResultCodec
         out int bytesWritten)
     {
         bytesWritten = 0;
+        var outputLength = result.FighterExperienceProjection.HasValue
+            ? SecureProtocolConstants.LegacyCommandResultV2Bytes
+            : SecureProtocolConstants.LegacyCommandResultBytes;
         if (!IsValid(result) ||
-            destination.Length <
-                SecureProtocolConstants.LegacyCommandResultBytes)
+            destination.Length < outputLength)
         {
             return false;
         }
 
-        var output =
-            destination[..SecureProtocolConstants.LegacyCommandResultBytes];
+        var output = destination[..outputLength];
         output.Clear();
-        output[0] = SecureProtocolConstants.LegacyCommandResultVersion;
+        output[0] = result.FighterExperienceProjection.HasValue
+            ? SecureProtocolConstants.LegacyCommandResultV2Version
+            : SecureProtocolConstants.LegacyCommandResultVersion;
         output[1] = (byte)result.Disposition;
         BinaryPrimitives.WriteUInt16BigEndian(
             output[2..],
@@ -40,6 +43,15 @@ internal static class SecureLegacyCommandResultCodec
             output.Clear();
             return false;
         }
+        if (result.FighterExperienceProjection is { } projection)
+        {
+            BinaryPrimitives.WriteUInt32BigEndian(
+                output[32..],
+                projection.CurrentExperience);
+            BinaryPrimitives.WriteUInt32BigEndian(
+                output[36..],
+                projection.MaximumExperience);
+        }
 
         bytesWritten = output.Length;
         return true;
@@ -50,10 +62,17 @@ internal static class SecureLegacyCommandResultCodec
         out SecureLegacyCommandResult result)
     {
         result = default;
-        if (source.Length !=
-                SecureProtocolConstants.LegacyCommandResultBytes ||
-            source[0] !=
-                SecureProtocolConstants.LegacyCommandResultVersion)
+        var isVersion1 =
+            source.Length ==
+                SecureProtocolConstants.LegacyCommandResultBytes &&
+            source[0] ==
+                SecureProtocolConstants.LegacyCommandResultVersion;
+        var isVersion2 =
+            source.Length ==
+                SecureProtocolConstants.LegacyCommandResultV2Bytes &&
+            source[0] ==
+                SecureProtocolConstants.LegacyCommandResultV2Version;
+        if (!isVersion1 && !isVersion2)
         {
             return false;
         }
@@ -75,12 +94,44 @@ internal static class SecureLegacyCommandResultCodec
             return false;
         }
 
-        result = new SecureLegacyCommandResult(
-            disposition,
-            commandFamily,
-            BinaryPrimitives.ReadUInt32BigEndian(source[4..]),
-            authoritativeRevision,
-            operationId);
+        var resultCode =
+            BinaryPrimitives.ReadUInt32BigEndian(source[4..]);
+        if (isVersion2)
+        {
+            var currentExperience =
+                BinaryPrimitives.ReadUInt32BigEndian(source[32..]);
+            var maximumExperience =
+                BinaryPrimitives.ReadUInt32BigEndian(source[36..]);
+            if (maximumExperience == 0 ||
+                !SecureLegacyCommandResult
+                    .CanCarryFighterExperienceProjection(
+                        disposition,
+                        commandFamily,
+                        resultCode,
+                        authoritativeRevision))
+            {
+                return false;
+            }
+
+            result = new SecureLegacyCommandResult(
+                disposition,
+                commandFamily,
+                resultCode,
+                authoritativeRevision,
+                operationId,
+                new SecureFighterExperienceProjection(
+                    currentExperience,
+                    maximumExperience));
+        }
+        else
+        {
+            result = new SecureLegacyCommandResult(
+                disposition,
+                commandFamily,
+                resultCode,
+                authoritativeRevision,
+                operationId);
+        }
         return true;
     }
 
@@ -92,6 +143,14 @@ internal static class SecureLegacyCommandResultCodec
             result.OperationId != Guid.Empty &&
             (result.Disposition !=
                 SecureLegacyCommandDisposition.Applied ||
-                result.AuthoritativeRevision != 0);
+                result.AuthoritativeRevision != 0) &&
+            (result.FighterExperienceProjection is not { } projection ||
+                projection.MaximumExperience != 0 &&
+                SecureLegacyCommandResult
+                    .CanCarryFighterExperienceProjection(
+                        result.Disposition,
+                        result.CommandFamily,
+                        result.ResultCode,
+                        result.AuthoritativeRevision));
     }
 }

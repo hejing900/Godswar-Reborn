@@ -21,8 +21,8 @@ internal static partial class HolySpiritEffectivenessPolicyChecks
             "critical history accepts the former 7.00% envelope");
 
         var balance = new HolySpiritBalanceSnapshot(
-            55,
-            55,
+            70,
+            70,
             60,
             7,
             DateTimeOffset.Parse("2026-08-21T00:00:00Z"),
@@ -30,19 +30,19 @@ internal static partial class HolySpiritEffectivenessPolicyChecks
         balance.Validate();
         var maximumSource = new BoundaryRandomSource(useMaximum: true);
         Check.Equal(
-            550,
+            700,
             HolySpiritEffectivenessPolicy.Roll(
                 9080, 10, false,
                 balance.CooledPhysicalReductionGradeOneMaximum,
                 maximumSource).Value,
-            "pinned physical balance caps new Grade-10 rolls at 5.50%");
+            "pinned physical balance caps new Grade-10 rolls at 7.00%");
         Check.Equal(
-            550,
+            700,
             HolySpiritEffectivenessPolicy.Roll(
                 9081, 10, false,
                 balance.CooledMagicReductionGradeOneMaximum,
                 maximumSource).Value,
-            "pinned magic balance caps new Grade-10 rolls at 5.50%");
+            "pinned magic balance caps new Grade-10 rolls at 7.00%");
         Check.Equal(
             600,
             HolySpiritEffectivenessPolicy.Roll(
@@ -128,6 +128,62 @@ internal static partial class HolySpiritEffectivenessPolicyChecks
                 "legacy NULL fallbacks");
         }
 
+        var sevenPercent = PostgresSchemaMigrationCatalog
+            .CreateCooledHolyStoneSevenPercentReduction();
+        Check.Equal(
+            "20260821_104_cooled_holy_stone_reduction_7_percent",
+            sevenPercent.Id,
+            "seven-percent balance uses its reserved forward identity");
+        Check.Equal(
+            "266293036DFB2914BD98D2A1BF9E750A92A50E62491B6590E471989E338A1330",
+            sevenPercent.Checksum,
+            "seven-percent migration checksum is review-pinned");
+        for (var ordinal = 1; ordinal <= 4; ordinal++)
+        {
+            var prefix = $"holy_socket{ordinal}";
+            Check.True(
+                sevenPercent.Sql.Contains(
+                    $"{prefix}_effect_id IN (",
+                    StringComparison.Ordinal) &&
+                sevenPercent.Sql.Contains(
+                    $"{prefix}_value = {prefix}_level *",
+                    StringComparison.Ordinal) &&
+                sevenPercent.Sql.Contains(
+                    $"THEN {prefix}_level *",
+                    StringComparison.Ordinal),
+                $"seven-percent migration covers socket {ordinal}");
+        }
+        var normalizedSevenPercentSql = string.Join(
+            ' ',
+            sevenPercent.Sql.Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries));
+        Check.True(
+            normalizedSevenPercentSql.Contains(
+                "current_physical <> 55 OR",
+                StringComparison.Ordinal) &&
+            normalizedSevenPercentSql.Contains(
+                "current_magic <> 55 OR",
+                StringComparison.Ordinal) &&
+            normalizedSevenPercentSql.Contains(
+                "current_critical <> 60 THEN",
+                StringComparison.Ordinal) &&
+            normalizedSevenPercentSql.Contains(
+                "cooled_physical_reduction_grade_one_maximum = 70,",
+                StringComparison.Ordinal) &&
+            normalizedSevenPercentSql.Contains(
+                "cooled_magic_reduction_grade_one_maximum = 70,",
+                StringComparison.Ordinal),
+            "migration 104 guards 55/55/60 before committing 70/70/60");
+        Check.True(
+            !sevenPercent.Sql.Contains(
+                "holy_socket1_effect_id IN (13",
+                StringComparison.Ordinal) &&
+            !sevenPercent.Sql.Contains(
+                "cooled_critical_reduction_grade_one_maximum = 70",
+                StringComparison.Ordinal),
+            "migration 104 leaves critical and flat channels unchanged");
+
         var projection = PostgresCharacterRuntimeItemProjectionSql
             .CalculatedStatsForCharacter;
         Check.True(
@@ -148,8 +204,8 @@ internal static partial class HolySpiritEffectivenessPolicyChecks
         PostgresHolySpiritBalanceBinding.AddParameters(command, balance);
         Check.True(
             command.Parameters.Count == 3 &&
-            Convert.ToInt32(command.Parameters[0].Value) == 55 &&
-            Convert.ToInt32(command.Parameters[1].Value) == 55 &&
+            Convert.ToInt32(command.Parameters[0].Value) == 70 &&
+            Convert.ToInt32(command.Parameters[1].Value) == 70 &&
             Convert.ToInt32(command.Parameters[2].Value) == 60,
             "projection binding carries the exact pinned balance values");
         Check.True(

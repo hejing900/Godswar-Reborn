@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Messaging;
@@ -11,7 +9,8 @@ internal static partial class PetDurablePersistenceCodec
 {
     public const short ContractVersion = 1;
     private const short PreviousBagItemActivationContractVersion = 2;
-    public const short BagItemActivationContractVersion = 3;
+    private const short PreviousBagItemActivationContractVersionV3 = 3;
+    public const short BagItemActivationContractVersion = 4;
     public const short PetToPetMergeContractVersion = 2;
     private const short LegacyPetGrowthResetContractVersion = 3;
     private const short PreviousPetGrowthResetContractVersion = 4;
@@ -164,6 +163,9 @@ internal static partial class PetDurablePersistenceCodec
                 BagItemActivationContractVersion) =>
                 DecodeBagItemActivation(payload),
             (CommandFamily.BagItemActivation,
+                PreviousBagItemActivationContractVersionV3) =>
+                DecodeBagItemActivationV3(payload),
+            (CommandFamily.BagItemActivation,
                 PreviousBagItemActivationContractVersion) =>
                 DecodeBagItemActivationV2(payload),
             (CommandFamily.PetToPetMerge,
@@ -240,6 +242,7 @@ internal static partial class PetDurablePersistenceCodec
             CommandFamily.BagItemActivation =>
                 version is ContractVersion or
                     PreviousBagItemActivationContractVersion or
+                    PreviousBagItemActivationContractVersionV3 or
                     BagItemActivationContractVersion,
             CommandFamily.PetToPetMerge =>
                 version == PetToPetMergeContractVersion,
@@ -360,107 +363,6 @@ internal static partial class PetDurablePersistenceCodec
             stored.OutboxEventId,
             BasicSavvyPreview: stored.BasicSavvyPreview);
     }
-
-    public static PetDurableReceipt DecodeAndVerify(
-        string payload,
-        ReadOnlySpan<byte> expectedHash)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(payload);
-        var receipt = Decode(Encoding.UTF8.GetBytes(payload));
-        var header = JsonSerializer.Deserialize<PersistedReceiptHeader>(
-            payload) ?? throw new InvalidDataException(
-                "The pet durable receipt is malformed.");
-        var canonical = (receipt.Family, header.ContractVersion) switch
-        {
-            (CommandFamily.BagItemActivation, ContractVersion) or
-            (CommandFamily.PetGrowthReset, ContractVersion) or
-            (CommandFamily.PetRebirth, ContractVersion) =>
-                EncodeV1(receipt),
-            (CommandFamily.BagItemActivation,
-                PreviousBagItemActivationContractVersion) =>
-                EncodeBagItemActivationV2(receipt),
-            (CommandFamily.PetGrowthReset,
-                PreviousPetGrowthResetContractVersion) =>
-                EncodePetGrowthV4(receipt),
-            (CommandFamily.PetGrowthReset,
-                LegacyPetGrowthResetContractVersion) =>
-                EncodePetGrowthV3(receipt),
-            (CommandFamily.PetManagerUtility, ContractVersion) =>
-                CanonicalizePetManagerUtility(payload),
-            _ => Encode(receipt)
-        };
-        var hash = SHA256.HashData(canonical);
-        if (expectedHash.Length != hash.Length ||
-            !CryptographicOperations.FixedTimeEquals(hash, expectedHash))
-        {
-            throw new InvalidDataException(
-                "The pet durable receipt hash is invalid.");
-        }
-
-        return receipt;
-    }
-
-    public static byte[] Hash(ReadOnlySpan<byte> payload) =>
-        SHA256.HashData(payload);
-
-    private static PersistedReceiptHeader ReadHeader(
-        ReadOnlySpan<byte> payload)
-    {
-        if (payload.Length is <= 0 or >
-            OutboxEventMessage.MaximumPayloadBytes)
-        {
-            throw new InvalidDataException(
-                "The pet durable receipt has an invalid size.");
-        }
-
-        return JsonSerializer.Deserialize<PersistedReceiptHeader>(payload) ??
-            throw new InvalidDataException(
-                "The pet durable receipt is malformed.");
-    }
-
-    private static byte[] EncodeV1(PetDurableReceipt receipt) =>
-        JsonSerializer.SerializeToUtf8Bytes(
-            new PersistedReceipt(
-                ContractVersion,
-                (ushort)receipt.Family,
-                (byte)receipt.Status,
-                receipt.AccountId,
-                receipt.CharacterId,
-                receipt.KitBagSlot,
-                receipt.EquipmentSlot,
-                receipt.PetId,
-                receipt.PetLevel,
-                receipt.PetExperience,
-                receipt.PetRevision,
-                receipt.IsCarried,
-                receipt.IsSummoned,
-                receipt.PresenceOperation,
-                receipt.AggregateRevision,
-                receipt.AuditReference,
-                receipt.OutboxEventId));
-
-    private sealed record PersistedReceipt(
-        short ContractVersion,
-        ushort Family,
-        byte Status,
-        int AccountId,
-        int CharacterId,
-        int KitBagSlot,
-        int EquipmentSlot,
-        long PetId,
-        short PetLevel,
-        long PetExperience,
-        long PetRevision,
-        bool IsCarried,
-        bool IsSummoned,
-        byte PresenceOperation,
-        long AggregateRevision,
-        string AuditReference,
-        Guid? OutboxEventId);
-
-    private sealed record PersistedReceiptHeader(
-        short ContractVersion,
-        ushort Family);
 
     private sealed record PersistedPetToPetMergeReceipt(
         short ContractVersion,

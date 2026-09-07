@@ -188,6 +188,32 @@ SecurePendingOperationRegistry::DescribePacket(
         return zodiacResult;
     }
 
+    bool factionCrierPacket = false;
+    const auto factionCrierResult = DescribeFactionCrierPacket(
+        packet, packetBytes, now, descriptor, &factionCrierPacket);
+    if (factionCrierPacket) {
+        return factionCrierResult;
+    }
+
+    bool onlineAwardPacket = false;
+    const auto onlineAwardResult = DescribeOnlineAwardPacket(
+        packet, packetBytes, now, descriptor, &onlineAwardPacket);
+    if (onlineAwardPacket) {
+        return onlineAwardResult;
+    }
+
+    bool fighterLevelSealPacket = false;
+    const auto fighterLevelSealResult =
+        DescribeFighterLevelSealPacket(
+            packet,
+            packetBytes,
+            now,
+            descriptor,
+            &fighterLevelSealPacket);
+    if (fighterLevelSealPacket) {
+        return fighterLevelSealResult;
+    }
+
     bool classSuitPacket = false;
     const auto classSuitResult = DescribeClassSuitPacket(
         packet, packetBytes, now, descriptor, &classSuitPacket);
@@ -484,6 +510,7 @@ SecurePendingOperationRegistry::SetCharacter(
     hasCharacter_ = true;
     characterId_ = characterId;
     if (changed) {
+        ClearFighterExperienceProjections();
         ResetSelectionState();
         ResetForgeState();
         combinePageArmed_ = false;
@@ -509,6 +536,7 @@ void SecurePendingOperationRegistry::Clear() noexcept {
     hasPrincipal_ = false;
     hasCharacter_ = false;
     characterId_ = -1;
+    ClearFighterExperienceProjections();
     ResetSelectionState();
     ResetForgeState();
     selectionGeneration_ = 0;

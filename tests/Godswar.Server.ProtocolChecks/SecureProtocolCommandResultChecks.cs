@@ -59,6 +59,7 @@ internal static partial class SecureProtocolCodecChecks
             decoded.OperationId,
             "command result UUID round trips");
 
+        CheckFighterLevelSealResultV2(operationId);
         CheckLegacyCommandResultBoundaries(operationId);
         CheckLegacyCommandResultRejections(encoded, operationId);
         CheckLegacyCommandResultFrameContext();

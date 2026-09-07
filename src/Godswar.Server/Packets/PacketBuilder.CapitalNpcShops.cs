@@ -45,7 +45,7 @@ internal static partial class PacketBuilder
 
     public static byte[] CapitalNpcShopCatalog(
         uint npcId,
-        int currencyBalance,
+        CapitalNpcShopBalances balances,
         CapitalNpcServiceKind service)
     {
         var source = GetCapitalShopCatalogSource(service);
@@ -56,12 +56,21 @@ internal static partial class PacketBuilder
         {
             var packetLength = BinaryPrimitives.ReadUInt16LittleEndian(
                 packets.AsSpan(offset, sizeof(ushort)));
+            if (packetLength < ShopCatalogHeaderBytes ||
+                offset + packetLength > packets.Length ||
+                !CapitalNpcServiceProtocol.TryGetShopCurrency(
+                    packets[offset + 9],
+                    out var currency))
+            {
+                throw new InvalidDataException(
+                    "Captured capital shop catalog has an invalid frame.");
+            }
             BinaryPrimitives.WriteUInt32LittleEndian(
                 packets.AsSpan(offset + 4, sizeof(uint)),
                 npcId);
             BinaryPrimitives.WriteInt32LittleEndian(
                 packets.AsSpan(offset + 12, sizeof(int)),
-                Math.Max(0, currencyBalance));
+                Math.Max(0, balances.Get(currency)));
             offset += packetLength;
         }
 
@@ -79,26 +88,41 @@ internal static partial class PacketBuilder
         if (category is < 0 or > byte.MaxValue ||
             listingIndex < 0 ||
             expectedItemId == 0 ||
-            !CapitalNpcServiceProtocol.TryGetShopCurrency(
-                service,
-                out var currency))
+            !CapitalNpcServiceProtocol.IsShop(service))
         {
             return false;
         }
 
         var packets = GetCapitalShopCatalogSource(service);
         var packetOffset = 0;
-        var currentIndex = 0;
+        // MSG_NPC_SELL carries Num as an index within the selected category,
+        // not within the complete catalog stream. A category can span several
+        // frames, so accumulate only records from matching-category frames.
+        // Header byte 11 starts a new logical listing; continuation frames use
+        // zero and append to the current listing.
+        var categoryIndex = 0;
         while (packetOffset < packets.Length)
         {
             var packetLength = BinaryPrimitives.ReadUInt16LittleEndian(
                 packets.AsSpan(packetOffset));
+            var frameCategory = packets[packetOffset + 8];
             var itemCount = packets[packetOffset + 10];
+            if (frameCategory != category)
+            {
+                packetOffset += packetLength;
+                continue;
+            }
+
+            if (packets[packetOffset + 11] != 0)
+            {
+                categoryIndex = 0;
+            }
+
             for (var itemIndex = 0;
                  itemIndex < itemCount;
-                 itemIndex++, currentIndex++)
+                 itemIndex++, categoryIndex++)
             {
-                if (currentIndex != listingIndex)
+                if (categoryIndex != listingIndex)
                 {
                     continue;
                 }
@@ -107,12 +131,17 @@ internal static partial class PacketBuilder
                     packetOffset + ShopCatalogHeaderBytes +
                     (itemIndex * ShopCatalogItemBytes),
                     ShopCatalogItemBytes);
-                return packets[packetOffset + 8] == category &&
+                if (CapitalNpcServiceProtocol.TryGetShopCurrency(
+                        packets[packetOffset + 9],
+                        out var currency) &&
                     TryReadCapitalShopOffer(
                         record,
                         expectedItemId,
                         currency,
-                        out offer);
+                        out offer))
+                {
+                    return true;
+                }
             }
             packetOffset += packetLength;
         }
@@ -128,10 +157,7 @@ internal static partial class PacketBuilder
                 BoundGoldVendorCatalog.Value,
             CapitalNpcServiceKind.BindingGoldShop =>
                 BindingGoldShopCatalog.Value,
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(service),
-                service,
-                "The selected capital NPC is not a shop.")
+            _ => GetCapturedCapitalShopCatalogSource(service)
         };
 
     private static bool TryReadCapitalShopOffer(
@@ -146,8 +172,10 @@ internal static partial class PacketBuilder
             record.Slice(68));
         var socketCount = BinaryPrimitives.ReadInt16LittleEndian(
             record.Slice(34));
+        var capturedStackMarker = record[27];
         if (itemId != expectedItemId ||
             price is 0 or > int.MaxValue ||
+            capturedStackMarker == 0 ||
             socketCount is < 0 or > 4)
         {
             return false;
@@ -179,7 +207,12 @@ internal static partial class PacketBuilder
             record[24],
             record[25],
             record[26],
-            record[27],
+            // Offset 27 is the stack field in the shared compact-item wire
+            // shape. Shop captures repeat the same item and unit price with
+            // 5/99 markers, so it is listing metadata, not grant authority.
+            // Persistence derives granted stacks from the request quantity
+            // and the authoritative item-template stack cap.
+            1,
             BinaryPrimitives.ReadInt32LittleEndian(record.Slice(28)),
             BinaryPrimitives.ReadInt16LittleEndian(record.Slice(32)),
             null,

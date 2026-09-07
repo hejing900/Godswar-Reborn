@@ -8,20 +8,42 @@ internal static class BackhaulSkillCatalogChecks
     public static Task RunAsync()
     {
         Check.Equal(
-            2,
+            4,
             BackhaulSkillCatalog.All.Count,
-            "backhaul catalog contains only the two native Sparta skills");
+            "backhaul catalog contains both native portal skills per faction");
 
         CheckDefinition(
-            BackhaulSkillCatalog.CitySkillId,
+            FactionPortalSkillPolicy.AthensCapitalPortalSkillId,
+            expectedName: "Athens City",
+            expectedScriptId: "FlyToAthens1",
+            expectedCamp: GameDefaults.AthensCamp,
+            expectedMapId: GameDefaults.AthensCapitalMap,
+            expectedX: 165f,
+            expectedZ: -97f,
+            expectedCooldown: TimeSpan.FromSeconds(300));
+        CheckDefinition(
+            FactionPortalSkillPolicy.AthensSuburbPortalSkillId,
+            expectedName: "Athens Suburb",
+            expectedScriptId: "FlyToAthens2",
+            expectedCamp: GameDefaults.AthensCamp,
+            expectedMapId: 2,
+            expectedX: 102f,
+            expectedZ: -217f,
+            expectedCooldown: TimeSpan.FromSeconds(600));
+        CheckDefinition(
+            FactionPortalSkillPolicy.SpartaCapitalPortalSkillId,
             expectedName: "Sparta City",
+            expectedScriptId: "FlyToSparta1",
+            expectedCamp: GameDefaults.SpartaCamp,
             expectedMapId: GameDefaults.SpartaCapitalMap,
             expectedX: 165f,
             expectedZ: -97f,
             expectedCooldown: TimeSpan.FromSeconds(300));
         CheckDefinition(
-            BackhaulSkillCatalog.SuburbSkillId,
+            FactionPortalSkillPolicy.SpartaSuburbPortalSkillId,
             expectedName: "Sparta Suburb",
+            expectedScriptId: "FlyToSparta2",
+            expectedCamp: GameDefaults.SpartaCamp,
             expectedMapId: 4,
             expectedX: 102f,
             expectedZ: -217f,
@@ -34,7 +56,7 @@ internal static class BackhaulSkillCatalogChecks
         var suburbTemplate = SkillTalentSeeds.Skills.Single(
             static skill =>
                 skill.SkillId ==
-                (int)BackhaulSkillCatalog.SuburbSkillId);
+                (int)FactionPortalSkillPolicy.AthensSuburbPortalSkillId);
         Check.True(
             suburbTemplate.ClassIds.SequenceEqual(
                 new short[] { 0, 1, 2, 3 }) &&
@@ -47,6 +69,8 @@ internal static class BackhaulSkillCatalogChecks
     private static void CheckDefinition(
         uint skillId,
         string expectedName,
+        string expectedScriptId,
+        byte expectedCamp,
         byte expectedMapId,
         float expectedX,
         float expectedZ,
@@ -64,7 +88,11 @@ internal static class BackhaulSkillCatalogChecks
             definition.DisplayName,
             $"backhaul skill {skillId} display name");
         Check.Equal(
-            GameDefaults.SpartaCamp,
+            expectedScriptId,
+            definition.ScriptId,
+            $"backhaul skill {skillId} script identity");
+        Check.Equal(
+            (short)expectedCamp,
             definition.RequiredCamp,
             $"backhaul skill {skillId} camp");
         Check.Equal(

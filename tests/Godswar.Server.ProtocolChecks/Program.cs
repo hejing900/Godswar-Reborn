@@ -23,11 +23,8 @@ internal static partial class Program
         (string Name, Func<Task> Run)[] checks =
         [
             .. CoreRuntimeCheckCatalog.All,
-            ("Authoritative hidden live-map transfer", MapLiveTransferChecks.RunAsync),
-            ("Native handler map-transition readiness", MapTransitionHandlerChecks.RunAsync),
-            ("Native Sparta backhaul skill catalog", BackhaulSkillCatalogChecks.RunAsync),
-            ("Authoritative Sparta backhaul casting", BackhaulSkillHandlerChecks.RunAsync),
-            ("Authoritative map traversal catalog", MapTraversalCatalogChecks.RunAsync),
+            .. WorldTravelCheckCatalog.All,
+            .. LegacyInstanceCheckCatalog.All,
             ("Native local-player scene-change packet", MapSceneChangePacketChecks.RunAsync),
             ("Player combat and committed-progression ECS parity", PlayerCombatEcsParityChecks.RunAsync),
             ("Live reversible player-combat ECS adapter", PlayerCombatEcsLiveAdapterChecks.RunAsync),
@@ -55,7 +52,8 @@ internal static partial class Program
             (
                 LegacyFighterExperienceWireChecks.CheckName,
                 LegacyFighterExperienceWireChecks.RunAsync),
-            ("Additive fighter EXP boost stacking", CheckExperienceBoostStackingAsync),
+            ("Donator and Battle Pass progression benefits", CheckExperienceBoostStackingAsync),
+            ("Pet EXP boost settlement boundary", PetExperienceRewardBoundaryChecks.RunAsync),
             ("Online-only EXP and Talent boost duration", CheckOnlineProgressionBoostDurationAsync),
             ("World-session owned boost clock", CheckWorldSessionOwnedBoostClockAsync),
             ("Working-original login bootstrap manifest", CheckAfterLoginManifestAsync),
@@ -154,7 +152,6 @@ internal static partial class Program
                 ElementalClassSuitAttributeChecks.CheckName,
                 ElementalClassSuitAttributeChecks.RunAsync),
             (ClassSuitHandlerChecks.CheckName, ClassSuitHandlerChecks.RunAsync),
-            .. WarehouseCheckCatalog.All,
             ("Atomic gear-enhancement persistence", GearEnhancementTransactionChecks.RunAsync),
             (
                 PostgresGearEnhancementIntegrationChecks.CheckName,
@@ -165,9 +162,10 @@ internal static partial class Program
             ("Gear-enhancer initial NPC protocol", CheckGearEnhancerInitialProtocolAsync),
             ("Holy-suit design original NPC protocol", CheckHolySuitDesignProtocolAsync),
             ("Holy-suit bounded stock-client wire protocol", HolySuitWireProtocolChecks.RunAsync),
-            (CapitalNpcServiceProtocolChecks.CheckName,
-                CapitalNpcServiceProtocolChecks.RunAsync),
+            .. CapitalCommerceCheckCatalog.All,
             .. MedusaCheckCatalog.All,
+            (FactionCrierHandlerChecks.CheckName, FactionCrierHandlerChecks.RunAsync),
+            (FactionCrierProjectionChecks.CheckName, FactionCrierProjectionChecks.RunAsync),
             (
                 CompactItemClassAttributeChecks.CheckName,
                 CompactItemClassAttributeChecks.RunAsync),

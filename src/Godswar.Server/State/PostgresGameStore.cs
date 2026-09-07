@@ -1,5 +1,6 @@
 using Godswar.Server.Application.Accounts;
 using Godswar.Server.Application.Inventory;
+using Godswar.Server.Application.Progression;
 using Godswar.Server.Infrastructure.Accounts;
 using Godswar.Server.Infrastructure.Progression;
 using Godswar.Server.Infrastructure.World;
@@ -24,7 +25,9 @@ internal sealed partial class PostgresGameStore :
     IAccountDirectory,
     IAccountPresenceWriter,
     ILegacyAccountLoginStore,
-    IGameplayItemContentProvider
+    IGameplayItemContentProvider,
+    IWeekendExperienceClaimStore,
+    IFighterLevelSealStore
 {
     private const short ItemLocationEquipment = 0;
     private const short ItemLocationKitBag = 1;

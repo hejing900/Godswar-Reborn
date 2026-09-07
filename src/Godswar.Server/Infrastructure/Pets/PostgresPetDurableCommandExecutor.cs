@@ -4,6 +4,7 @@ using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Infrastructure.Characters;
+using Godswar.Server.Infrastructure.Database;
 using Godswar.Server.Infrastructure.Inventory;
 using Godswar.Server.Infrastructure.Messaging;
 using Godswar.Server.State;
@@ -25,6 +26,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
     private readonly IPetContentCatalog _petContent;
     private readonly IPetOwnerMergeContentCatalog _ownerMergeContent;
     private readonly IPetLearnedSkillContentCatalog _learnedSkillContent;
+    private readonly string? _gameplayContentRevision;
     private readonly IPetHatchRankRollSource _petHatchRankRollSource;
     private readonly IPetCaptureRarityRollSource _petCaptureRarityRollSource;
 
@@ -36,7 +38,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         IPetOwnerMergeContentCatalog ownerMergeContent,
         IPetLearnedSkillContentCatalog learnedSkillContent,
         IPetHatchRankRollSource? petHatchRankRollSource = null,
-        IPetCaptureRarityRollSource? petCaptureRarityRollSource = null)
+        IPetCaptureRarityRollSource? petCaptureRarityRollSource = null,
+        string? gameplayContentRevision = null)
     {
         _dataSource = dataSource ??
             throw new ArgumentNullException(nameof(dataSource));
@@ -49,6 +52,9 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
             throw new ArgumentNullException(nameof(ownerMergeContent));
         _learnedSkillContent = learnedSkillContent ??
             throw new ArgumentNullException(nameof(learnedSkillContent));
+        _gameplayContentRevision =
+            PostgresGameplayContentBinding.ValidateOptional(
+                gameplayContentRevision);
         _petHatchRankRollSource = petHatchRankRollSource ??
             CryptographicPetHatchRankRollSource.Instance;
         _petCaptureRarityRollSource = petCaptureRarityRollSource ??
@@ -429,7 +435,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         PetSoulContractEvidence? SoulContract = null,
         PetManagerUtilityEvidence? PetManagerUtility = null,
         PetRebirthGrowthEvidence? RebirthGrowth = null,
-        PetSkillLearnEvidence? SkillLearn = null)
+        PetSkillLearnEvidence? SkillLearn = null,
+        PlayerSkillLearnEvidence? PlayerSkillLearn = null)
     {
         public bool Succeeded =>
             Status is PetDurableReceiptStatus.PetCaptured or
@@ -459,6 +466,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
                 PetDurableReceiptStatus.PetAppearanceChanged or
                 PetDurableReceiptStatus.PetBound or
                 PetDurableReceiptStatus.PetSkillLearned or
+                PetDurableReceiptStatus.PlayerSkillLearned or
                 PetDurableReceiptStatus.OwnerMerged or
                 PetDurableReceiptStatus.OwnerUnmerged;
     }

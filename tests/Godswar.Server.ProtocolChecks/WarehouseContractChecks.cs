@@ -233,7 +233,7 @@ internal static class WarehouseContractChecks
 
     private static void CheckNpcCapabilities()
     {
-        var routes = NpcDialogueBaselineV8.CreateRoutes();
+        var routes = NpcDialogueBaselineV9.CreateRoutes();
         foreach (var (key, id) in new[]
         {
             ("Athens_134", WarehouseNpcProtocol.AthensManagerNpcId),

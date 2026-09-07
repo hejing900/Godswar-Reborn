@@ -4,7 +4,9 @@ using Godswar.Server.Application.Accounts;
 
 namespace Godswar.Server.Security.Authentication;
 
-internal sealed class AccountAuthenticationService : IAsyncDisposable
+internal sealed class AccountAuthenticationService :
+    IAccountAuthenticator,
+    IAsyncDisposable
 {
     private readonly IAccountCredentialStore _credentials;
     private readonly IAccountPresenceWriter _presence;
@@ -34,13 +36,53 @@ internal sealed class AccountAuthenticationService : IAsyncDisposable
         AuthenticationOptions options,
         TimeProvider? timeProvider = null,
         IPasswordKdfScheduler? scheduler = null)
+        : this(
+            credentials,
+            presence,
+            (options ?? throw new ArgumentNullException(nameof(options)))
+                .Snapshot(),
+            timeProvider,
+            scheduler)
+    {
+    }
+
+    /// <summary>
+    /// Preserves the local rollback's create-on-first-login behavior while
+    /// storing only a versioned verifier. Existing credentials still require
+    /// successful verification before any migration or presence update.
+    /// </summary>
+    public static AccountAuthenticationService CreateLegacyRaw(
+        IAccountCredentialStore credentials,
+        IAccountPresenceWriter presence,
+        AuthenticationOptions options,
+        TimeProvider? timeProvider = null,
+        IPasswordKdfScheduler? scheduler = null)
+    {
+        var policy = (options ??
+            throw new ArgumentNullException(nameof(options))).Snapshot() with
+        {
+            AllowRegistration = true
+        };
+        return new AccountAuthenticationService(
+            credentials,
+            presence,
+            policy,
+            timeProvider,
+            scheduler);
+    }
+
+    private AccountAuthenticationService(
+        IAccountCredentialStore credentials,
+        IAccountPresenceWriter presence,
+        AuthenticationPolicy policy,
+        TimeProvider? timeProvider,
+        IPasswordKdfScheduler? scheduler)
     {
         _credentials = credentials ??
             throw new ArgumentNullException(nameof(credentials));
         _presence = presence ??
             throw new ArgumentNullException(nameof(presence));
-        _policy = (options ??
-            throw new ArgumentNullException(nameof(options))).Snapshot();
+        _policy = policy;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _scheduler = scheduler ??
             new PasswordKdfScheduler(_policy, _timeProvider);

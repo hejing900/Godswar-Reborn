@@ -27,6 +27,10 @@ internal static class NpcDialogueBehaviorRegistry
         PetManagerProtocol.InitialMenuSubIds.ToArray();
     private static readonly int[] PetPointResetMenu =
         PetManagerProtocol.PointResetInitialMenuSubIds.ToArray();
+    private static readonly int[] FactionCrierMenu =
+        FactionCrierProtocol.InitialMenuSubIds.ToArray();
+    private static readonly int[] OnlineAwardMenu =
+        OnlineAwardProtocol.InitialMenuSubIds.ToArray();
     private static readonly int[] WarehouseManagerMenu =
         WarehouseNpcProtocol.ManagerInitialMenuSubIds.ToArray();
     private static readonly int[] InstanceCallerMenu =
@@ -40,10 +44,9 @@ internal static class NpcDialogueBehaviorRegistry
                 npc.NpcKey,
                 route.NpcKey,
                 StringComparison.Ordinal) ||
-            !string.Equals(
+            !DuelArenaCapturedTransportProtocol.IsAllowedClientScriptKey(
                 npc.NpcKey,
-                route.ClientScriptKey,
-                StringComparison.Ordinal))
+                route.ClientScriptKey))
         {
             return false;
         }
@@ -96,6 +99,18 @@ internal static class NpcDialogueBehaviorRegistry
                 PetManagerProtocol.IsEndpoint(
                     npc.NpcKey,
                     npc.InteractionId),
+            NpcDialogueBehavior.FactionCrier =>
+                route.DialogIndex == FactionCrierProtocol.DialogIndex &&
+                HasExactMenu(route, FactionCrierMenu) &&
+                FactionCrierProtocol.IsEndpoint(
+                    npc.NpcKey,
+                    npc.InteractionId),
+            NpcDialogueBehavior.OnlineAward =>
+                route.DialogIndex == OnlineAwardProtocol.DialogIndex &&
+                HasExactMenu(route, OnlineAwardMenu) &&
+                OnlineAwardProtocol.IsEndpoint(
+                    npc.NpcKey,
+                    npc.InteractionId),
             NpcDialogueBehavior.WarehouseManager =>
                 route.DialogIndex ==
                     WarehouseNpcProtocol.ManagerDialogIndex &&
@@ -109,6 +124,35 @@ internal static class NpcDialogueBehaviorRegistry
                 InstanceCallerProtocol.IsEndpoint(
                     npc.NpcKey,
                     npc.InteractionId),
+            NpcDialogueBehavior.Transporter =>
+                route.DialogIndex == TransporterProtocol.DialogIndex &&
+                TransporterProtocol.TryGetInitialMenu(
+                    npc.NpcKey,
+                    npc.InteractionId,
+                    out var transporterMenu) &&
+                HasExactMenu(route, transporterMenu),
+            NpcDialogueBehavior.BattlefieldTransporter =>
+                route.DialogIndex ==
+                    BattlefieldTransporterProtocol.DialogIndex &&
+                BattlefieldTransporterProtocol.TryGetInitialMenu(
+                    npc.NpcKey,
+                    npc.InteractionId,
+                    out var battlefieldMenu) &&
+                HasExactMenu(route, battlefieldMenu),
+            NpcDialogueBehavior.DuelArenaTransporter =>
+                (DuelArenaCapturedTransportProtocol.IsCapturedRoute(route) &&
+                    DuelArenaCapturedTransportProtocol.IsCapturedEndpoint(
+                        npc.NpcKey, npc.InteractionId)) ||
+                (route.DialogIndex ==
+                    DuelArenaTransporterProtocol.DialogIndex &&
+                DuelArenaTransporterProtocol.IsEndpoint(
+                    npc.NpcKey,
+                    npc.InteractionId) &&
+                HasExactMenu(
+                    route,
+                    DuelArenaTransporterProtocol.InitialMenuSubIds)),
+            NpcDialogueBehavior.DuelArenaServices =>
+                DuelArenaServiceProtocol.IsAllowed(npc, route),
             _ => false
         };
     }

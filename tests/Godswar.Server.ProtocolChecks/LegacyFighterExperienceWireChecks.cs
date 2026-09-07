@@ -32,14 +32,18 @@ internal static class LegacyFighterExperienceWireChecks
                 offset: 88),
             "unsealed level-89 EXP bar uses the next-level threshold");
 
-        var sealedLevel89 = CreateCharacter(0);
-        sealedLevel89.FighterLevelSealed = true;
-        Check.Equal(
-            uint.MaxValue,
-            ReadUnsignedField(
-                PacketBuilder.EnterMain(sealedLevel89),
-                offset: 88),
-            "sealed level-89 EXP bar uses the UInt32 storage ceiling");
+        foreach (var level in new[] { 1, 88, 89, 90, 199, 200 })
+        {
+            var sealedAtCurrentLevel = CreateCharacter(0);
+            sealedAtCurrentLevel.Level = level;
+            sealedAtCurrentLevel.FighterLevelSealed = true;
+            Check.Equal(
+                uint.MaxValue,
+                ReadUnsignedField(
+                    PacketBuilder.EnterMain(sealedAtCurrentLevel),
+                    offset: 88),
+                $"sealed level-{level} EXP bar uses the UInt32 storage ceiling");
+        }
 
         var normalLevel199 = CreateCharacter(0);
         normalLevel199.Level = 199;
@@ -119,13 +123,6 @@ internal static class LegacyFighterExperienceWireChecks
                 CreateCharacter(4_294_967_296L),
                 objectId: 3),
             "player-status fighter EXP above UInt32 is rejected");
-
-        var invalidSeal = CreateCharacter(0);
-        invalidSeal.Level = 88;
-        invalidSeal.FighterLevelSealed = true;
-        Check.Throws<InvalidOperationException>(
-            () => PacketBuilder.EnterMain(invalidSeal),
-            "fighter EXP bar rejects a level seal outside level 89");
 
         return Task.CompletedTask;
     }

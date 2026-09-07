@@ -242,7 +242,8 @@ internal static partial class
         {
             AssertGuardRejection(
                 ex,
-                "already contains its declared 383 definitions",
+                $"already contains its declared {ExpectedEntryCount} " +
+                "definitions",
                 "extra NPC definition");
             await transaction.RollbackAsync();
             return;

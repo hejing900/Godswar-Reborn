@@ -12,6 +12,8 @@ internal static class PlayerOwnershipArchitectureChecks
 
     private static readonly string[] ExecutorPaths =
     [
+        "src/Godswar.Server/Infrastructure/FactionCrier/" +
+        "PostgresFactionCrierCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Inventory/" +
         "PostgresDeveloperBagClearCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Inventory/" +
@@ -39,6 +41,8 @@ internal static class PlayerOwnershipArchitectureChecks
         "src/Godswar.Server/Infrastructure/Pets/" +
         "PostgresPetDurableCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Progression/" +
+        "PostgresDeveloperProgressionCommandExecutor.cs",
+        "src/Godswar.Server/Infrastructure/Progression/" +
         "PostgresProgressionIntervalSettlementCommandExecutor.cs",
         "src/Godswar.Server/Infrastructure/Rewards/" +
         "PostgresMonsterDeathRewardCommandExecutor.cs",
@@ -55,7 +59,7 @@ internal static class PlayerOwnershipArchitectureChecks
     public static Task RunAsync()
     {
         var repositoryRoot = FindRepositoryRoot();
-        Check.Equal(19, ExecutorPaths.Length,
+        Check.Equal(21, ExecutorPaths.Length,
             "reviewed durable executor fence inventory");
         AssertExactExecutorInventory(repositoryRoot);
 

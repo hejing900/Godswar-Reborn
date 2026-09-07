@@ -74,6 +74,13 @@ internal static class SecureProtocolConstants
     public const byte LegacyCommandOperationVersion = 1;
     public const int LegacyCommandResultBytes = 32;
     public const byte LegacyCommandResultVersion = 1;
+    public const int LegacyCommandResultV2Bytes = 40;
+    public const byte LegacyCommandResultV2Version = 2;
+    public const int MaximumLegacyCommandResultBytes =
+        LegacyCommandResultV2Bytes;
+    public const ushort FighterLevelSealCommandFamily = 60;
+    public const uint FighterLevelSealedResultCode = 106;
+    public const uint FighterLevelUnsealedResultCode = 107;
 }
 
 internal readonly record struct SecureLegacyCommandOperation(

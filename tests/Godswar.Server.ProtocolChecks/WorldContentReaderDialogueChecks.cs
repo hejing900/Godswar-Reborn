@@ -7,7 +7,7 @@ using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class WorldContentReaderDialogueChecks
+internal static partial class WorldContentReaderDialogueChecks
 {
     private static readonly DateTimeOffset FixedLoadTime =
         new(2026, 7, 29, 0, 0, 0, TimeSpan.Zero);
@@ -380,88 +380,6 @@ internal static class WorldContentReaderDialogueChecks
                 mentorRoutes[1].Behavior == NpcDialogueBehavior.ClassSuit &&
                 mentorRoutes[1].DialogIndex == 37,
                 $"{npcKey} publishes Gear Mentor and Class Suit functions");
-        }
-    }
-
-    private static void CheckReviewedCurrentRelease()
-    {
-        var publishedNpcKeys = NpcContentBaselineV1.LoadDefinitions()
-            .Select(static npc => npc.NpcKey)
-            .ToHashSet(StringComparer.Ordinal);
-        var texts = NpcTemplateSeeds.Texts
-            .Where(text => publishedNpcKeys.Contains(text.NpcKey))
-            .Select(static text => new NpcTextDefinition(
-                text.NpcKey,
-                text.SceneKey,
-                text.DisplayName,
-                text.Description))
-            .OrderBy(static text => text.NpcKey, StringComparer.Ordinal)
-            .ToArray();
-        var routes = NpcDialogueBaselineV8.CreateRoutes();
-        var revision = WorldContentRevisionHasher.HashNpcDialogues(
-            texts,
-            routes);
-
-        Check.Equal(
-            NpcDialogueBaselineV8.ExpectedTextCount,
-            texts.Length,
-            "V5 dialogue text count");
-        Check.Equal(
-            NpcDialogueBaselineV8.ExpectedHashedEntryCount,
-            revision.EntryCount,
-            "V5 dialogue hashed-entry count");
-        Check.Equal(
-            NpcDialogueBaselineV8.ExpectedRevision,
-            revision.Sha256,
-            "V5 NPC-dialogue canonical revision golden vector");
-        foreach (var npcKey in new[] { "Athens_086", "Sparta_086" })
-        {
-            var artisanRoute = routes.Single(
-                route => route.NpcKey == npcKey);
-            Check.True(
-                artisanRoute.Behavior ==
-                    NpcDialogueBehavior.HolyStone &&
-                artisanRoute.InitialMenuSubIds.SequenceEqual(
-                    [101, 201, 301, 401, 501, 601, 701, 801]),
-                $"{npcKey} publishes Mount Gear Drilling action 801");
-        }
-        foreach (var npcKey in new[] { "Athens_088", "Sparta_088" })
-        {
-            var petManagerRoutes = routes
-                .Where(route => route.NpcKey == npcKey)
-                .ToArray();
-            var petManagerNpc = NpcSpawnDefinitionFactory
-                .Create(
-                    npcKey.StartsWith("Athens", StringComparison.Ordinal)
-                        ? (short)1
-                        : (short)0,
-                    [],
-                    [],
-                    [])
-                .Single(npc => npc.NpcKey == npcKey);
-            Check.True(
-                petManagerRoutes.Length == 2 &&
-                petManagerRoutes[0].RouteOrder == 0 &&
-                petManagerRoutes[0].Behavior ==
-                    NpcDialogueBehavior.PetManager &&
-                petManagerRoutes[0].DialogIndex ==
-                    PetManagerProtocol.DialogIndex &&
-                petManagerRoutes[0].InitialMenuSubIds.SequenceEqual(
-                    Enumerable.Range(1, 11)) &&
-                NpcDialogueBehaviorRegistry.IsAllowed(
-                    petManagerNpc,
-                    petManagerRoutes[0]) &&
-                petManagerRoutes[1].RouteOrder == 1 &&
-                petManagerRoutes[1].Behavior ==
-                    NpcDialogueBehavior.PetPointReset &&
-                petManagerRoutes[1].DialogIndex ==
-                    PetManagerProtocol.PointResetDialogIndex &&
-                petManagerRoutes[1].InitialMenuSubIds.SequenceEqual(
-                    PetManagerProtocol.PointResetInitialMenuSubIds) &&
-                NpcDialogueBehaviorRegistry.IsAllowed(
-                    petManagerNpc,
-                    petManagerRoutes[1]),
-                $"{npcKey} publishes both stock Pet Manager functions");
         }
     }
 

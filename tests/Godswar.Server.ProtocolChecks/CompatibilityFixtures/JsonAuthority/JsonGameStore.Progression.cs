@@ -1,4 +1,5 @@
 using Godswar.Server.Application.Talents;
+using Godswar.Server.Game;
 
 namespace Godswar.Server.State;
 
@@ -164,6 +165,8 @@ internal sealed partial class JsonGameStore
             return SkillTalentSeeds.Skills
                 .Where(skill =>
                     (skill.SkillId == MountCatalog.RideSkillId ||
+                     skill.SkillId == checked((int)FactionPortalSkillPolicy
+                         .ResolveCapitalPortalSkillId(character.Camp)) ||
                      (skill.PreviousSkillId is null &&
                       skill.SkillLevel == 1 &&
                       (skill.MinLevel ?? 1) <= character.Level)) &&
@@ -172,7 +175,9 @@ internal sealed partial class JsonGameStore
                 .Select(skill => new SkillState
                 {
                     SkillId = skill.SkillId,
-                    Level = skill.SkillId == MountCatalog.RideSkillId
+                    Level = skill.SkillId == MountCatalog.RideSkillId ||
+                            skill.SkillId == checked((int)FactionPortalSkillPolicy
+                                .ResolveCapitalPortalSkillId(character.Camp))
                         ? (short)1
                         : skill.SkillLevel!.Value
                 })

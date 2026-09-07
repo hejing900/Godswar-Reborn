@@ -211,7 +211,8 @@ internal sealed partial class GameClientHandler
             StringComparison.Ordinal) &&
         WarehouseNpcProtocol.IsWarehouseEndpoint(
             current.NpcKey,
-            current.InteractionId);
+            current.InteractionId) &&
+        CanUseDuelArenaWarehouseNpc(current);
 
     private static WarehouseTransferReplayIntent ToWarehouseReplayIntent(
         int realmId,

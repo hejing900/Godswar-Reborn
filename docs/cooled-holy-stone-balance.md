@@ -4,13 +4,14 @@ Percentage values use hundredths of one percentage point. For example, `550`
 is `5.50%` and `600` is `6.00%`.
 
 The mutable singleton row in `holy_spirit_balance_settings` is the production
-authority for the three adjustable Cooled Holy Stone maxima. Its initial
+authority for the three adjustable Cooled Holy Stone maxima. After forward
+migration `20260821_104_cooled_holy_stone_reduction_7_percent`, the reviewed
 values are:
 
 | Effect | Channel | Grade-10 maximum |
 |---:|---|---:|
-| 9 | Physical damage reduction | 5.50% |
-| 10 | Magic damage reduction | 5.50% |
+| 9 | Physical damage reduction | 7.00% |
+| 10 | Magic damage reduction | 7.00% |
 | 13 | Critical-damage reduction | 6.00% |
 
 Effects 11, 12, and 14 remain physical, magic, and critical flat reduction.
@@ -37,9 +38,11 @@ Grade-1 maxima are `22..80` for physical and magic reduction and `28..70` for
 critical reduction.
 
 Lowering a maximum is intentionally irreversible for existing rolls because
-their raw values are clamped. Raising a maximum does not inflate historical
-rolls; it only expands the range available to future implementations after the
-coordinated worker restart.
+their raw values are clamped. Ordinary management-page increases do not
+inflate historical rolls; they only expand the range available to future
+implementations after the coordinated worker restart. A reviewed forward
+migration may define an explicit one-time conversion when product intent is to
+move a recognizable old capped population.
 
 ## Forward migrations and existing sockets
 
@@ -59,3 +62,17 @@ Compiled `80/80/70` bounds remain only as immutable historical acceptance
 envelopes. They allow old command receipts and detached stones to replay after
 the live cap is lowered. Combat and newly implemented Cooled stones always use
 the startup-pinned PostgreSQL maxima.
+
+Migration `20260821_104_cooled_holy_stone_reduction_7_percent` is the reviewed
+one-time conversion from `55/55/60` to `70/70/60`. It first locks and verifies
+the singleton row. An unexpected balance aborts the migration. Across all four
+socket ordinals, explicit physical or magic values exactly equal to
+`55 * grade` become `70 * grade`. Lower rolls, custom values, `NULL` values,
+critical reduction, and flat-reduction effects are unchanged. The settings
+update and socket promotion share the migration runner's transaction, so a
+failure or rollback exposes neither half of the change.
+
+Migration 099 already discarded the amount by which older rolls exceeded the
+5.5% cap. Migration 104 therefore cannot recover their former individual
+values. The exact old-cap population is deliberately promoted to 7%; rolls
+below that old cap remain at their stored values.

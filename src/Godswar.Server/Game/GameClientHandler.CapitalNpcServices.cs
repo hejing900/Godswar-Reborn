@@ -17,17 +17,45 @@ internal sealed partial class GameClientHandler
             return false;
         }
 
-        var packet = service == CapitalNpcServiceKind.TeachingManager
-            ? PacketBuilder.NpcDescriptionDialogOpenAck(
-                npc.InteractionId,
-                npc.NpcKey)
-            : PacketBuilder.NpcShopDialogOpenAck(
+        byte[] packet;
+        if (service == CapitalNpcServiceKind.TeachingManager)
+        {
+            packet = PacketBuilder.NpcDescriptionDialogOpenAck(
                 npc.InteractionId,
                 npc.NpcKey);
+        }
+        else if (CapitalNpcServiceProtocol.IsShop(service))
+        {
+            packet = PacketBuilder.NpcShopDialogOpenAck(
+                npc.InteractionId,
+                npc.NpcKey);
+        }
+        else if (service == CapitalNpcServiceKind.PrizeChest)
+        {
+            packet = PacketBuilder.NpcPrizeChestDialogOpenAck(
+                npc.InteractionId,
+                npc.NpcKey);
+        }
+        else if (CapitalNpcServiceProtocol.TryGetDialogueRoutes(
+                     npc,
+                     out var routes))
+        {
+            packet = PacketBuilder.NpcDialogOpenAck(
+                npc.InteractionId,
+                routes[0].DialogIndex,
+                npc.NpcKey);
+        }
+        else
+        {
+            return false;
+        }
         await _session.SendAsync(
             packet,
             cancellationToken,
             "CapitalNpcDialogOpenAck");
+        Console.WriteLine(
+            $"[npc] capital open npc={npc.InteractionId} " +
+            $"key={npc.NpcKey} service={service}");
         return true;
     }
 
@@ -40,15 +68,13 @@ internal sealed partial class GameClientHandler
             return false;
         }
 
-        if (service is
-            CapitalNpcServiceKind.BoundGoldVendor or
-            CapitalNpcServiceKind.BindingGoldShop)
+        if (CapitalNpcServiceProtocol.IsShop(service))
         {
             await _session.SendAsync(
                 PacketBuilder.CapitalNpcShopCatalog(
                     npc.InteractionId,
-                    GetCapitalShopCurrencyBalance(service),
-                service),
+                    GetCapitalShopBalances(),
+                    service),
                 cancellationToken,
                 "NpcShopCatalog",
                 framed: false);
@@ -102,9 +128,7 @@ internal sealed partial class GameClientHandler
                 out var intent) ||
             !TryResolveMapNpc(intent.NpcId, out var npc) ||
             !CapitalNpcServiceProtocol.TryResolve(npc, out var service) ||
-            service is not (
-                CapitalNpcServiceKind.BoundGoldVendor or
-                CapitalNpcServiceKind.BindingGoldShop) ||
+            !CapitalNpcServiceProtocol.IsShop(service) ||
             !PacketBuilder.TryResolveCapitalNpcShopOffer(
                 service,
                 intent.Category,
@@ -134,7 +158,13 @@ internal sealed partial class GameClientHandler
             await SendCapitalShopCatalogAsync(
                 npc,
                 service,
-                result.CurrencyBalance,
+                result.Status is
+                    CapitalShopPurchaseStatus.InsufficientCurrency or
+                    CapitalShopPurchaseStatus.InsufficientCapacity
+                    ? GetCapitalShopBalances(
+                        offer.Currency,
+                        result.CurrencyBalance)
+                    : GetCapitalShopBalances(),
                 cancellationToken);
             return;
         }
@@ -152,14 +182,14 @@ internal sealed partial class GameClientHandler
         await SendCapitalShopCatalogAsync(
             npc,
             service,
-            GetCapitalShopCurrencyBalance(service),
+            GetCapitalShopBalances(),
             cancellationToken);
         Console.WriteLine(
             $"[npc-shop] purchased character={_character.Name} " +
             $"npc={intent.NpcId} item={intent.ItemId} " +
             $"quantity={intent.Quantity} unitPrice={offer.UnitPrice} " +
             $"currency={offer.Currency} " +
-            $"balance={GetCapitalShopCurrencyBalance(service)}");
+            $"balance={GetCapitalShopCurrencyBalance(offer.Currency)}");
     }
 
     private void InstallCapitalShopProjection(GameCharacter updated)
@@ -184,29 +214,64 @@ internal sealed partial class GameClientHandler
     }
 
     private int GetCapitalShopCurrencyBalance(
-        CapitalNpcServiceKind service)
+        CapitalNpcShopCurrency currency)
     {
-        if (_character is null ||
-            !CapitalNpcServiceProtocol.TryGetShopCurrency(
-                service,
-                out var currency))
+        if (_character is null)
         {
             return 0;
         }
-        return currency == CapitalNpcShopCurrency.Gold
-            ? _character.Gold
-            : _character.BindingGold;
+        return currency switch
+        {
+            CapitalNpcShopCurrency.Silver => _character.Silver,
+            CapitalNpcShopCurrency.Gold => _character.Gold,
+            CapitalNpcShopCurrency.BindingGold => _character.BindingGold,
+            _ => 0
+        };
+    }
+
+    private CapitalNpcShopBalances GetCapitalShopBalances(
+        CapitalNpcShopCurrency? overrideCurrency = null,
+        int overrideBalance = 0)
+    {
+        var balances = _character is null
+            ? default
+            : new CapitalNpcShopBalances(
+                _character.Silver,
+                _character.Gold,
+                _character.BindingGold);
+        if (!overrideCurrency.HasValue)
+        {
+            return balances;
+        }
+
+        var balance = Math.Max(0, overrideBalance);
+        return overrideCurrency.Value switch
+        {
+            CapitalNpcShopCurrency.Silver => balances with
+            {
+                Silver = balance
+            },
+            CapitalNpcShopCurrency.Gold => balances with
+            {
+                Gold = balance
+            },
+            CapitalNpcShopCurrency.BindingGold => balances with
+            {
+                BindingGold = balance
+            },
+            _ => balances
+        };
     }
 
     private Task SendCapitalShopCatalogAsync(
         NpcSpawnDefinition npc,
         CapitalNpcServiceKind service,
-        int currencyBalance,
+        CapitalNpcShopBalances balances,
         CancellationToken cancellationToken) =>
         _session.SendAsync(
             PacketBuilder.CapitalNpcShopCatalog(
                 npc.InteractionId,
-                Math.Max(0, currencyBalance),
+                balances,
                 service),
             cancellationToken,
             "NpcShopCatalogRefresh",

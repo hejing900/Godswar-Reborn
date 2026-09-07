@@ -1,11 +1,13 @@
 using System.IO.Compression;
 using System.Text;
 using Godswar.Server.Application.World;
+using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Infrastructure.WorldContent;
+using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class NpcContentAuthorityChecks
+internal static partial class NpcContentAuthorityChecks
 {
     private const int GoldenEntryCount = 383;
     private const string GoldenRevision =
@@ -28,6 +30,17 @@ internal static class NpcContentAuthorityChecks
     public static Task RunAsync()
     {
         CheckFrozenBaseline();
+        CheckArenaV2Release();
+        CheckArenaV3Release();
+        CheckArenaV4Release();
+        CheckArenaV5Release();
+        CheckArenaV6Release();
+        CheckArenaV7Release();
+        CheckArenaV15DialogueRelease();
+        CheckArenaV16DialogueRelease();
+        CheckArenaV17DialogueRelease();
+        CheckArenaV18DialogueRelease();
+        CheckArenaV19DialogueRelease();
         CheckCodecRoundTrip();
         CheckCodecRejectsMalformedAndUnboundedInput();
         CheckPostgresLoaderHasOneNpcAuthority();

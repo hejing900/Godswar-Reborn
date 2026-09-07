@@ -8,6 +8,27 @@ internal enum SecureLegacyCommandDisposition : byte
     Conflict = 4
 }
 
+internal readonly record struct SecureFighterExperienceProjection
+{
+    public SecureFighterExperienceProjection(
+        uint currentExperience,
+        uint maximumExperience)
+    {
+        if (maximumExperience == 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumExperience),
+                "The fighter EXP maximum must be nonzero.");
+        }
+        CurrentExperience = currentExperience;
+        MaximumExperience = maximumExperience;
+    }
+
+    public uint CurrentExperience { get; }
+
+    public uint MaximumExperience { get; }
+}
+
 internal readonly record struct SecureLegacyCommandResult
 {
     public SecureLegacyCommandResult(
@@ -16,6 +37,40 @@ internal readonly record struct SecureLegacyCommandResult
         uint resultCode,
         ulong authoritativeRevision,
         Guid operationId)
+        : this(
+            disposition,
+            commandFamily,
+            resultCode,
+            authoritativeRevision,
+            operationId,
+            fighterExperienceProjection: null)
+    {
+    }
+
+    public SecureLegacyCommandResult(
+        SecureLegacyCommandDisposition disposition,
+        ushort commandFamily,
+        uint resultCode,
+        ulong authoritativeRevision,
+        Guid operationId,
+        SecureFighterExperienceProjection fighterExperienceProjection)
+        : this(
+            disposition,
+            commandFamily,
+            resultCode,
+            authoritativeRevision,
+            operationId,
+            (SecureFighterExperienceProjection?)fighterExperienceProjection)
+    {
+    }
+
+    private SecureLegacyCommandResult(
+        SecureLegacyCommandDisposition disposition,
+        ushort commandFamily,
+        uint resultCode,
+        ulong authoritativeRevision,
+        Guid operationId,
+        SecureFighterExperienceProjection? fighterExperienceProjection)
     {
         if (!SecureProtocolValidation.IsLegacyCommandDisposition(
                 disposition))
@@ -39,12 +94,25 @@ internal readonly record struct SecureLegacyCommandResult
                 nameof(authoritativeRevision),
                 "An applied durable command must identify its authoritative revision.");
         }
+        if (fighterExperienceProjection.HasValue &&
+            !CanCarryFighterExperienceProjection(
+                disposition,
+                commandFamily,
+                resultCode,
+                authoritativeRevision))
+        {
+            throw new ArgumentException(
+                "A fighter EXP projection is valid only for a successful " +
+                "applied or replayed Fighter Level Seal result.",
+                nameof(fighterExperienceProjection));
+        }
 
         Disposition = disposition;
         CommandFamily = commandFamily;
         ResultCode = resultCode;
         AuthoritativeRevision = authoritativeRevision;
         OperationId = operationId;
+        FighterExperienceProjection = fighterExperienceProjection;
     }
 
     public SecureLegacyCommandDisposition Disposition { get; }
@@ -60,4 +128,22 @@ internal readonly record struct SecureLegacyCommandResult
     public ulong InventoryRevision => AuthoritativeRevision;
 
     public Guid OperationId { get; }
+
+    public SecureFighterExperienceProjection?
+        FighterExperienceProjection { get; }
+
+    internal static bool CanCarryFighterExperienceProjection(
+        SecureLegacyCommandDisposition disposition,
+        ushort commandFamily,
+        uint resultCode,
+        ulong authoritativeRevision) =>
+        commandFamily ==
+            SecureProtocolConstants.FighterLevelSealCommandFamily &&
+        (resultCode is
+            SecureProtocolConstants.FighterLevelSealedResultCode or
+            SecureProtocolConstants.FighterLevelUnsealedResultCode) &&
+        (disposition is
+            SecureLegacyCommandDisposition.Applied or
+            SecureLegacyCommandDisposition.Replayed) &&
+        authoritativeRevision != 0;
 }

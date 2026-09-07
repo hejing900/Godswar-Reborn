@@ -24,9 +24,10 @@ internal static class LegacyAuthenticationProfileChecks
         var packet = LoginPacket(
             Opcodes.Login,
             "test2",
-            "password",
+            " password ",
             68);
-        var allowedStore = new CountingAccountStore();
+        var allowedAuthentication =
+            new FixedPasswordAccountAuthenticator();
         var allowedTransport =
             new ScriptedLegacyByteTransport();
         var allowedPacketBytes = (byte[])packet.Clone();
@@ -37,8 +38,8 @@ internal static class LegacyAuthenticationProfileChecks
             var options = LocalOptions();
             var handler = new LoginClientHandler(
                 session,
-                allowedStore,
                 options,
+                allowedAuthentication,
                 legacyAuthenticationAccess:
                     LocalAccess(options));
             await InvokeAsync(
@@ -49,14 +50,19 @@ internal static class LegacyAuthenticationProfileChecks
 
         Check.Equal(
             1,
-            allowedStore.LoginOrCreateCalls,
-            "explicit local raw login reaches account upsert once");
+            allowedAuthentication.Calls,
+            "explicit local raw login authenticates once");
+        Check.True(
+            allowedAuthentication.LastPassword.AsSpan()
+                .SequenceEqual("password"u8),
+            "raw login preserves legacy password-edge trimming");
         Check.True(
             allowedPacketBytes.AsSpan(36, 32)
                 .IndexOfAnyExcept((byte)0) < 0,
             "raw rollback credential packet bytes are cleared");
 
-        var blockedStore = new CountingAccountStore();
+        var blockedAuthentication =
+            new FixedPasswordAccountAuthenticator();
         var blockedTransport =
             new ScriptedLegacyByteTransport();
         var blockedPacketBytes = (byte[])packet.Clone();
@@ -66,8 +72,8 @@ internal static class LegacyAuthenticationProfileChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                blockedStore,
-                LocalOptions());
+                LocalOptions(),
+                blockedAuthentication);
             await InvokeAsync(
                 handler,
                 "HandleLoginAsync",
@@ -76,8 +82,8 @@ internal static class LegacyAuthenticationProfileChecks
 
         Check.Equal(
             0,
-            blockedStore.LoginOrCreateCalls,
-            "raw login without local capability performs no account call");
+            blockedAuthentication.Calls,
+            "raw login without local capability performs no authentication");
         Check.Equal(
             1,
             blockedTransport.DisconnectCount,
@@ -86,6 +92,48 @@ internal static class LegacyAuthenticationProfileChecks
             blockedPacketBytes.AsSpan(36, 32)
                 .IndexOfAnyExcept((byte)0) < 0,
             "blocked raw credential packet bytes are cleared");
+
+        var wrongPacket = LoginPacket(
+            Opcodes.Login,
+            "test2",
+            "wrong-password",
+            68);
+        var wrongAuthentication =
+            new FixedPasswordAccountAuthenticator();
+        var wrongTransport = new ScriptedLegacyByteTransport();
+        await using (var session = new ClientSession(
+            wrongTransport,
+            endpointRole: NetworkEndpointRole.Login))
+        {
+            var options = LocalOptions();
+            var handler = new LoginClientHandler(
+                session,
+                options,
+                wrongAuthentication,
+                legacyAuthenticationAccess:
+                    LocalAccess(options));
+            await InvokeAsync(
+                handler,
+                "HandleLoginAsync",
+                new GamePacket(wrongPacket));
+        }
+
+        Check.Equal(
+            1,
+            wrongAuthentication.Calls,
+            "wrong-password raw login authenticates once");
+        Check.True(
+            wrongAuthentication.LastPassword.AsSpan().SequenceEqual(
+                "wrong-password"u8),
+            "raw login does not replace the supplied password");
+        Check.True(
+            wrongTransport.WrittenBytes.SequenceEqual(
+                Encrypt(PacketBuilder.LoginFailed(3))),
+            "wrong-password raw login returns only generic failure");
+        Check.True(
+            wrongPacket.AsSpan(36, 32)
+                .IndexOfAnyExcept((byte)0) < 0,
+            "wrong-password raw credential packet bytes are cleared");
     }
 
     private static async Task CheckRawGameBindingCapabilityAsync()
@@ -95,6 +143,10 @@ internal static class LegacyAuthenticationProfileChecks
             "test2",
             null,
             36);
+        Check.Equal(
+            36,
+            packet.Length,
+            "legacy game-login compatibility packet has no password field");
         var allowedStore = new CountingAccountStore();
         var allowedTransport =
             new ScriptedLegacyByteTransport();
@@ -274,22 +326,17 @@ internal static class LegacyAuthenticationProfileChecks
                 $"{methodName} did not return a task."));
     }
 
+    private static byte[] Encrypt(byte[] clear)
+    {
+        var encrypted = (byte[])clear.Clone();
+        new PacketCipher().Transform(encrypted);
+        return encrypted;
+    }
+
     private sealed class CountingAccountStore :
         GameStoreTestStub
     {
         public int FindByUsernameCalls { get; private set; }
-
-        public int LoginOrCreateCalls { get; private set; }
-
-        public override Task<GameAccount>
-            LoginOrCreateAccountAsync(
-                string username,
-                string password,
-                CancellationToken cancellationToken = default)
-        {
-            LoginOrCreateCalls++;
-            return Task.FromResult(Account(username));
-        }
 
         public override Task<GameAccount?>
             FindAccountByUsernameAsync(

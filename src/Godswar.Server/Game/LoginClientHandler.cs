@@ -14,9 +14,8 @@ namespace Godswar.Server.Game;
 internal sealed class LoginClientHandler : IClientHandler
 {
     private readonly ClientSession _session;
-    private readonly ILegacyAccountLoginStore _legacyAccounts;
     private readonly ServerOptions _options;
-    private readonly AccountAuthenticationService? _authentication;
+    private readonly IAccountAuthenticator _authentication;
     private readonly SecureGameTarget? _gameTarget;
     private readonly IGameTicketStore? _ticketStore;
     private readonly LegacyAuthenticationAccess?
@@ -31,26 +30,23 @@ internal sealed class LoginClientHandler : IClientHandler
 
     public LoginClientHandler(
         ClientSession session,
-        ILegacyAccountLoginStore legacyAccounts,
         ServerOptions options,
-        AccountAuthenticationService? authentication = null,
+        IAccountAuthenticator authentication,
         IGameTicketStore? ticketStore = null,
         SecureGameTarget? gameTarget = null,
         LegacyAuthenticationAccess?
             legacyAuthenticationAccess = null,
         IRealmCatalogReader? realmCatalog = null)
     {
-        _session = session;
-        _legacyAccounts = legacyAccounts ??
-            throw new ArgumentNullException(nameof(legacyAccounts));
-        _options = options;
-        if ((authentication is null) != (ticketStore is null) ||
-            (ticketStore is null) != (gameTarget is null))
+        _session = session ?? throw new ArgumentNullException(nameof(session));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _authentication = authentication ??
+            throw new ArgumentNullException(nameof(authentication));
+        if ((ticketStore is null) != (gameTarget is null))
         {
             throw new ArgumentException(
-                "Secure login authentication, tickets, and game target must be configured together.");
+                "Secure login tickets and game target must be configured together.");
         }
-        _authentication = authentication;
         _ticketStore = ticketStore;
         _gameTarget = gameTarget;
         _legacyAuthenticationAccess =
@@ -183,31 +179,18 @@ internal sealed class LoginClientHandler : IClientHandler
                     .RecordLegacyAuthenticationAttempt(
                         "login",
                         "allowed");
-                var password = PacketText.ReadFixedAscii(payload, 32, 32);
-                _authenticatedAccount =
-                    await _legacyAccounts.LoginOrCreateLegacyAccountAsync(
-                        username,
-                        password,
-                        cancellationToken);
-                _session.MarkAuthenticated();
-                if (_session.AllowsPayloadDiagnostics)
-                {
-                    Console.WriteLine($"[login] accepted {username}");
-                }
-                await SendServerListAsync(cancellationToken);
-                return;
             }
-
-            if (_authentication is null ||
-                _ticketStore is null ||
-                _gameTarget is null)
+            else if (_ticketStore is null ||
+                     _gameTarget is null)
             {
                 _session.Disconnect();
                 return;
             }
 
-            var passwordBytes = CopyPasswordBytes(
-                packet.Buffer.AsSpan(36, 32));
+            var passwordField = packet.Buffer.AsSpan(36, 32);
+            var passwordBytes = _session.IsSecure
+                ? CopyPasswordBytes(passwordField)
+                : CopyLegacyPasswordBytes(passwordField);
             try
             {
                 var result = await _authentication.AuthenticateAsync(
@@ -220,19 +203,26 @@ internal sealed class LoginClientHandler : IClientHandler
                     return;
                 }
 
-                var generation = await _ticketStore.BeginLoginAsync(
-                    result.Account!.Id,
-                    result.Account.Username,
-                    SecureTicketOperationDeadline.Default,
-                    cancellationToken);
-                if (!generation.IsStarted)
+                if (_session.IsSecure)
                 {
-                    await SendGenericFailureAsync(cancellationToken);
-                    return;
-                }
+                    var generation = await _ticketStore!.BeginLoginAsync(
+                        result.Account!.Id,
+                        result.Account.Username,
+                        SecureTicketOperationDeadline.Default,
+                        cancellationToken);
+                    if (!generation.IsStarted)
+                    {
+                        await SendGenericFailureAsync(cancellationToken);
+                        return;
+                    }
 
-                _authenticatedAccount = result.Account;
-                _loginGeneration = generation.Generation;
+                    _authenticatedAccount = result.Account;
+                    _loginGeneration = generation.Generation;
+                }
+                else
+                {
+                    _authenticatedAccount = result.Account;
+                }
             }
             finally
             {
@@ -240,6 +230,11 @@ internal sealed class LoginClientHandler : IClientHandler
             }
 
             _session.MarkAuthenticated();
+            if (!_session.IsSecure &&
+                _session.AllowsPayloadDiagnostics)
+            {
+                Console.WriteLine($"[login] accepted {username}");
+            }
             await SendServerListAsync(cancellationToken);
         }
         finally
@@ -427,6 +422,28 @@ internal sealed class LoginClientHandler : IClientHandler
         var length = terminator >= 0 ? terminator : field.Length;
         return field[..length].ToArray();
     }
+
+    private static byte[] CopyLegacyPasswordBytes(ReadOnlySpan<byte> field)
+    {
+        var terminator = field.IndexOf((byte)0);
+        if (terminator >= 0)
+        {
+            field = field[..terminator];
+        }
+
+        while (!field.IsEmpty && IsLegacyTrimByte(field[0]))
+        {
+            field = field[1..];
+        }
+        while (!field.IsEmpty && IsLegacyTrimByte(field[^1]))
+        {
+            field = field[..^1];
+        }
+        return field.ToArray();
+    }
+
+    private static bool IsLegacyTrimByte(byte value) =>
+        value is 0x20 or >= 0x09 and <= 0x0D;
 
     private static void ClearAvailableCredentialField(byte[] buffer)
     {

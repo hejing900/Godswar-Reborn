@@ -74,6 +74,58 @@ bool HasSettlingResultCode(
                     SecureLegacyCommandDisposition::Conflict);
     }
     if (result.commandFamily ==
+            SecureLegacyCommandFamily::OnlineAward) {
+        if (result.resultCode == LegacyOnlineAwardSuccessResult) {
+            return (result.disposition ==
+                        SecureLegacyCommandDisposition::Applied ||
+                    result.disposition ==
+                        SecureLegacyCommandDisposition::Replayed) &&
+                result.inventoryRevision != 0;
+        }
+        if (result.resultCode == LegacyOnlineAwardAlreadyResult ||
+            result.resultCode == LegacyOnlineAwardBagFullResult) {
+            return result.disposition ==
+                SecureLegacyCommandDisposition::Rejected;
+        }
+        if (result.resultCode == LegacyOnlineAwardUnavailableResult) {
+            return result.disposition ==
+                    SecureLegacyCommandDisposition::Rejected ||
+                result.disposition ==
+                    SecureLegacyCommandDisposition::Conflict;
+        }
+        return false;
+    }
+    if (result.commandFamily ==
+            SecureLegacyCommandFamily::FighterLevelSeal) {
+        if (result.resultCode ==
+                LegacyFighterLevelSealSealedResult ||
+            result.resultCode ==
+                LegacyFighterLevelSealUnsealedResult) {
+            return (result.disposition ==
+                        SecureLegacyCommandDisposition::Applied ||
+                    result.disposition ==
+                        SecureLegacyCommandDisposition::Replayed) &&
+                result.inventoryRevision != 0;
+        }
+        if (result.resultCode ==
+                LegacyFighterLevelSealUnavailableResult) {
+            return result.disposition ==
+                    SecureLegacyCommandDisposition::Rejected ||
+                result.disposition ==
+                    SecureLegacyCommandDisposition::Conflict;
+        }
+        if (result.resultCode ==
+                LegacyFighterLevelSealInsufficientFundsResult ||
+            result.resultCode ==
+                LegacyFighterLevelSealAlreadyUnsealedResult ||
+            result.resultCode ==
+                LegacyFighterLevelSealAlreadySealedResult) {
+            return result.disposition ==
+                SecureLegacyCommandDisposition::Rejected;
+        }
+        return false;
+    }
+    if (result.commandFamily ==
         SecureLegacyCommandFamily::PetBind) {
         return result.resultCode ==
                 LegacyPetBindAlreadyBoundResultSubId ||
@@ -168,6 +220,52 @@ bool IsUnsealResultCode(std::uint32_t resultCode) noexcept {
         resultCode == LegacyPetUnsealConflictResult;
 }
 
+bool IsFighterLevelSealResultForAction(
+    int actionSubId,
+    std::uint32_t resultCode) noexcept {
+    if (resultCode == LegacyFighterLevelSealUnavailableResult) {
+        return true;
+    }
+    if (actionSubId == LegacyFighterLevelSealSealSubId) {
+        return resultCode == LegacyFighterLevelSealSealedResult ||
+            resultCode == LegacyFighterLevelSealAlreadySealedResult;
+    }
+    if (actionSubId == LegacyFighterLevelSealUnsealSubId) {
+        return resultCode ==
+                LegacyFighterLevelSealInsufficientFundsResult ||
+            resultCode == LegacyFighterLevelSealUnsealedResult ||
+            resultCode ==
+                LegacyFighterLevelSealAlreadyUnsealedResult;
+    }
+    return false;
+}
+
+bool IsSuccessfulFighterLevelSealResult(
+    const SecureLegacyCommandResult& result) noexcept {
+    return result.commandFamily ==
+            SecureLegacyCommandFamily::FighterLevelSeal &&
+        (result.resultCode ==
+                LegacyFighterLevelSealSealedResult ||
+            result.resultCode ==
+                LegacyFighterLevelSealUnsealedResult) &&
+        (result.disposition ==
+                SecureLegacyCommandDisposition::Applied ||
+            result.disposition ==
+                SecureLegacyCommandDisposition::Replayed);
+}
+
+bool HasValidFighterExperienceProjection(
+    const SecureLegacyCommandResult& result) noexcept {
+    const bool successful =
+        IsSuccessfulFighterLevelSealResult(result);
+    if (!successful) {
+        return !result.hasFighterExperienceProjection;
+    }
+    return result.hasFighterExperienceProjection &&
+        result.inventoryRevision != 0 &&
+        result.maximumExperience != 0;
+}
+
 } // namespace
 
 SecureOperationRegistryResult
@@ -176,7 +274,8 @@ SecurePendingOperationRegistry::Resolve(
     // Pet Manager families are settled only by their stock terminal
     // responses. An unknown code must leave the UUID pending so a valid
     // response or retry can still complete the operation.
-    if (!HasSettlingResultCode(result)) {
+    if (!HasSettlingResultCode(result) ||
+        !HasValidFighterExperienceProjection(result)) {
         return SecureOperationRegistryResult::InvalidPacket;
     }
     std::uint64_t now = 0;
@@ -221,10 +320,29 @@ SecurePendingOperationRegistry::Resolve(
         // idempotent while every other cross-family settlement still fails.
         entry->family = result.commandFamily;
     }
+    if (entry->family ==
+            SecureLegacyCommandFamily::FighterLevelSeal &&
+        (entry->selectionCount != 1 ||
+         !IsFighterLevelSealResultForAction(
+             entry->bagSlots[0], result.resultCode))) {
+        ReleaseSRWLockExclusive(&lock_);
+        return SecureOperationRegistryResult::InvalidPacket;
+    }
+
+    const bool publishFighterExperience =
+        IsSuccessfulFighterLevelSealResult(result);
+    if (publishFighterExperience &&
+        !CanPublishFighterExperienceProjection()) {
+        ReleaseSRWLockExclusive(&lock_);
+        return SecureOperationRegistryResult::Capacity;
+    }
 
     if (!RememberResolved(*entry, now)) {
         ReleaseSRWLockExclusive(&lock_);
         return SecureOperationRegistryResult::ClockFailure;
+    }
+    if (publishFighterExperience) {
+        PublishFighterExperienceProjection(result);
     }
     if (entry->family ==
         SecureLegacyCommandFamily::EquipmentForge) {

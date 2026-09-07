@@ -5,7 +5,8 @@
 `LegacyCommandResult` is the authenticated, bounded server-to-client outcome
 for a valuable legacy command carrying a `LegacyCommandOperation` ID. It is
 frame type `0x0102`, is accepted only on a bound game TLS channel, and has an
-exact 32-byte payload.
+exact version-owned payload: 32 bytes for version 1 or 40 bytes for the narrowly
+scoped Fighter Level Seal version 2 result.
 
 This is a terminal result, not a receipt for parsed bytes and not a claim that
 an ordinary stock-client response is an acknowledgement. `Applied` and
@@ -20,12 +21,28 @@ All integer fields and UUID bytes use network order.
 
 | Offset | Size | Field | Rule |
 | ---: | ---: | --- | --- |
-| `0` | `1` | Format version | exactly `1` |
+| `0` | `1` | Format version | `1` for the 32-byte base result; `2` only for the 40-byte Level Sealer extension |
 | `1` | `1` | Disposition | finite value below |
 | `2` | `2` | Command family | nonzero |
 | `4` | `4` | Result code | family-owned finite result |
 | `8` | `8` | Authoritative revision | aggregate revision at the recorded outcome |
 | `16` | `16` | Client operation ID | nonzero canonical UUID bytes |
+
+Version 2 preserves the first 32 bytes exactly and appends:
+
+| Offset | Size | Field | Rule |
+| ---: | ---: | --- | --- |
+| `32` | `4` | Current fighter EXP | authoritative live unsigned 32-bit value |
+| `36` | `4` | Client EXP maximum | nonzero unsigned 32-bit value for the current seal state and fighter level |
+
+Version 2 is valid only for family `60`, success code `106` (sealed) or
+`107` (unsealed), disposition `Applied` or `Replayed`, and a nonzero current
+seal revision. Replays carry the current durable projection rather than the
+historical receipt: the result code still identifies the replayed operation,
+while the revision and EXP maximum describe current state. Current EXP may
+legitimately exceed the normal next-level maximum immediately after unsealing.
+Every other family and every Level Sealer rejection, conflict, or no-op remains
+version 1.
 
 Disposition values are:
 
@@ -45,8 +62,9 @@ the authoritative transaction recorded one. Version-1 native code retains
 the source-level member name `inventoryRevision`; that legacy name does not
 change the field's wire semantics.
 
-Unknown versions, dispositions, zero command families, zero UUIDs, non-exact
-payload sizes, wrong endpoint roles, and wrong directions fail closed.
+Unknown or family-inappropriate versions, dispositions, zero command families,
+zero UUIDs, non-exact version-owned payload sizes, wrong endpoint roles, and
+wrong directions fail closed.
 
 ## Emission ordering
 
@@ -75,8 +93,8 @@ drive the original UI.
 
 ## Bounded behavior
 
-The payload is fixed at 32 bytes and is encoded into a temporary bounded
-buffer. `ClientSession.SendLegacyCommandResultAsync` rejects raw legacy
+The payload is bounded to 32 or 40 bytes and is encoded into a temporary
+40-byte maximum buffer. `ClientSession.SendLegacyCommandResultAsync` rejects raw legacy
 transports explicitly. The TLS mux accepts it only after bound game
 authentication and serializes it with legacy and secure control writes using
 the existing single outbound write gate.
@@ -101,6 +119,7 @@ The wired families and stable terminal result codes are:
 | `18` | Holy Stone Drill | `1500` | `0`, `100`, `200`, `1300`, `1400` |
 | `20` | Zodiac skill-grid upgrade | `1` | `0`, `2..8` |
 | `21` | Zodiac skill-grid selection | `1` | `0`, `2` invalid intent, `3` inactive grid, `4` wrong row, `5` wrong class, `6` skill not learned, `7` duplicate in row, `8` already selected, `9` wrong owner |
+| `60` | Fighter Level Seal | `106` sealed, `107` unsealed (v2 EXP projection) | `104` insufficient Bound Gold, `105` unavailable/conflict, `108` already unsealed, `109` already sealed (v1 only) |
 
 Every additional family must define stable finite result codes, keep retry
 identity isolated from other families, and demonstrate durable inbox replay

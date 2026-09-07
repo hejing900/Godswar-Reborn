@@ -104,6 +104,15 @@ installed client originally labels values 15 and 16 as `Backup`;
 client files are `text.lua`, `ItemColor.xml`, `PetDetailProc.lua`,
 `PetInfoProc.lua`, and `PetSamsaraUI.lua`.
 
+For pet item and quality text, aptitude 10 (`Smart`) deliberately uses
+`YELLOW_TEXTCOLOR` in both `en_us` and `zh_cn`. The reversible
+`tools/PatchClientPetAptitudeItemColor.ps1` patch recognizes stock clients,
+older project clients where Smart is still green, and the current yellow
+policy. Apply migrates either predecessor; Revert restores the byte-exact
+stock order and color. Each mutation requires a closed `Origin.exe` and writes
+a verified backup plus JSON receipt outside the client directory. The pet
+detail aptitude value is a separate, statically white UI field.
+
 ## Skills, slots, and talents
 
 The client and server compatibility rules for the 12 learned-skill cells, six

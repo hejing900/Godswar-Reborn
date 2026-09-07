@@ -22,6 +22,13 @@ internal static class MonsterWorldOwnerRoutingChecks
                 "Godswar.Server",
                 "Game",
                 "GameSessionRegistry.MonsterAttacksEcs.cs")));
+        var attackTargetResolution = Normalize(
+            File.ReadAllText(Path.Combine(
+                root,
+                "src",
+                "Godswar.Server",
+                "Game",
+                "GameSessionRegistry.MonsterAttackTargetResolution.cs")));
         var world = Normalize(
             File.ReadAllText(Path.Combine(
                 root,
@@ -65,12 +72,14 @@ internal static class MonsterWorldOwnerRoutingChecks
             "attack member reads do not bypass the instance owner");
         Check.True(
             Count(attacks, "SnapshotMonsterAttackMembers(runtime)") >= 2 &&
-            Count(ecsAttacks, "SnapshotMonsterAttackMembers(runtime)") >= 2,
-            "target and observer snapshots flow through the owner helper");
+            Count(ecsAttacks, "SnapshotMonsterAttackMembers(runtime)") >= 1,
+            "target and observer snapshots flow through the owner helper without duplicate ECS capture");
         Check.True(
-            Count(attacks, "ClearMonsterAttackAggro(") >= 3 &&
-            Count(ecsAttacks, "ClearMonsterAttackAggro(") >= 3,
-            "legacy and ECS aggro mutations flow through the owner helper");
+            Count(
+                attacks + attackTargetResolution,
+                "ClearMonsterAttackAggro(") >= 3 &&
+            Count(ecsAttacks, "ClearMonsterAttackAggro(") >= 2,
+            "legacy and ECS broad aggro mutations flow through the owner helper while exact stale targets avoid character-only clearing");
         Check.True(
             world.Contains(
                 "await ProcessMonsterAttackAsync(\n" +

@@ -20,7 +20,7 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
 {
     private const int PublicationLockNamespace = 1_193_657_936;
     private const int PublicationLockKey = 1_448_298_802;
-    private const string Publisher = "server-baseline-v9";
+    private const string Publisher = "server-baseline-v21";
 
     public static async Task<NpcDialoguePublicationResult>
         EnsurePublishedAsync(
@@ -57,7 +57,7 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             cancellationToken);
         if (current is not null && string.Equals(
                 current.Revision,
-                NpcDialogueBaselineV9.ExpectedRevision,
+                NpcDialogueBaselineV21.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             await transaction.CommitAsync(cancellationToken);
@@ -67,8 +67,8 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             !IsSupportedPreviousRevision(current.Revision))
         {
             throw new InvalidDataException(
-                "The published NPC dialogue revision is neither the " +
-                "reviewed V1-V8 predecessor nor the reviewed V9 release.");
+                "The published NPC dialogue revision is neither a reviewed " +
+                "V1-V20 predecessor nor the reviewed V21 release.");
         }
 
         var spawnRevision = await ReadCurrentSpawnRevisionAsync(
@@ -77,22 +77,23 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             cancellationToken);
         if (!string.Equals(
                 spawnRevision.Revision,
-                NpcDialogueBaselineV9.ExpectedSpawnRevision,
+                NpcDialogueBaselineV21.ExpectedSpawnRevision,
                 StringComparison.Ordinal) ||
             spawnRevision.EntryCount !=
-                NpcDialogueBaselineV9.ExpectedTextCount)
+                NpcDialogueBaselineV21.ExpectedTextCount)
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline does not target the " +
                 "currently published NPC spawn revision.");
         }
 
-        var texts = await ReadOfficialNpcTextsAsync(
-            connection,
-            transaction,
-            spawnRevision.Revision,
-            cancellationToken);
-        var routes = NpcDialogueBaselineV9.CreateRoutes();
+        var texts = NpcDialogueBaselineV21.ApplyTextOverrides(
+            await ReadOfficialNpcTextsAsync(
+                connection,
+                transaction,
+                spawnRevision.Revision,
+                cancellationToken));
+        var routes = NpcDialogueBaselineV21.CreateRoutes();
         var revision = ValidateBaseline(texts, routes);
 
         var releaseCreated = await InsertReleaseAsync(
@@ -144,13 +145,13 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         IReadOnlyList<NpcTextDefinition> texts,
         IReadOnlyList<NpcDialogueRouteDefinition> routes)
     {
-        if (texts.Count != NpcDialogueBaselineV9.ExpectedTextCount ||
-            routes.Count != NpcDialogueBaselineV9.ExpectedRouteCount ||
-            NpcDialogueBaselineV9.Profiles.Length !=
-                NpcDialogueBaselineV9.ExpectedProfileCount ||
-            NpcDialogueBaselineV9.Profiles.Sum(
+        if (texts.Count != NpcDialogueBaselineV21.ExpectedTextCount ||
+            routes.Count != NpcDialogueBaselineV21.ExpectedRouteCount ||
+            NpcDialogueBaselineV21.Profiles.Length !=
+                NpcDialogueBaselineV21.ExpectedProfileCount ||
+            NpcDialogueBaselineV21.Profiles.Sum(
                 static profile => profile.InitialMenuSubIds.Length) !=
-                NpcDialogueBaselineV9.ExpectedMenuEntryCount)
+                NpcDialogueBaselineV21.ExpectedMenuEntryCount)
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline has unexpected counts.");
@@ -182,10 +183,9 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         {
             if (!textKeys.Contains(route.NpcKey) ||
                 !routeKeys.Add((route.NpcKey, route.RouteOrder)) ||
-                !string.Equals(
+                !DuelArenaCapturedTransportProtocol.IsAllowedClientScriptKey(
                     route.NpcKey,
-                    route.ClientScriptKey,
-                    StringComparison.Ordinal) ||
+                    route.ClientScriptKey) ||
                 route.InitialMenuSubIds.IsDefaultOrEmpty ||
                 route.InitialMenuSubIds.Distinct().Count() !=
                     route.InitialMenuSubIds.Length)
@@ -214,15 +214,15 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         var revision =
             WorldContentRevisionHasher.HashNpcDialogues(texts, routes);
         if (revision.EntryCount !=
-                NpcDialogueBaselineV9.ExpectedHashedEntryCount ||
+                NpcDialogueBaselineV21.ExpectedHashedEntryCount ||
             !string.Equals(
                 revision.Sha256,
-                NpcDialogueBaselineV9.ExpectedRevision,
+                NpcDialogueBaselineV21.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline failed golden " +
-                "revision validation.");
+                $"revision validation: {revision.Sha256}.");
         }
 
         return revision;
@@ -364,11 +364,11 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         new(
             revision,
             spawnRevision,
-            NpcDialogueBaselineV9.ExpectedTextCount,
-            NpcDialogueBaselineV9.ExpectedProfileCount,
-            NpcDialogueBaselineV9.ExpectedRouteCount,
-            NpcDialogueBaselineV9.ExpectedMenuEntryCount,
-            NpcDialogueBaselineV9.Source,
+            NpcDialogueBaselineV21.ExpectedTextCount,
+            NpcDialogueBaselineV21.ExpectedProfileCount,
+            NpcDialogueBaselineV21.ExpectedRouteCount,
+            NpcDialogueBaselineV21.ExpectedMenuEntryCount,
+            NpcDialogueBaselineV21.Source,
             Created);
 
     private static bool IsSupportedPreviousRevision(string revision) =>
@@ -403,5 +403,53 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         string.Equals(
             revision,
             NpcDialogueBaselineV8.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV9.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV10.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV11.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV12.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV13.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV14.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV15.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV16.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV17.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV18.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV19.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV20.ExpectedRevision,
             StringComparison.Ordinal);
 }

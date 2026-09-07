@@ -17,6 +17,12 @@ internal sealed partial class GameClientHandler
         {
             return [CapitalNpcServiceProtocol.ExchangeRoute(npc)];
         }
+        if (CapitalNpcServiceProtocol.TryGetDialogueRoutes(
+                npc,
+                out var capturedRoutes))
+        {
+            return capturedRoutes;
+        }
 
         NpcDialogueContent dialogue;
         try
@@ -75,12 +81,52 @@ internal sealed partial class GameClientHandler
     {
         ClearGearEnhancerSelection();
         ClearInstanceCallerPageContext();
+        ClearTransporterDialogueContext();
+        ClearBattlefieldTransporterDialogueContext();
+        ClearDuelArenaTransporterDialogueContext();
+        if (route.Behavior == NpcDialogueBehavior.CapturedCapital)
+        {
+            await SendCapturedCapitalNpcInitialMenuAsync(
+                npc.InteractionId,
+                route,
+                cancellationToken);
+            return;
+        }
         if (route.Behavior == NpcDialogueBehavior.WarehouseManager)
         {
             await SendWarehouseManagerMenuAsync(
                 npc,
                 route,
                 cancellationToken);
+            return;
+        }
+        if (route.Behavior == NpcDialogueBehavior.Transporter &&
+            !TryIssueTransporterDialogueContext(npc))
+        {
+            Console.Error.WriteLine(
+                "[transporter] initial menu rejected outside interaction " +
+                $"authority npc={npc.InteractionId} " +
+                $"character={_character?.Name ?? "<none>"}");
+            return;
+        }
+        if (route.Behavior ==
+                NpcDialogueBehavior.BattlefieldTransporter &&
+            !TryIssueBattlefieldTransporterDialogueContext(npc))
+        {
+            Console.Error.WriteLine(
+                "[battlefield-transporter] initial menu rejected outside " +
+                $"interaction authority npc={npc.InteractionId} " +
+                $"character={_character?.Name ?? "<none>"}");
+            return;
+        }
+        if (route.Behavior ==
+                NpcDialogueBehavior.DuelArenaTransporter &&
+            !TryIssueDuelArenaTransporterDialogueContext(npc))
+        {
+            Console.Error.WriteLine(
+                "[duel-arena-transporter] initial menu rejected outside " +
+                $"interaction authority npc={npc.InteractionId} " +
+                $"character={_character?.Name ?? "<none>"}");
             return;
         }
         if (route.Behavior == NpcDialogueBehavior.HolySuitDesign &&

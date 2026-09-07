@@ -58,8 +58,11 @@ internal static class LegacyCommandIdentityPolicy
             CommandFamily.PetAppearanceChange or
             CommandFamily.PetBind or
             CommandFamily.PetSoulContract or
+            CommandFamily.FactionCrier or
+            CommandFamily.OnlineAward or
             CommandFamily.WarehouseTransfer or
-            CommandFamily.WarehouseExpansion =>
+            CommandFamily.WarehouseExpansion or
+            CommandFamily.FighterLevelSeal =>
                 CommandIdentityStrength.ClientOperationId,
             CommandFamily.ZodiacSkillGridSelection =>
                 CommandIdentityStrength.ClientOperationId,

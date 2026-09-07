@@ -1,6 +1,4 @@
-using Godswar.Server.Application.Characters;
 using Godswar.Server.Game.WorldInstances;
-using Godswar.Server.Packets;
 
 namespace Godswar.Server.Game;
 
@@ -10,11 +8,7 @@ internal sealed partial class GameClientHandler
         AcceptedMapMovementSegment movement,
         CancellationToken cancellationToken)
     {
-        if (_pendingMapTransition is not null ||
-            _account is null ||
-            _character is null ||
-            !_registered ||
-            !_worldPresenceAnnounced ||
+        if (_character is null ||
             movement.MapId != _character.CurrentMap ||
             !MedusaIslandTraversalDetector.TryResolve(
                 movement,
@@ -27,109 +21,22 @@ internal sealed partial class GameClientHandler
         {
             return false;
         }
-        if (!TryCaptureCurrentPlayerOwnership(out var ownership))
-        {
-            RejectLostPlayerOwnership();
-            return false;
-        }
-
-        await InterruptPendingSkillCastAsync(
-            SkillCastInterruptionReason.MapTransition,
-            cancellationToken);
-        if (!RevalidateCurrentPlayerOwnership(ownership))
-        {
-            return false;
-        }
-
         var sourceX = _character.PositionX;
         var sourceZ = _character.PositionZ;
-        try
-        {
-            if (!await PersistRelocationCheckpointAsync(
-                    _character.CurrentMap,
-                    traversal.TargetX,
-                    traversal.TargetZ,
-                    cancellationToken))
-            {
-                return false;
-            }
-        }
-        catch (PlayerOwnershipValidationException)
-        {
-            RejectLostPlayerOwnership();
-            return false;
-        }
-        catch (Exception error)
-            when (error is not OperationCanceledException ||
-                  !cancellationToken.IsCancellationRequested)
-        {
-            Console.WriteLine(
-                "[instance] island transfer persistence rejected " +
-                $"character={_character.Name}: {error.Message}");
-            return false;
-        }
-        if (!RevalidateCurrentPlayerOwnership(ownership) ||
-            _registry.ResolveMedusaCharacterEffectAuthority(
-                    _session,
-                    DateTimeOffset.UtcNow).Outcome !=
-                MedusaCharacterEffectAuthorityOutcome.ResolvedActive)
-        {
-            return false;
-        }
-
-        _character.PositionX = traversal.TargetX;
-        _character.PositionZ = traversal.TargetZ;
-        _positionDirty = false;
-        _lastPositionPersistUtc = DateTime.UtcNow;
-        _registry.UpdateCharacter(
-            _session,
-            _character,
-            advanceWorldRevision: false);
-        if (!_registry.TryHideForSameWorldSceneTransition(
-                _session,
-                ownership,
-                out _))
-        {
-            _session.Disconnect();
-            return false;
-        }
-
-        _worldPresenceAnnounced = false;
-        ClearLocalNpcCatalog();
-        ClearForgeSelection();
-        ClearGearEnhancerSelection();
-        _warehouseAccessContext = null;
-        ResetPlayerMovementEcs();
-        RebaseRealtimeWorld();
-        _nextBasicAttackAt = DateTimeOffset.MinValue;
-        _nextSkillCastAt.Clear();
-
-        var transition = new PendingMapTransition(
-            _character.CurrentMap,
-            _character.CurrentMap,
+        var transitioned = await TryBeginSameMapSceneTransitionAsync(
             traversal.TargetX,
-            traversal.TargetZ);
-        _pendingMapTransition = transition;
-        _mapTransitionTimeoutTask = MonitorMapTransitionTimeoutAsync(
-            transition,
-            _realtimeMovementStop.Token);
-
-        await _registry.BroadcastToCurrentWorldInstanceAsync(
-            _session,
-            PacketBuilder.RemoveWorldObjects(CurrentPlayerObjectId),
-            cancellationToken,
-            includeRoutingSession: false,
-            "MedusaIslandTransferSourceRemove");
-        await _session.SendAsync(
-            PacketBuilder.SceneChange(
-                LocalPlayerObjectId,
-                traversal.TargetX,
-                y: 0f,
-                traversal.TargetZ,
-                _character.CurrentMap),
-            cancellationToken,
-            "MedusaIslandSceneChange");
-        await PublishPartyPositionRefreshAsync(cancellationToken);
+            traversal.TargetZ,
+            $"medusa-island:{traversal.SourceAnchorId}" +
+            $"->{traversal.TargetAnchorId}",
+            () => _registry.ResolveMedusaCharacterEffectAuthority(
+                    _session,
+                    DateTimeOffset.UtcNow).Outcome ==
+                MedusaCharacterEffectAuthorityOutcome.ResolvedActive,
+            cancellationToken);
+        if (!transitioned)
+        {
+            return false;
+        }
 
         Console.WriteLine(
             "[instance] island transfer applied " +

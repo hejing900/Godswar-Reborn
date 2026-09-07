@@ -17,7 +17,7 @@ namespace Godswar.Server.ProtocolChecks;
 internal static partial class InstanceCallerHandlerChecks
 {
     public const string CheckName =
-        "Instance Caller expiring Medusa page context";
+        "Instance Caller expiring destination page context";
 
     private static readonly MethodInfo HandlePacketMethod =
         FindHandlerMethod("HandlePacketAsync");
@@ -37,9 +37,10 @@ internal static partial class InstanceCallerHandlerChecks
                 PacketBuilder.NpcFunctionActionResponse(
                     InstanceCallerProtocol.AthensNpcId,
                     InstanceCallerProtocol.DialogIndex,
-                    InstanceCallerProtocol.MedusaRootSubId)) &&
+                    InstanceCallerProtocol.InitialMenuSubIds.ToArray())) &&
             GetPageContext(fixture.Handler) is null,
-            "initial request advertises only Medusa and grants no page proof");
+            "initial request advertises Medusa, Atlantis, and Wonderland " +
+            "without granting page proof");
 
         await OpenMedusaPageAsync(fixture);
         var context = GetPageContext(fixture.Handler) ??
@@ -50,6 +51,7 @@ internal static partial class InstanceCallerHandlerChecks
             context.CharacterId == fixture.Character.Id &&
             context.NpcKey == "Athens_060" &&
             context.NpcInteractionId == InstanceCallerProtocol.AthensNpcId &&
+            context.RootSubId == InstanceCallerProtocol.MedusaRootSubId &&
             context.SourceWorldInstanceId == sourceInstanceId &&
             context.PageNonce != Guid.Empty &&
             context.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1),
@@ -59,6 +61,7 @@ internal static partial class InstanceCallerHandlerChecks
             "_instanceCallerPageContext",
             null);
 
+        await CheckLegacyPageNavigationAsync(fixture);
         await CheckForgedAndExpiredChoicesAsync(fixture);
         await CheckCanonicalShapeAndWorldBindingAsync(fixture);
         await CheckSuccessfulSoloEntryAsync();
@@ -67,9 +70,11 @@ internal static partial class InstanceCallerHandlerChecks
         await CheckSuccessfulMythicSoloEntryAsync();
         await CheckLatePartyMemberEntryAsync();
         await CheckSuccessfulPartyEntryAsync();
+        await CheckAuthoritativeDynamicDungeonTransitionsAsync();
         await CheckDecliningMemberLeavesLeaderInsideAsync();
         await CheckTimedOutMemberLeavesLeaderInsideAsync();
         await CheckDailyEntryEligibilityAsync();
+        await CheckAtlantisOpalRetryAsync();
     }
 
     private static async Task CheckSuccessfulSoloEntryAsync()
@@ -193,6 +198,77 @@ internal static partial class InstanceCallerHandlerChecks
             fixture.ReadPackets().Count == beforeWrongAccount &&
             GetPageContext(fixture.Handler) is null,
             "account-mismatched page proof is rejected");
+    }
+
+    private static async Task CheckLegacyPageNavigationAsync(
+        InstanceCallerFixture fixture)
+    {
+        var beforeAtlantis = fixture.ReadPackets().Count;
+        await InvokeAsync(
+            fixture.Handler,
+            CreateActionPacket(InstanceCallerProtocol.AtlantisRootSubId));
+        var atlantisContext = GetPageContext(fixture.Handler);
+        Check.True(
+            fixture.ReadPackets()
+                .Skip(beforeAtlantis)
+                .Single()
+                .SequenceEqual(PacketBuilder.NpcFunctionActionResponse(
+                    InstanceCallerProtocol.AthensNpcId,
+                    InstanceCallerProtocol.DialogIndex,
+                    InstanceCallerProtocol.AtlantisPageSubIds.ToArray())) &&
+            atlantisContext?.RootSubId ==
+                InstanceCallerProtocol.AtlantisRootSubId,
+            "Atlantis root emits 208/209/210 and binds Atlantis page proof");
+
+        var beforeAtlantisEntry = fixture.ReadPackets().Count;
+        await InvokeAsync(
+            fixture.Handler,
+            CreateActionPacket(
+                InstanceCallerProtocol.AtlantisRootSubId,
+                InstanceCallerProtocol.AtlantisEnterSubId));
+        Check.True(
+            fixture.ReadPackets()
+                .Skip(beforeAtlantisEntry)
+                .Single()
+                .SequenceEqual(PacketBuilder.NpcFunctionActionResponse(
+                    InstanceCallerProtocol.AthensNpcId,
+                    InstanceCallerProtocol.DialogIndex,
+                    InstanceCallerProtocol.AtlantisPartyTooSmallResultSubId)) &&
+            GetPageContext(fixture.Handler) is null,
+            "proved Atlantis entry reaches the exact three-player admission " +
+            "gate and consumes its page proof");
+
+        var beforeForgedWonderland = fixture.ReadPackets().Count;
+        await InvokeAsync(
+            fixture.Handler,
+            CreateActionPacket(
+                InstanceCallerProtocol.WonderlandRootSubId,
+                InstanceCallerProtocol.WonderlandEnterSubId));
+        Check.True(
+            fixture.ReadPackets().Count == beforeForgedWonderland &&
+            GetPageContext(fixture.Handler) is null,
+            "Wonderland entry without Wonderland page proof fails closed");
+
+        var beforeWonderland = fixture.ReadPackets().Count;
+        await InvokeAsync(
+            fixture.Handler,
+            CreateActionPacket(InstanceCallerProtocol.WonderlandRootSubId));
+        var wonderlandContext = GetPageContext(fixture.Handler);
+        Check.True(
+            fixture.ReadPackets()
+                .Skip(beforeWonderland)
+                .Single()
+                .SequenceEqual(PacketBuilder.NpcFunctionActionResponse(
+                    InstanceCallerProtocol.AthensNpcId,
+                    InstanceCallerProtocol.DialogIndex,
+                    InstanceCallerProtocol.WonderlandPageSubIds.ToArray())) &&
+            wonderlandContext?.RootSubId ==
+                InstanceCallerProtocol.WonderlandRootSubId,
+            "Wonderland root emits 211 and binds Wonderland page proof");
+        SetHandlerField<InstanceCallerPageContext?>(
+            fixture.Handler,
+            "_instanceCallerPageContext",
+            null);
     }
 
     private static async Task CheckCanonicalShapeAndWorldBindingAsync(

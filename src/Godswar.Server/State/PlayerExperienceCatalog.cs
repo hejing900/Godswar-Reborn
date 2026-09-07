@@ -3,7 +3,6 @@ namespace Godswar.Server.State;
 internal static class PlayerExperienceCatalog
 {
     internal const int MaximumLevel = 200;
-    internal const int FighterLevelSealLevel = 89;
     internal const long MaximumStoredExperience = uint.MaxValue;
 
     // Original server PlayerNextGradeExp table. Entry n is the fighter EXP
@@ -50,12 +49,6 @@ internal static class PlayerExperienceCatalog
 
         if (fighterLevelSealed)
         {
-            if (level != FighterLevelSealLevel)
-            {
-                throw new InvalidOperationException(
-                    $"Fighter level sealing is valid only at level {FighterLevelSealLevel}.");
-            }
-
             return MaximumStoredExperience;
         }
 
@@ -70,6 +63,15 @@ internal static class PlayerExperienceCatalog
         int gainedExperience,
         bool fighterLevelSealed = false)
     {
+        if (fighterLevelSealed &&
+            level is < 1 or > MaximumLevel)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(level),
+                level,
+                $"A sealed fighter level must be between 1 and {MaximumLevel}.");
+        }
+
         level = Math.Clamp(level, 1, MaximumLevel);
         currentExperience = Math.Clamp(
             currentExperience,
@@ -79,12 +81,6 @@ internal static class PlayerExperienceCatalog
 
         if (fighterLevelSealed)
         {
-            if (level != FighterLevelSealLevel)
-            {
-                throw new InvalidOperationException(
-                    $"Fighter level sealing is valid only at level {FighterLevelSealLevel}.");
-            }
-
             var availableCredit =
                 MaximumStoredExperience - currentExperience;
             var creditedExperience = checked((int)Math.Min(

@@ -11,6 +11,9 @@ namespace Godswar.Server.ProtocolChecks;
 
 internal static partial class BackhaulSkillHandlerChecks
 {
+    public const string NativeSuccessCheckName =
+        "Authoritative native faction backhaul casting";
+
     private const int AccountId = 413;
     private const int CharacterId = 4_013;
     private const uint LocalPlayerObjectId = 0x00001448;
@@ -42,10 +45,7 @@ internal static partial class BackhaulSkillHandlerChecks
 
     public static async Task RunAsync()
     {
-        await CheckSuccessfulCastAsync(
-            BackhaulSkillCatalog.CitySkillId);
-        await CheckSuccessfulCastAsync(
-            BackhaulSkillCatalog.SuburbSkillId);
+        await RunNativeSuccessAsync();
         await CheckUnlearnedCastRejectedAsync();
         await CheckNativeCastInterruptionAsync();
         await CheckMovementCastInterruptionAsync();
@@ -53,6 +53,18 @@ internal static partial class BackhaulSkillHandlerChecks
         await CheckBasicAttackCastInterruptionAsync();
         await CheckInterruptionBroadcastIdentityAsync();
         await CheckControlStatusCastInterruptionsAsync();
+    }
+
+    public static async Task RunNativeSuccessAsync()
+    {
+        await CheckSuccessfulCastAsync(
+            FactionPortalSkillPolicy.AthensCapitalPortalSkillId);
+        await CheckSuccessfulCastAsync(
+            FactionPortalSkillPolicy.AthensSuburbPortalSkillId);
+        await CheckSuccessfulCastAsync(
+            FactionPortalSkillPolicy.SpartaCapitalPortalSkillId);
+        await CheckSuccessfulCastAsync(
+            FactionPortalSkillPolicy.SpartaSuburbPortalSkillId);
     }
 
     private static async Task CheckSuccessfulCastAsync(uint skillId)
@@ -63,7 +75,8 @@ internal static partial class BackhaulSkillHandlerChecks
 
         await using var socket = await BackhaulSessionSocket.CreateAsync();
         var character = CreateCharacter(
-            $"Backhaul{skillId}");
+            $"Backhaul{skillId}",
+            checked((byte)definition.RequiredCamp));
         var store = new BackhaulStore(
             character,
             [new SkillState
@@ -202,7 +215,7 @@ internal static partial class BackhaulSkillHandlerChecks
         await InvokePacketAsync(
             handler,
             CreateSkillCastPacket(
-                BackhaulSkillCatalog.CitySkillId,
+                FactionPortalSkillPolicy.SpartaCapitalPortalSkillId,
                 character.PositionX,
                 character.PositionZ,
                 targetX: 165f,
@@ -280,14 +293,16 @@ internal static partial class BackhaulSkillHandlerChecks
             playerRuntimeMode,
             gameplayCatalogs: GameplayContentTestFixtures.Runtime);
 
-    private static GameCharacter CreateCharacter(string name) =>
+    private static GameCharacter CreateCharacter(
+        string name,
+        byte camp = GameDefaults.SpartaCamp) =>
         new()
         {
             Id = CharacterId,
             AccountId = AccountId,
             Name = name,
             CreatedUtc = TestTime.UtcDateTime,
-            Camp = GameDefaults.SpartaCamp,
+            Camp = camp,
             CurrentMap = PeloponneseMapId,
             PositionX = -57f,
             PositionZ = 34f,

@@ -46,7 +46,9 @@ internal sealed partial class PostgresReconciliationSnapshot
                         THEN row.previous_balance
                     WHEN row.currency_code = 'silver'
                         THEN baseline.silver
-                    ELSE baseline.gold
+                    WHEN row.currency_code = 'gold'
+                        THEN baseline.gold
+                    ELSE baseline.binding_gold
                 END
             )
         ),

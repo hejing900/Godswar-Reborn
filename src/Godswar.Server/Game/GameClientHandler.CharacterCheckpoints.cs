@@ -78,6 +78,11 @@ internal sealed partial class GameClientHandler
 
         try
         {
+            await RecoverLegacyInstanceStateBeforeSnapshotAsync(
+                accountId,
+                characterId,
+                ownership.Value.Owner,
+                cancellationToken);
             if (!await RefreshCharacterSnapshotAsync(
                     "checkpoint-owner",
                     cancellationToken) ||
@@ -478,66 +483,6 @@ internal sealed partial class GameClientHandler
         throw new InvalidOperationException(
             "The checkpoint owner could not be released because the " +
             "character no longer exists.");
-    }
-
-    private void InstallUpdatedCharacter(GameCharacter updated)
-    {
-        ArgumentNullException.ThrowIfNull(updated);
-        if (updated.RealmId != _processRealmId)
-        {
-            throw new InvalidOperationException(
-                "The refreshed character belongs to another realm.");
-        }
-
-        var current = _character;
-        if (current is not null && current.Id == updated.Id)
-        {
-            if (current.RealmId != updated.RealmId)
-            {
-                throw new InvalidOperationException(
-                    "A character refresh cannot change realms.");
-            }
-
-            updated.CurrentMap = current.CurrentMap;
-            updated.PositionX = current.PositionX;
-            updated.PositionZ = current.PositionZ;
-            updated.PositionRevision = Math.Max(
-                updated.PositionRevision,
-                current.PositionRevision);
-            lock (current.VitalsSync)
-            {
-                var currentHp = current.CurrentHp;
-                var currentMp = current.CurrentMp;
-                updated.CurrentHp = Math.Clamp(
-                    currentHp,
-                    0,
-                    Math.Max(1, updated.MaxHp));
-                updated.CurrentMp = Math.Clamp(
-                    currentMp,
-                    0,
-                    Math.Max(0, updated.MaxMp));
-                updated.VitalsRevision = Math.Max(
-                    updated.VitalsRevision,
-                    current.VitalsRevision);
-                if (updated.CurrentHp != currentHp ||
-                    updated.CurrentMp != currentMp)
-                {
-                    updated.MarkVitalsChanged();
-                }
-            }
-            updated.CheckpointOwnerId =
-                current.CheckpointOwnerId;
-            updated.CheckpointOwnerGeneration =
-                current.CheckpointOwnerGeneration;
-            updated.FashionHidden =
-                ResolveFashionHiddenAfterEquipmentChange(
-                    current,
-                    updated);
-            updated.EquipmentEffectsVisible =
-                current.EquipmentEffectsVisible;
-        }
-
-        _character = updated;
     }
 
     private bool AcceptEnqueue(

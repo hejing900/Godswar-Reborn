@@ -1,6 +1,8 @@
 using Godswar.Server.Application.Accounts;
 using Godswar.Server.Application.Characters;
+using Godswar.Server.Application.FactionCrier;
 using Godswar.Server.Application.Inventory;
+using Godswar.Server.Application.OnlineAwards;
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.Progression;
 using Godswar.Server.Application.Rewards;
@@ -13,9 +15,11 @@ using Godswar.Server.Application.Warehouse;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Infrastructure.Accounts;
 using Godswar.Server.Infrastructure.Characters;
+using Godswar.Server.Infrastructure.FactionCrier;
 using Godswar.Server.Infrastructure.Database;
 using Godswar.Server.Infrastructure.Inventory;
 using Godswar.Server.Infrastructure.Messaging;
+using Godswar.Server.Infrastructure.OnlineAwards;
 using Godswar.Server.Infrastructure.Pets;
 using Godswar.Server.Infrastructure.Progression;
 using Godswar.Server.Infrastructure.Rewards;
@@ -41,6 +45,7 @@ internal sealed class PostgresApplicationDataRuntime :
     IAsyncDisposable
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly RealmId _realmId;
     private readonly PostgresOutboxDispatcher _outboxDispatcher;
     private readonly PostgresReconciliationWorker
         _reconciliationWorker;
@@ -58,6 +63,8 @@ internal sealed class PostgresApplicationDataRuntime :
         IPetLearnedSkillContentCatalog learnedSkillContent,
         HolySpiritBalanceSnapshot holySpiritBalance,
         WarehouseExpansionPolicySnapshot warehouseExpansionPolicy,
+        FactionCrierBalanceSnapshot factionCrierBalance,
+        OnlineAwardBalanceSnapshot onlineAwardBalance,
         ReconciliationOptions? reconciliationOptions = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
@@ -70,6 +77,7 @@ internal sealed class PostgresApplicationDataRuntime :
                 "The selected calendar must belong to the process realm.",
                 nameof(realmCalendar));
         }
+        _realmId = realmId;
         ArgumentNullException.ThrowIfNull(petContent);
         ArgumentNullException.ThrowIfNull(ownerMergeContent);
         ArgumentNullException.ThrowIfNull(learnedSkillContent);
@@ -78,6 +86,12 @@ internal sealed class PostgresApplicationDataRuntime :
         ArgumentNullException.ThrowIfNull(warehouseExpansionPolicy);
         warehouseExpansionPolicy.Validate();
         WarehouseExpansionPolicy = warehouseExpansionPolicy;
+        ArgumentNullException.ThrowIfNull(factionCrierBalance);
+        factionCrierBalance.Validate();
+        FactionCrierBalance = factionCrierBalance;
+        ArgumentNullException.ThrowIfNull(onlineAwardBalance);
+        onlineAwardBalance.Validate();
+        OnlineAwardBalance = onlineAwardBalance;
         gameplayContentRevision =
             PostgresGameplayContentBinding.ValidateRequired(
                 gameplayContentRevision);
@@ -204,6 +218,9 @@ internal sealed class PostgresApplicationDataRuntime :
                 outboxOptions,
                 zodiacEnergyPolicy,
                 realmCalendar);
+        DeveloperProgressionCommands =
+            new PostgresDeveloperProgressionCommandExecutor(
+                _dataSource);
         PetDurableCommands =
             new PostgresPetDurableCommandExecutor(
                 _dataSource,
@@ -211,7 +228,23 @@ internal sealed class PostgresApplicationDataRuntime :
                 itemContent,
                 petContent,
                 ownerMergeContent,
-                learnedSkillContent);
+                learnedSkillContent,
+                gameplayContentRevision:
+                    gameplayContentRevision);
+        FactionCrierCommands =
+            new PostgresFactionCrierCommandExecutor(
+                _dataSource,
+                outboxOptions,
+                factionCrierBalance,
+                realmCalendar,
+                itemContent.Templates.Revision.Sha256);
+        OnlineAwardCommands =
+            new PostgresOnlineAwardCommandExecutor(
+                _dataSource,
+                outboxOptions,
+                onlineAwardBalance,
+                realmCalendar,
+                itemContent.Templates);
         WarehouseSnapshots =
             new PostgresWarehouseSnapshotReader(_dataSource);
         WarehouseTransferCommands =
@@ -226,6 +259,12 @@ internal sealed class PostgresApplicationDataRuntime :
                 warehouseExpansionPolicy);
         MedusaDailyEntries =
             new PostgresMedusaDailyEntryClaimStore(_dataSource);
+        LegacyInstanceDailyEntries =
+            new PostgresLegacyInstanceDailyEntryClaimStore(_dataSource);
+        LegacyInstanceOpalPayments =
+            new PostgresLegacyInstanceOpalPaymentStore(
+                _dataSource,
+                outboxOptions);
         MedusaCompletionRewards =
             new PostgresMedusaCompletionRewardStore(_dataSource);
         var outboxConsumers =
@@ -349,7 +388,19 @@ internal sealed class PostgresApplicationDataRuntime :
         ProgressionIntervalSettlementCommands
     { get; }
 
+    public IDeveloperProgressionCommandExecutor
+        DeveloperProgressionCommands
+    { get; }
+
     public IPetDurableCommandExecutor PetDurableCommands { get; }
+
+    public IFactionCrierCommandExecutor FactionCrierCommands { get; }
+
+    public FactionCrierBalanceSnapshot FactionCrierBalance { get; }
+
+    public IOnlineAwardCommandExecutor OnlineAwardCommands { get; }
+
+    public OnlineAwardBalanceSnapshot OnlineAwardBalance { get; }
 
     public WarehouseExpansionPolicySnapshot WarehouseExpansionPolicy
     { get; }
@@ -364,6 +415,12 @@ internal sealed class PostgresApplicationDataRuntime :
 
     public IMedusaDailyEntryClaimStore MedusaDailyEntries { get; }
 
+    public ILegacyInstanceDailyEntryClaimStore LegacyInstanceDailyEntries
+    { get; }
+
+    public ILegacyInstanceOpalPaymentStore LegacyInstanceOpalPayments
+    { get; }
+
     public IMedusaCompletionRewardStore MedusaCompletionRewards { get; }
 
     public bool OutboxEnabled { get; }
@@ -375,6 +432,37 @@ internal sealed class PostgresApplicationDataRuntime :
     public Task RunOutboxAsync(
         CancellationToken cancellationToken = default) =>
         _outboxDispatcher.RunAsync(cancellationToken);
+
+    public async Task RunLegacyInstanceOpalRecoveryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var staleBefore = DateTimeOffset.UtcNow.Subtract(
+                TimeSpan.FromMinutes(10));
+            var recoveredPayments = await LegacyInstanceOpalPayments
+                .RecoverPendingAsync(
+                    _realmId,
+                    staleBefore,
+                    cancellationToken);
+            var recoveredClaims = await LegacyInstanceDailyEntries
+                .RecoverPendingAsync(
+                    _realmId,
+                    staleBefore,
+                    cancellationToken);
+            if (recoveredPayments != 0 || recoveredClaims != 0)
+            {
+                Console.WriteLine(
+                    "[instance-caller] recovered stale instance state " +
+                    $"realm={_realmId.Value} " +
+                    $"payments={recoveredPayments} " +
+                    $"claims={recoveredClaims}");
+            }
+            await Task.Delay(
+                TimeSpan.FromMinutes(1),
+                cancellationToken);
+        }
+    }
 
     public Task RunReconciliationAsync(
         CancellationToken cancellationToken = default) =>

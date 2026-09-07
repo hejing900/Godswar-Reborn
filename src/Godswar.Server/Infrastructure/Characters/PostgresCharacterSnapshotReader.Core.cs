@@ -54,7 +54,9 @@ internal sealed partial class PostgresCharacterSnapshotReader
             reader.GetInt16(46),
             reader.GetInt64(47))
         {
-            RealmId = new RealmId(reader.GetInt32(53))
+            RealmId = new RealmId(reader.GetInt32(53)),
+            FactionCrierRevision = reader.GetInt64(55),
+            OnlineAwardRevision = reader.GetInt64(56)
         };
         return new CharacterCoreRow(
             identity,
@@ -65,10 +67,10 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 ToByte(reader.GetInt16(6), "hair"),
                 ToByte(reader.GetInt16(7), "face"),
                 ToByte(reader.GetInt16(8), "faith"),
-                checked((uint)reader.GetInt32(57)))
+                checked((uint)reader.GetInt32(59)))
             {
                 OwnedTitleIds = ImmutableArray.CreateRange(
-                    reader.GetFieldValue<int[]>(58)
+                    reader.GetFieldValue<int[]>(60)
                         .Select(static titleId => checked((uint)titleId)))
             },
             new CharacterLocationSnapshot(
@@ -94,8 +96,8 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 reader.GetInt32(41),
                 reader.GetInt32(42),
                 reader.GetInt32(54),
-                reader.GetInt32(55),
-                reader.GetInt64(56)),
+                reader.GetInt32(57),
+                reader.GetInt64(58)),
             new CharacterLoadoutSnapshot(
                 reader.GetString(18),
                 reader.GetString(19),
@@ -250,6 +252,8 @@ internal sealed partial class PostgresCharacterSnapshotReader
             cb.pet_shed_revision,
             cb.server_id,
             cb."BindingGold",
+            cb.faction_crier_revision,
+            cb.online_award_revision,
             cb.medusa_honor_points,
             cb.medusa_reward_revision,
             cb.selected_title_id,

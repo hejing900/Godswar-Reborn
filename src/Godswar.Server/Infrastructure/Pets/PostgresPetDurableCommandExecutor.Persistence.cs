@@ -149,7 +149,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             transition.SoulContract,
             transition.PetManagerUtility,
             transition.RebirthGrowth,
-            transition.SkillLearn);
+            transition.SkillLearn,
+            transition.PlayerSkillLearn);
         receipt.Validate();
         var payload = PetDurablePersistenceCodec.Encode(receipt);
         var resultHash = PetDurablePersistenceCodec.Hash(payload);
@@ -250,7 +251,13 @@ internal sealed partial class PostgresPetDurableCommandExecutor
     }
 
     private static string EncodeAuditDetail(PetTransition transition) =>
-        transition.SkillLearn is { } learned
+        transition.PlayerSkillLearn is { } playerSkill
+            ? JsonSerializer.Serialize(new
+            {
+                status = (byte)transition.Status,
+                player_skill_learn = playerSkill
+            })
+            : transition.SkillLearn is { } learned
             ? JsonSerializer.Serialize(new
             {
                 status = (byte)transition.Status,

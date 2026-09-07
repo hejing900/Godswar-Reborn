@@ -32,11 +32,22 @@ $assetDefinitions = @(
 $strictUtf16 = [Text.UnicodeEncoding]::new($false, $false, $true)
 $utf16WithBom = [Text.UnicodeEncoding]::new($false, $true, $true)
 $originRelativePath = 'Origin.exe'
-$originTitleFormatOffset = 0x554FCC
+$originSharedFormatOffset = 0x554FCC
+$originTitleOperandOffset = 0x0D8047
+$originSharedConsumerOperandOffsets = @(
+    0x17EB07,
+    0x1CEEA4,
+    0x1E487F,
+    0x1E743E)
+$originBaseOnlyFormatOffset = 0x551528
 $originAppTitleKeyOffset = 0x554F78
 $originDynamicSuffixOffset = 0x557904
-$originAreaFormat = $strictUtf16.GetBytes("%s %s`0")
-$originBaseOnlyFormat = $strictUtf16.GetBytes("%s`0`0`0`0")
+$originSharedFormat = $strictUtf16.GetBytes("%s %s`0")
+$originLegacySharedFormat = $strictUtf16.GetBytes("%s`0`0`0`0")
+$originBaseOnlyFormat = $strictUtf16.GetBytes("%s`0")
+$originSharedFormatOperand = [BitConverter]::GetBytes([uint32]0x00954FCC)
+$originBaseOnlyFormatOperand = [BitConverter]::GetBytes([uint32]0x00951528)
+$originPushOpcode = [byte[]]@(0x68)
 $originDynamicSuffix = $strictUtf16.GetBytes(" - `0")
 $originAppTitleKey = [Text.Encoding]::ASCII.GetBytes("AppTitle`0")
 if ($targetTitle.Length -gt 127) {
@@ -105,22 +116,41 @@ function Read-OriginTitleAsset {
         $bytes $originAppTitleKeyOffset $originAppTitleKey
     $hasDynamicSuffix = Test-BytesAtOffset `
         $bytes $originDynamicSuffixOffset $originDynamicSuffix
+    $hasBaseOnlyFormat = Test-BytesAtOffset `
+        $bytes $originBaseOnlyFormatOffset $originBaseOnlyFormat
+    $hasTitlePush = Test-BytesAtOffset `
+        $bytes ($originTitleOperandOffset - 1) $originPushOpcode
+    $hasSharedConsumerCalls = @($originSharedConsumerOperandOffsets |
+        Where-Object {
+            -not (Test-BytesAtOffset $bytes ($_ - 1) $originPushOpcode) -or
+            -not (Test-BytesAtOffset `
+                $bytes $_ $originSharedFormatOperand)
+        }).Count -eq 0
     if ($bytes.Length -le $originDynamicSuffixOffset +
             $originDynamicSuffix.Length -or
         $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A -or
-        -not $hasAppTitleKey -or -not $hasDynamicSuffix) {
+        -not $hasAppTitleKey -or -not $hasDynamicSuffix -or
+        -not $hasBaseOnlyFormat -or -not $hasTitlePush -or
+        -not $hasSharedConsumerCalls) {
         throw 'Origin.exe does not match the reviewed title-source layout.'
     }
 
-    $hasBaseOnlyFormat = Test-BytesAtOffset `
-        $bytes $originTitleFormatOffset $originBaseOnlyFormat
-    $hasAreaFormat = Test-BytesAtOffset `
-        $bytes $originTitleFormatOffset $originAreaFormat
-    $state = if ($hasBaseOnlyFormat) {
+    $hasSharedFormat = Test-BytesAtOffset `
+        $bytes $originSharedFormatOffset $originSharedFormat
+    $hasLegacySharedFormat = Test-BytesAtOffset `
+        $bytes $originSharedFormatOffset $originLegacySharedFormat
+    $hasSharedTitleOperand = Test-BytesAtOffset `
+        $bytes $originTitleOperandOffset $originSharedFormatOperand
+    $hasBaseOnlyTitleOperand = Test-BytesAtOffset `
+        $bytes $originTitleOperandOffset $originBaseOnlyFormatOperand
+    $state = if ($hasSharedFormat -and $hasBaseOnlyTitleOperand) {
         'Patched'
     }
-    elseif ($hasAreaFormat) {
+    elseif ($hasSharedFormat -and $hasSharedTitleOperand) {
         'Pristine'
+    }
+    elseif ($hasLegacySharedFormat -and $hasSharedTitleOperand) {
+        'LegacyPatched'
     }
     else {
         'Unknown'
@@ -143,16 +173,22 @@ function New-PatchedOriginBytes {
     if ($Asset.State -ceq 'Patched') {
         return $Asset.Bytes
     }
-    if ($Asset.State -cne 'Pristine') {
+    if ($Asset.State -notin @('Pristine', 'LegacyPatched')) {
         throw 'Origin.exe title format is not a recognized predecessor.'
     }
     $result = [byte[]]$Asset.Bytes.Clone()
     [Array]::Copy(
-        $originBaseOnlyFormat,
+        $originSharedFormat,
         0,
         $result,
-        $originTitleFormatOffset,
-        $originBaseOnlyFormat.Length)
+        $originSharedFormatOffset,
+        $originSharedFormat.Length)
+    [Array]::Copy(
+        $originBaseOnlyFormatOperand,
+        0,
+        $result,
+        $originTitleOperandOffset,
+        $originBaseOnlyFormatOperand.Length)
     return $result
 }
 
@@ -254,6 +290,10 @@ function Get-StatusResult {
         $Origin.State -ceq 'Patched') {
         'Patched'
     }
+    elseif ($Assets.State -notcontains 'Pristine' -and
+        $Origin.State -ceq 'LegacyPatched') {
+        'LegacyPatched'
+    }
     elseif ($Assets.State -notcontains 'Patched' -and
         $Origin.State -ceq 'Pristine') {
         'Pristine'
@@ -271,7 +311,7 @@ function Get-StatusResult {
     else {
         $Assets[0].Title
     }
-    $loginTitle = if ($Origin.State -ceq 'Patched') {
+    $loginTitle = if ($Origin.State -in @('Patched', 'LegacyPatched')) {
         $baseTitle
     }
     else {
@@ -296,7 +336,15 @@ function Get-StatusResult {
             Path = $Origin.Path
             State = $Origin.State
             Sha256 = $Origin.Sha256
-            FormatOffset = ('0x{0:X}' -f $originTitleFormatOffset)
+            SharedFormatOffset = ('0x{0:X}' -f $originSharedFormatOffset)
+            TitleOperandOffset = ('0x{0:X}' -f $originTitleOperandOffset)
+            TitleFormatAddress = if ($Origin.State -ceq 'Patched') {
+                '0x951528'
+            }
+            else {
+                '0x954FCC'
+            }
+            SharedConsumerFormatAddress = '0x954FCC'
             DynamicRealmSuffixPreserved = $true
         }
         BackupDirectory = $BackupDirectory
@@ -356,9 +404,9 @@ if ($Mode -ceq 'Apply') {
         return
     }
     $runningOrigin = @(Get-Process -Name Origin -ErrorAction SilentlyContinue)
-    if ($origin.State -ceq 'Pristine' -and $runningOrigin.Count -gt 0) {
+    if ($origin.State -cne 'Patched' -and $runningOrigin.Count -gt 0) {
         $ids = ($runningOrigin.Id -join ', ')
-        throw "Close Origin.exe before patching its title format (PID: $ids)."
+        throw "Close Origin.exe before repairing its title format (PID: $ids)."
     }
 
     if ([string]::IsNullOrWhiteSpace($BackupRoot)) {
@@ -426,11 +474,17 @@ if ($Mode -ceq 'Apply') {
     }
 
     $manifest = [ordered]@{
-        contractVersion = 2
+        contractVersion = 3
         clientRoot = $resolvedClientRoot
         targetTitle = $targetTitle
         createdAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
         predecessorBackupDirectory = $predecessor
+        binaryPatch = [ordered]@{
+            sharedFormatOffset = '0x554FCC'
+            titleOperandOffset = '0xD8047'
+            sharedFormatAddress = '0x954FCC'
+            baseOnlyFormatAddress = '0x951528'
+        }
         assets = $manifestAssets
     }
     [IO.File]::WriteAllText(
@@ -484,7 +538,7 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Encoding UTF8 -Raw |
     ConvertFrom-Json
-if ($manifest.contractVersion -notin @(1, 2) -or
+if ($manifest.contractVersion -notin @(1, 2, 3) -or
     $manifest.targetTitle -cne $targetTitle -or
     [IO.Path]::GetFullPath([string]$manifest.clientRoot) -cne
         $resolvedClientRoot) {

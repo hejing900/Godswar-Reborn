@@ -21,6 +21,16 @@ internal static class RuntimeContentFingerprintChecks
             "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE";
         const string holyBalance =
             "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+        const string factionCrierBalance =
+            "1111111111111111111111111111111111111111111111111111111111111111";
+        const string realmCalendars =
+            "2222222222222222222222222222222222222222222222222222222222222222";
+        const string onlineAwardBalance =
+            "3333333333333333333333333333333333333333333333333333333333333333";
+        const string warehouseExpansionPolicy =
+            "4444444444444444444444444444444444444444444444444444444444444444";
+        const string monsterRewardPolicy =
+            "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
         var baseline = RuntimeContentFingerprint.Create(
             world,
             items,
@@ -151,6 +161,68 @@ internal static class RuntimeContentFingerprintChecks
                 learnedSkills,
                 holyBalance.ToLowerInvariant()),
             "lowercase Holy Spirit balance revision is rejected");
+
+        var complete = RuntimeContentFingerprint.Create(
+            world,
+            items,
+            pets,
+            ownerMerge,
+            learnedSkills,
+            holyBalance,
+            factionCrierBalance,
+            realmCalendars,
+            onlineAwardBalance,
+            warehouseExpansionPolicy,
+            monsterRewardPolicy);
+        Check.Equal(
+            64,
+            complete.Length,
+            "monster reward-aware fingerprint SHA-256 length");
+        Check.Equal(
+            complete,
+            RuntimeContentFingerprint.Create(
+                world,
+                items,
+                pets,
+                ownerMerge,
+                learnedSkills,
+                holyBalance,
+                factionCrierBalance,
+                realmCalendars,
+                onlineAwardBalance,
+                warehouseExpansionPolicy,
+                monsterRewardPolicy),
+            "monster reward-aware fingerprint determinism");
+        Check.True(
+            !complete.Equals(
+                RuntimeContentFingerprint.Create(
+                    world,
+                    items,
+                    pets,
+                    ownerMerge,
+                    learnedSkills,
+                    holyBalance,
+                    factionCrierBalance,
+                    realmCalendars,
+                    onlineAwardBalance,
+                    warehouseExpansionPolicy,
+                    "F123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"),
+                StringComparison.Ordinal),
+            "monster reward policy participates in worker compatibility");
+        Check.Throws<ArgumentException>(
+            () => RuntimeContentFingerprint.Create(
+                world,
+                items,
+                pets,
+                ownerMerge,
+                learnedSkills,
+                holyBalance,
+                factionCrierBalance,
+                realmCalendars,
+                onlineAwardBalance,
+                warehouseExpansionPolicy,
+                monsterRewardPolicy.ToLowerInvariant()),
+            "lowercase monster reward policy revision is rejected");
         return Task.CompletedTask;
     }
 }

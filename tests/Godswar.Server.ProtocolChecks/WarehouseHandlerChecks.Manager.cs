@@ -186,7 +186,7 @@ internal static partial class WarehouseHandlerChecks
                     "Warehouse expansion test dialogue")
             ],
             npcDialogueRoutes: [route]);
-        var transport = new WarehouseCaptureTransport();
+        var transport = new FactionCrierCaptureTransport();
         var session = new ClientSession(transport);
         var registry = GameHandlerOwnershipTestFences.CreateRegistry(
             session,
@@ -377,7 +377,7 @@ internal static partial class WarehouseHandlerChecks
 
     private sealed record WarehouseManagerFixture(
         ClientSession Session,
-        WarehouseCaptureTransport Transport,
+        FactionCrierCaptureTransport Transport,
         GameClientHandler Handler,
         WarehouseExpansionExecutor Executor,
         WarehouseCharacterSnapshotReader Characters,

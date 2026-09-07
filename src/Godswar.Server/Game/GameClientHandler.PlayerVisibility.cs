@@ -440,8 +440,9 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        stats.ApplyTo(character);
-        ApplyElementalPassiveStats(character, stats);
+        // Import derived stats without restoring stale database HP/MP over
+        // newer live combat or recovery values.
+        ApplyDurableEquipmentStatsProjection(character, stats);
         Console.WriteLine($"[stats] refreshed reason={reason} character={character.Name} {stats.ToLogSummary()}");
     }
 

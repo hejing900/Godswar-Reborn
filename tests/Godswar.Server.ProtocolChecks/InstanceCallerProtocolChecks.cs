@@ -1,5 +1,8 @@
 using System.Buffers.Binary;
+using Godswar.Server.Application.Realms;
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.World.Content;
+using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game;
 using Godswar.Server.Infrastructure.WorldContent;
 using Godswar.Server.Packets;
@@ -7,10 +10,10 @@ using Godswar.Server.Protocol;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class InstanceCallerProtocolChecks
+internal static partial class InstanceCallerProtocolChecks
 {
     public const string CheckName =
-        "Stock Instance Caller Medusa dialogue protocol";
+        "Stock Instance Caller dialogue protocol";
 
     public static Task RunAsync()
     {
@@ -19,11 +22,16 @@ internal static class InstanceCallerProtocolChecks
         Check.Equal(92, InstanceCallerProtocol.ActionPacketBytes,
             "Instance Caller uses the canonical NPC action frame");
         Check.True(
-            InstanceCallerProtocol.InitialMenuSubIds.SequenceEqual([11]) &&
+            InstanceCallerProtocol.InitialMenuSubIds.SequenceEqual(
+                [11, 14, 15]) &&
             InstanceCallerProtocol.MedusaPageSubIds.SequenceEqual(
                 [206, 204, 205, 207]) &&
+            InstanceCallerProtocol.AtlantisPageSubIds.SequenceEqual(
+                [208, 209, 210]) &&
+            InstanceCallerProtocol.WonderlandPageSubIds.SequenceEqual(
+                [211]) &&
             InstanceCallerProtocol.QueueUnavailableResultSubId == 1000,
-            "Medusa root, difficulty page, and queue-failure result are finite");
+            "root and destination pages are finite and preserve Medusa order");
         Check.True(
             InstanceCallerProtocol.IsEndpoint("Athens_060", 5199) &&
             InstanceCallerProtocol.IsEndpoint("Sparta_060", 5057) &&
@@ -32,7 +40,10 @@ internal static class InstanceCallerProtocolChecks
             "only published capital Instance Caller endpoints are accepted");
 
         CheckNavigationAndDifficultyPaths();
-        CheckPublishedV9Routes();
+        CheckLegacyPageAndEntryPaths();
+        CheckLegacyScheduleBoundaries();
+        CheckPublishedCurrentRoutes();
+        CheckClientAttemptDialogue();
         CheckLeaderInstancePanelPackets();
         CheckCompletionPackets();
         return Task.CompletedTask;
@@ -197,19 +208,213 @@ internal static class InstanceCallerProtocolChecks
             "wrong dialog, loose sub-id, polluted paths, and short frames fail");
     }
 
-    private static void CheckPublishedV9Routes()
+    private static void CheckLegacyPageAndEntryPaths()
     {
-        var routes = NpcDialogueBaselineV9.CreateRoutes();
+        Check.True(
+            InstanceCallerProtocol.TryGetPage(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.AtlantisRootSubId,
+                Arguments(),
+                out var atlantisRoot,
+                out var atlantisPage) &&
+            atlantisRoot == InstanceCallerProtocol.AtlantisRootSubId &&
+            atlantisPage.SequenceEqual([208, 209, 210]) &&
+            InstanceCallerProtocol.TryGetPage(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.WonderlandRootSubId,
+                Arguments(),
+                out var wonderlandRoot,
+                out var wonderlandPage) &&
+            wonderlandRoot == InstanceCallerProtocol.WonderlandRootSubId &&
+            wonderlandPage.SequenceEqual([211]),
+            "Atlantis and Wonderland roots open their exact stock pages");
+
+        Check.True(
+            InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.AtlantisRootSubId,
+                Arguments(InstanceCallerProtocol.AtlantisEnterSubId),
+                out var atlantis) &&
+            atlantis.Kind == InstanceCallerEntryKind.Atlantis &&
+            atlantis.DisplayName == "Atlantis" &&
+            atlantis.TargetMapId == 205 &&
+            atlantis.TargetX == 171f &&
+            atlantis.TargetZ == 24f &&
+            atlantis.MinimumLevel == 90 &&
+            atlantis.MaximumLevel == 140 &&
+            atlantis.RequiredPartySize == 3 &&
+            atlantis.PaymentMode ==
+                InstanceCallerEntryPaymentMode.FreeOnly &&
+            InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.AtlantisRootSubId,
+                Arguments(InstanceCallerProtocol.AtlantisOpalSubId),
+                out var paidAtlantis) &&
+            paidAtlantis.Kind == InstanceCallerEntryKind.Atlantis &&
+            paidAtlantis.PaymentMode ==
+                InstanceCallerEntryPaymentMode.OpalRetry,
+            "Atlantis enter path resolves the reviewed map, arrival, and " +
+            "three-player level window, while 209 is explicit paid retry");
+        Check.True(
+            InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.WonderlandRootSubId,
+                Arguments(InstanceCallerProtocol.WonderlandEnterSubId),
+                out var wonderland) &&
+            wonderland.Kind == InstanceCallerEntryKind.Wonderland &&
+            wonderland.DisplayName == "Wonderland" &&
+            wonderland.TargetMapId == 207 &&
+            wonderland.TargetX == 120f &&
+            wonderland.TargetZ == 209f &&
+            wonderland.MinimumLevel == 120 &&
+            wonderland.MaximumLevel == int.MaxValue &&
+            wonderland.RequiredPartySize is null,
+            "Wonderland enter path resolves the reviewed map and arrival");
+
+        var pollutedAtlantis = Arguments(
+            InstanceCallerProtocol.AtlantisEnterSubId);
+        pollutedAtlantis[1] = 0;
+        Check.True(
+            !InstanceCallerProtocol.TryGetPage(
+                InstanceCallerProtocol.DialogIndex + 1,
+                InstanceCallerProtocol.AtlantisRootSubId,
+                Arguments(),
+                out _,
+                out _) &&
+            !InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.AtlantisEnterSubId,
+                Arguments(),
+                out _) &&
+            !InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.AtlantisRootSubId,
+                Arguments(InstanceCallerProtocol.AtlantisDescriptionSubId),
+                out _) &&
+            !InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.AtlantisRootSubId,
+                pollutedAtlantis,
+                out _) &&
+            !InstanceCallerProtocol.TryResolveEntry(
+                InstanceCallerProtocol.DialogIndex,
+                InstanceCallerProtocol.WonderlandRootSubId,
+                Arguments(InstanceCallerProtocol.WonderlandEnterSubId)[..^1],
+                out _),
+            "wrong dialog/root, informational choices, polluted paths, and " +
+            "short legacy entry frames fail closed");
+    }
+
+    private static void CheckLegacyScheduleBoundaries()
+    {
+        var calendar = RealmCalendar.CreateForTesting(RealmId.Tempest);
+        var saturdayBeforeCutoff = new DateTimeOffset(
+            2026,
+            8,
+            29,
+            22,
+            59,
+            59,
+            TimeSpan.Zero).AddTicks(TimeSpan.TicksPerSecond - 1);
+        var saturdayAtCutoff = new DateTimeOffset(
+            2026,
+            8,
+            29,
+            23,
+            0,
+            0,
+            TimeSpan.Zero);
+        var sundayBeforeCutoff = new DateTimeOffset(
+            2026,
+            8,
+            30,
+            22,
+            59,
+            59,
+            TimeSpan.Zero).AddTicks(TimeSpan.TicksPerSecond - 1);
+        var sundayAtCutoff = new DateTimeOffset(
+            2026,
+            8,
+            30,
+            23,
+            0,
+            0,
+            TimeSpan.Zero);
+        var weekdayBeforeCutoff = new DateTimeOffset(
+            2026,
+            8,
+            28,
+            22,
+            59,
+            0,
+            TimeSpan.Zero);
+        var weekdayAtCutoff = new DateTimeOffset(
+            2026,
+            8,
+            31,
+            23,
+            0,
+            0,
+            TimeSpan.Zero);
+
+        Check.True(
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Atlantis,
+                calendar,
+                weekdayAtCutoff) == LegacyInstanceScheduleStatus.Open,
+            "Atlantis has no Wonderland weekend or 23:00 restriction");
+        Check.True(
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Wonderland,
+                calendar,
+                saturdayBeforeCutoff) ==
+                    LegacyInstanceScheduleStatus.Open &&
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Wonderland,
+                calendar,
+                sundayBeforeCutoff) ==
+                    LegacyInstanceScheduleStatus.Open,
+            "Wonderland remains open through the final instant before " +
+            "23:00 on both weekend days");
+        Check.True(
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Wonderland,
+                calendar,
+                saturdayAtCutoff) ==
+                    LegacyInstanceScheduleStatus.DailyCutoffPassed &&
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Wonderland,
+                calendar,
+                sundayAtCutoff) ==
+                    LegacyInstanceScheduleStatus.DailyCutoffPassed,
+            "Wonderland closes exactly at 23:00 on Saturday and Sunday");
+        Check.True(
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Wonderland,
+                calendar,
+                weekdayBeforeCutoff) ==
+                    LegacyInstanceScheduleStatus.WrongDay &&
+            LegacyInstanceAdmissionPolicy.CheckSchedule(
+                InstanceCallerEntryKind.Wonderland,
+                calendar,
+                weekdayAtCutoff) ==
+                    LegacyInstanceScheduleStatus.WrongDay,
+            "Wonderland rejects weekdays before applying the daily cutoff");
+    }
+
+    private static void CheckPublishedCurrentRoutes()
+    {
+        var routes = NpcDialogueBaselineV14.CreateRoutes();
         var npcs = NpcContentBaselineV1.LoadDefinitions()
             .Where(npc => npc.NpcKey is "Athens_060" or "Sparta_060")
             .OrderBy(npc => npc.NpcKey, StringComparer.Ordinal)
             .ToArray();
         Check.True(
-            NpcDialogueBaselineV9.ExpectedProfileCount == 11 &&
-            NpcDialogueBaselineV9.ExpectedRouteCount == 22 &&
-            NpcDialogueBaselineV9.ExpectedMenuEntryCount == 54 &&
+            NpcDialogueBaselineV14.ExpectedProfileCount == 16 &&
+            NpcDialogueBaselineV14.ExpectedRouteCount == 27 &&
+            NpcDialogueBaselineV14.ExpectedMenuEntryCount == 77 &&
             npcs.Length == 2,
-            "V9 extends V8 with one profile and two published routes");
+            "V14 publishes the reviewed finite dialogue surface");
         foreach (var npc in npcs)
         {
             var route = routes.Single(candidate =>
@@ -217,7 +422,7 @@ internal static class InstanceCallerProtocolChecks
             Check.True(
                 route.Behavior == NpcDialogueBehavior.InstanceCaller &&
                 route.DialogIndex == InstanceCallerProtocol.DialogIndex &&
-                route.InitialMenuSubIds.SequenceEqual([11]) &&
+                route.InitialMenuSubIds.SequenceEqual([11, 14, 15]) &&
                 NpcDialogueBehaviorRegistry.IsAllowed(npc, route),
                 $"{npc.NpcKey} has the allowlisted Instance Caller route");
         }

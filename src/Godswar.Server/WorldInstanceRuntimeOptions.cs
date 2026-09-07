@@ -1,5 +1,6 @@
 using WorldServerNodeId =
     Godswar.Server.Domain.World.Instances.ServerNodeId;
+using Godswar.Server.Domain.World.Instances;
 using WorldRealmId =
     Godswar.Server.Domain.World.Instances.RealmId;
 using WorldMapId =
@@ -160,6 +161,14 @@ internal sealed class WorldInstanceRuntimeOptions
             }
 
             route.Validate();
+            if (DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(
+                    route.MapId))
+            {
+                throw new InvalidDataException(
+                    "Dynamic-dungeon maps cannot be configured as static " +
+                    "open-world routes; they require an exact durable " +
+                    "dungeon admission.");
+            }
             if (route.ProcessRealmId != processRealmId)
             {
                 throw new InvalidDataException(

@@ -43,6 +43,10 @@ internal sealed record CharacterIdentitySnapshot(
     long LifecycleVersion = 1)
 {
     public RealmId RealmId { get; init; } = RealmId.Tempest;
+
+    public long FactionCrierRevision { get; init; }
+
+    public long OnlineAwardRevision { get; init; }
 }
 
 internal sealed record CharacterAppearanceSnapshot(
@@ -75,7 +79,6 @@ internal sealed record CharacterProgressionSnapshot(
 internal static class CharacterProgressionSnapshotRules
 {
     public const int MaximumCharacterLevel = 200;
-    public const int FighterLevelSealLevel = 89;
 }
 
 internal sealed record CharacterVitalsSnapshot(

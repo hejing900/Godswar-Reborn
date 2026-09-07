@@ -15,7 +15,9 @@ internal sealed partial class GameClientHandler
             PetCommandOperationIdentity identity,
             int kitBagSlot,
             CancellationToken cancellationToken,
-            PetCaptureIntent? captureIntent = null)
+            PetCaptureIntent? captureIntent = null,
+            BagItemActivationExecutionConstraint executionConstraint =
+                BagItemActivationExecutionConstraint.None)
     {
         if (!TryCreatePetSubject(identity, out var subject) ||
             _petDurableCommands is null)
@@ -28,16 +30,22 @@ internal sealed partial class GameClientHandler
         }
 
         var correlation = PetCorrelation(identity);
+        var effectiveExecutionConstraint =
+            executionConstraint !=
+                BagItemActivationExecutionConstraint.None
+                ? executionConstraint
+                : IsSkillCastPending(MountCatalog.RideSkillId) ||
+                    _registry.IsRuntimeStatusActive(
+                        _session,
+                        MountCatalog.RuntimeStatusKind,
+                        DateTimeOffset.UtcNow)
+                    ? BagItemActivationExecutionConstraint
+                        .RideRuntimeBlocked
+                    : BagItemActivationExecutionConstraint.None;
         var command = new BagItemActivationCommand(
             identity,
             kitBagSlot,
-            IsSkillCastPending(MountCatalog.RideSkillId) ||
-            _registry.IsRuntimeStatusActive(
-                _session,
-                MountCatalog.RuntimeStatusKind,
-                DateTimeOffset.UtcNow)
-                ? BagItemActivationExecutionConstraint.RideRuntimeBlocked
-                : BagItemActivationExecutionConstraint.None,
+            effectiveExecutionConstraint,
             captureIntent);
         var unownedEnvelope = identity.IsSecureClient
             ? BagItemActivationCommandEnvelope.Create(

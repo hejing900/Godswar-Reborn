@@ -3,6 +3,9 @@
 #include "SecureCharacterLifecycleIdentity.h"
 #include "SecureClassSuitCommandIdentity.h"
 #include "SecureEquipmentBagTransferIdentity.h"
+#include "SecureFactionCrierCommandIdentity.h"
+#include "SecureFighterLevelSealCommandIdentity.h"
+#include "SecureOnlineAwardCommandIdentity.h"
 #include "SecureWarehouseCommandIdentity.h"
 #include "SecureForgeCommandIdentity.h"
 #include "SecureHolyStoneCommandIdentity.h"
@@ -26,6 +29,8 @@ inline constexpr std::size_t SecureResolvedOperationCapacity = 16;
 inline constexpr std::size_t SecureThreeSlotSelectionCount = 3;
 inline constexpr std::size_t SecureGearSelectionCapacity = 4;
 inline constexpr std::size_t SecureForgeOddsCapacity = 25;
+inline constexpr std::size_t
+    SecureFighterExperienceProjectionCapacity = 16;
 inline constexpr std::uint64_t
     SecurePendingOperationLifetimeMilliseconds = 10 * 60 * 1000;
 inline constexpr std::uint64_t
@@ -60,6 +65,12 @@ struct SecureForgeOddsSelection final {
     bool descriptorLinked = false;
 };
 
+struct SecureFighterExperienceProjection final {
+    std::uint32_t currentExperience = 0;
+    std::uint32_t maximumExperience = 0;
+    std::uint64_t authoritativeRevision = 0;
+};
+
 struct SecurePendingOperationSnapshot final {
     std::size_t pending = 0;
     std::size_t resolved = 0;
@@ -83,6 +94,7 @@ struct SecurePendingOperationSnapshot final {
     std::size_t forgeOddsCount = 0;
     std::uint32_t forgeOddsTotal = 0;
     bool forgeOddsFullyLinked = true;
+    std::size_t fighterExperienceProjectionCount = 0;
     SecureForgeOddsSelection
         forgeOdds[SecureForgeOddsCapacity]{};
 };
@@ -110,6 +122,8 @@ public:
         const SecureLegacyCommandResult& result) noexcept;
     SecureOperationRegistryResult SetCharacter(
         int characterId) noexcept;
+    bool TryTakeFighterExperienceProjection(
+        SecureFighterExperienceProjection* projection) noexcept;
     SecurePendingOperationSnapshot Snapshot() noexcept;
     void Clear() noexcept;
 
@@ -195,6 +209,36 @@ private:
         LegacyPacketDescriptor* descriptor) noexcept;
     SecureOperationRegistryResult DescribePetCommand(
         const LegacyPetCommandIntent& intent,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeFactionCrierPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeFactionCrierCommand(
+        const LegacyFactionCrierCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeFighterLevelSealPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeFighterLevelSealCommand(
+        const LegacyFighterLevelSealCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeOnlineAwardPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeOnlineAwardCommand(
+        const LegacyOnlineAwardCommand& command,
         std::uint64_t now,
         LegacyPacketDescriptor* descriptor) noexcept;
     SecureOperationRegistryResult DescribeWarehousePacket(
@@ -332,6 +376,10 @@ private:
     bool RememberResolved(
         const Entry& entry,
         std::uint64_t now) noexcept;
+    bool CanPublishFighterExperienceProjection() const noexcept;
+    void PublishFighterExperienceProjection(
+        const SecureLegacyCommandResult& result) noexcept;
+    void ClearFighterExperienceProjections() noexcept;
     bool CreateOperationId(std::uint8_t* operationId) noexcept;
     bool StageForgeSelection(
         const LegacyForgeSelection& selection) noexcept;
@@ -430,6 +478,11 @@ private:
     std::size_t forgeOddsCount_ = 0;
     SecureForgeOddsSelection
         forgeOdds_[SecureForgeOddsCapacity]{};
+    SecureFighterExperienceProjection
+        fighterExperienceProjections_[
+            SecureFighterExperienceProjectionCapacity]{};
+    std::size_t fighterExperienceProjectionHead_ = 0;
+    std::size_t fighterExperienceProjectionCount_ = 0;
     std::uint8_t
         principal_[SecurePrincipalFingerprintBytes]{};
     Entry entries_[SecurePendingOperationCapacity]{};

@@ -1,5 +1,4 @@
 using Godswar.Server.State;
-using Godswar.Server.World.Systems.Combat;
 
 namespace Godswar.Server.Game;
 
@@ -9,16 +8,13 @@ internal sealed partial class GameClientHandler
         GameCharacter character,
         CharacterStats baseStats)
     {
-        var passive = ElementalResonanceExecutionPolicy.ApplyPassiveBonuses(
-            character.ElementalEquipment,
-            Math.Max(1, baseStats.MaxHp),
-            movementSpeed: 0);
-        var maximumHealth = checked((int)Math.Min(
-            passive.MaximumHealth,
-            int.MaxValue));
+        var maximumHealth = CharacterCalculatedStatsProjectionApplier
+            .ResolveEffectiveMaximumHealth(
+            character,
+            baseStats);
         lock (character.VitalsSync)
         {
-            character.MaxHp = Math.Max(1, maximumHealth);
+            character.MaxHp = maximumHealth;
             character.CurrentHp = Math.Clamp(
                 character.CurrentHp,
                 0,

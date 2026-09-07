@@ -24,7 +24,6 @@ internal sealed partial class GameClientHandler
         }
 
         if (character.Camp != definition.RequiredCamp ||
-            character.CurrentMap == definition.TargetMapId ||
             !_registered ||
             !_worldPresenceAnnounced ||
             IsMapTransitionPending ||
@@ -246,12 +245,20 @@ internal sealed partial class GameClientHandler
             character,
             cancellationToken);
 
-        var transitioned = await TryBeginMapTransitionAsync(
-            definition.TargetMapId,
-            definition.TargetX,
-            definition.TargetZ,
-            $"backhaul:{definition.ScriptId}",
-            cancellationToken);
+        var transitionSource = $"backhaul:{definition.ScriptId}";
+        var transitioned = sourceMapId == definition.TargetMapId
+            ? await TryBeginSameMapSceneTransitionAsync(
+                definition.TargetX,
+                definition.TargetZ,
+                transitionSource,
+                continuationGuard: null,
+                cancellationToken)
+            : await TryBeginMapTransitionAsync(
+                definition.TargetMapId,
+                definition.TargetX,
+                definition.TargetZ,
+                transitionSource,
+                cancellationToken);
         if (!transitioned)
         {
             await RefundBackhaulManaAsync(

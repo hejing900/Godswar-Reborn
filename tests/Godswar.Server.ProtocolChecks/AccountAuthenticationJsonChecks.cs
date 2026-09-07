@@ -263,9 +263,9 @@ internal static class AccountAuthenticationJsonChecks
         }
 
         var registrationOptions = TestOptions();
-        registrationOptions.AllowRegistration = true;
         await using var registration =
-            new AccountAuthenticationService(
+            AccountAuthenticationService.CreateLegacyRaw(
+                store,
                 store,
                 registrationOptions);
         var registrationPassword = "new-account"u8.ToArray();
@@ -274,8 +274,12 @@ internal static class AccountAuthenticationJsonChecks
             var created = await registration.AuthenticateAsync(
                 "auth-flow-created",
                 registrationPassword);
-            Check.True(created.IsAccepted, "enabled registration accepts");
-            Check.True(created.AccountCreated, "registration is explicit");
+            Check.True(
+                created.IsAccepted,
+                "legacy raw registration accepts a missing account");
+            Check.True(
+                created.AccountCreated,
+                "legacy raw registration remains explicit");
             var verifier = (await store.FindAccountCredentialAsync(
                 "auth-flow-created"))!.Verifier;
             Check.True(

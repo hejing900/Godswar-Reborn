@@ -307,7 +307,7 @@ internal static partial class ElementalClassSuitAttributeChecks
         {
             new HandlerOrder(
                 "GameClientHandler.MovementCombat.cs",
-                "TryApplyMonsterDamage(",
+                "TryCommitPlayerMonsterDamageGuarded(",
                 "DeliverMonsterHealthPacketToViewerAsync"),
             new HandlerOrder(
                 "GameClientHandler.CombatEcsBasic.cs",
@@ -384,6 +384,46 @@ internal static partial class ElementalClassSuitAttributeChecks
                     $"{handler.FileName} commits and durably prepares secondary effects before awaiting cast interruption, then publishes interruption before damage");
             }
         }
+
+        var monsterTransactions = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Godswar.Server",
+            "Game",
+            "GameSessionRegistry.ElementalCombat.Monsters.cs"));
+        var medusaSuppression = monsterTransactions.IndexOf(
+            "medusaOwnedMonsters.Contains(",
+            StringComparison.Ordinal);
+        var targetStatusLookup = monsterTransactions.IndexOf(
+            "GetPveMonsterElementalState(",
+            medusaSuppression,
+            StringComparison.Ordinal);
+        var statusCommit = monsterTransactions.IndexOf(
+            "ElementalDirectHitCommitPolicy.Commit(",
+            medusaSuppression,
+            StringComparison.Ordinal);
+        Check.True(
+            medusaSuppression >= 0 &&
+            medusaSuppression < targetStatusLookup &&
+            targetStatusLookup < statusCommit,
+            "bound Medusa secondary effects are suppressed before target status lookup and direct-hit ledger mutation");
+
+        var transactionAuthority = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Godswar.Server",
+            "Game",
+            "GameSessionRegistry.ElementalCombat.Transactions.cs"));
+        var ownershipSnapshot = transactionAuthority.IndexOf(
+            "TryGetMedusaOwnershipSnapshot(",
+            StringComparison.Ordinal);
+        var elementalGate = transactionAuthority.IndexOf(
+            "lock (_pveElementalCommitGate)",
+            StringComparison.Ordinal);
+        Check.True(
+            ownershipSnapshot >= 0 &&
+            ownershipSnapshot < elementalGate,
+            "Medusa ownership is captured on its world-owner lane before elemental transaction locks");
     }
 
     private static string FindPveTransactionRepositoryRoot()

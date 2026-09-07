@@ -12,37 +12,44 @@ internal static class PlayerExperienceSealingChecks
     public static Task RunAsync()
     {
         Check.Equal(
-            89,
-            PlayerExperienceCatalog.FighterLevelSealLevel,
-            "the original client seals only fighter level 89");
-        Check.Equal(
             4_294_967_295L,
             PlayerExperienceCatalog.MaximumStoredExperience,
             "stored fighter EXP uses the full UInt32 client ceiling");
 
-        var belowThreshold = PlayerExperienceCatalog.Apply(
-            89,
-            100,
-            50,
-            fighterLevelSealed: true);
-        AssertSealed(
-            belowThreshold,
-            expectedExperience: 150,
-            expectedCredit: 50,
-            "below-threshold reward");
+        foreach (var level in new[] { 1, 88, 89, 90, 199, 200 })
+        {
+            var belowThreshold = PlayerExperienceCatalog.Apply(
+                level,
+                100,
+                50,
+                fighterLevelSealed: true);
+            AssertSealed(
+                belowThreshold,
+                level,
+                expectedExperience: 150,
+                expectedCredit: 50,
+                $"level-{level} below-threshold reward");
 
-        var threshold =
-            PlayerExperienceCatalog.GetNextLevelExperience(89);
-        var crossing = PlayerExperienceCatalog.Apply(
-            89,
-            threshold - 10,
-            20,
-            fighterLevelSealed: true);
-        AssertSealed(
-            crossing,
-            threshold + 10,
-            expectedCredit: 20,
-            "threshold-crossing reward");
+            var threshold =
+                PlayerExperienceCatalog.GetNextLevelExperience(level);
+            var crossing = PlayerExperienceCatalog.Apply(
+                level,
+                threshold - 10L,
+                20,
+                fighterLevelSealed: true);
+            AssertSealed(
+                crossing,
+                level,
+                threshold + 10L,
+                expectedCredit: 20,
+                $"level-{level} threshold-crossing reward");
+            Check.Equal(
+                PlayerExperienceCatalog.MaximumStoredExperience,
+                PlayerExperienceCatalog.GetClientExperienceMaximum(
+                    level,
+                    fighterLevelSealed: true),
+                $"sealed level {level} uses the UInt32 EXP-bar maximum");
+        }
 
         var partial = PlayerExperienceCatalog.Apply(
             89,
@@ -51,7 +58,8 @@ internal static class PlayerExperienceSealingChecks
             fighterLevelSealed: true);
         AssertSealed(
             partial,
-            4_294_967_295L,
+            expectedLevel: 89,
+            expectedExperience: 4_294_967_295L,
             expectedCredit: 5,
             "saturating partial reward");
 
@@ -62,13 +70,16 @@ internal static class PlayerExperienceSealingChecks
             fighterLevelSealed: true);
         AssertSealed(
             saturated,
-            4_294_967_295L,
+            expectedLevel: 89,
+            expectedExperience: 4_294_967_295L,
             expectedCredit: 0,
             "already-saturated reward");
 
+        var ordinaryThreshold =
+            PlayerExperienceCatalog.GetNextLevelExperience(89);
         var ordinary = PlayerExperienceCatalog.Apply(
             89,
-            threshold - 10,
+            ordinaryThreshold - 10,
             20);
         Check.True(
             ordinary.Level == 90 &&
@@ -90,13 +101,20 @@ internal static class PlayerExperienceSealingChecks
                     >= 0 and <= 4_294_967_295L),
             "unsealed catch-up retains normal progression with UInt32-safe evidence");
 
-        Check.Throws<InvalidOperationException>(
+        Check.Throws<ArgumentOutOfRangeException>(
             () => PlayerExperienceCatalog.Apply(
-                88,
+                0,
                 0,
                 1,
                 fighterLevelSealed: true),
-            "a sealed non-89 fighter state fails closed");
+            "a sealed level below the supported range fails closed");
+        Check.Throws<ArgumentOutOfRangeException>(
+            () => PlayerExperienceCatalog.Apply(
+                PlayerExperienceCatalog.MaximumLevel + 1,
+                0,
+                1,
+                fighterLevelSealed: true),
+            "a sealed level above the supported range fails closed");
 
         var reachesLevelCap = PlayerExperienceCatalog.Apply(
             199,
@@ -134,15 +152,16 @@ internal static class PlayerExperienceSealingChecks
 
     private static void AssertSealed(
         PlayerExperienceProgression progression,
+        int expectedLevel,
         long expectedExperience,
         int expectedCredit,
         string scenario)
     {
         Check.True(
-            progression.Level == 89 &&
+            progression.Level == expectedLevel &&
             progression.Experience == expectedExperience &&
             progression.ExperienceGained == expectedCredit &&
             progression.LevelUps.Count == 0,
-            $"{scenario} stays level 89 with actual credited EXP and no level-up evidence");
+            $"{scenario} stays at the chosen level with actual credited EXP and no level-up evidence");
     }
 }

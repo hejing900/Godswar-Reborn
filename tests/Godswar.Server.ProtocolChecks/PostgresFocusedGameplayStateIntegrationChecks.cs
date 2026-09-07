@@ -3,6 +3,7 @@ using Godswar.Server.Application.World;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Infrastructure.Database;
 using Godswar.Server.Infrastructure.Progression;
+using Godswar.Server.Infrastructure.Rewards;
 using Godswar.Server.Infrastructure.World;
 using Godswar.Server.Infrastructure.WorldContent;
 using Godswar.Server.State;
@@ -45,6 +46,7 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
         await migrationRunner.InitializeGodswarSchemaAsync();
         await PostgresRelationalContentBaselineBootstrapper.EnsureAsync(
             connectionString);
+        await AssertGlobalExperiencePolicyAsync(dataSource);
         var gameplayPublication =
             await PostgresGameplayContentPublisher.EnsurePublishedAsync(
                 connectionString);
@@ -343,9 +345,9 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             fixture.ReadAtUtc);
         var snapshot = await reader.ReadAsync(request);
         Check.Equal(
-            4,
+            5,
             snapshot.ActiveBoosts.Length,
-            "one repeatable snapshot composes personal, Talent, VIP, and area boosts");
+            "one repeatable snapshot composes personal, Talent, donator, area, and Battle Pass boosts");
         Check.True(
             snapshot.ActiveBoosts
                 .Select(static boost => boost.Kind)
@@ -353,8 +355,9 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
                 [
                     AppBoostKinds.Consumable,
                     AppBoostKinds.Talent,
-                    AppBoostKinds.Vip,
-                    AppBoostKinds.FactionArea
+                    AppBoostKinds.Donator,
+                    AppBoostKinds.FactionArea,
+                    AppBoostKinds.BattlePass
                 ]),
             "composed boosts are stable and ordered by kind");
 
@@ -365,16 +368,16 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             fixture.ReadAtUtc.AddMinutes(30),
             personal.ExpiresAtUtc!.Value,
             "online-only personal duration is projected from read time");
-        var vip = snapshot.ActiveBoosts.Single(
-            static boost => boost.Kind == AppBoostKinds.Vip);
+        var donator = snapshot.ActiveBoosts.Single(
+            static boost => boost.Kind == AppBoostKinds.Donator);
         Check.Equal(
-            AppStatusIds.VipGold,
-            vip.StatusId,
-            "Gold VIP membership selects the Gold status");
+            AppStatusIds.OctagramPatron,
+            donator.StatusId,
+            "Octagram Patron membership selects the top donator status");
         Check.Equal(
-            fixture.VipExpiresAtUtc,
-            vip.ExpiresAtUtc!.Value,
-            "VIP projection preserves its calendar expiry");
+            fixture.DonatorExpiresAtUtc,
+            donator.ExpiresAtUtc!.Value,
+            "donator projection preserves its calendar expiry");
         var area = snapshot.ActiveBoosts.Single(
             static boost =>
                 boost.Kind == AppBoostKinds.FactionArea);
@@ -382,29 +385,89 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             control.ExpiresAtUtc,
             area.ExpiresAtUtc!.Value,
             "area boost shares the world-boss control expiry");
+        var battlePass = snapshot.ActiveBoosts.Single(
+            static boost => boost.Kind == AppBoostKinds.BattlePass);
+        Check.Equal(
+            AppStatusIds.PremiumBattlePass,
+            battlePass.StatusId,
+            "active Battle Pass entitlement selects its own status");
+        Check.Equal(
+            fixture.BattlePassExpiresAtUtc,
+            battlePass.ExpiresAtUtc!.Value,
+            "overlapping finite Battle Pass grants select the latest active calendar expiry");
+        Check.Equal(
+            4_000 + fixture.BonusBasisPoints,
+            snapshot.TotalBonusBasisPoints,
+            "fighter EXP stacks personal, donator, area, and Battle Pass bonuses");
         Check.Equal(
             2_500 + fixture.BonusBasisPoints,
-            snapshot.TotalBonusBasisPoints,
-            "fighter EXP stacks personal, VIP, and area bonuses");
-        Check.Equal(
-            2_000,
             snapshot.TotalTalentBonusBasisPoints,
-            "Talent EXP remains a separate bonus channel");
+            "Battle Pass and faction boost the separate Talent EXP channel");
         Check.Equal(
-            (100 * (12_500 + fixture.BonusBasisPoints)) / 10_000,
+            1_500 + fixture.BonusBasisPoints,
+            snapshot.TotalPetBonusBasisPoints,
+            "personal, Battle Pass, and faction pet EXP channels stack");
+        Check.Equal(
+            (100 * (14_000 + fixture.BonusBasisPoints)) / 10_000,
             snapshot.ApplyTo(100),
             "composed fighter EXP multiplier is deterministic");
         Check.Equal(
-            120,
+            (100 * (12_500 + fixture.BonusBasisPoints)) / 10_000,
             snapshot.ApplyToTalent(100),
             "composed Talent EXP multiplier is deterministic");
+        Check.Equal(
+            (100 * (11_500 + fixture.BonusBasisPoints)) / 10_000,
+            snapshot.ApplyToPet(100),
+            "composed Pet EXP multiplier is deterministic");
+
+        var turnover = await reader.ReadAsync(request with
+        {
+            ReadAtUtc = fixture.BattlePassExpiresAtUtc
+        });
+        var turnoverBattlePass = turnover.ActiveBoosts.Single(
+            static boost => boost.Kind == AppBoostKinds.BattlePass);
+        Check.Equal(
+            fixture.BattlePassFutureExpiresAtUtc,
+            turnoverBattlePass.ExpiresAtUtc!.Value,
+            "a Battle Pass beginning at the exact prior-expiry boundary is active and preserves its own calendar expiry");
+
+        var expired = await reader.ReadAsync(request with
+        {
+            ReadAtUtc = fixture.BattlePassFutureExpiresAtUtc
+        });
+        Check.True(
+            expired.ActiveBoosts.All(static boost =>
+                boost.Kind != AppBoostKinds.BattlePass),
+            "Battle Pass expiry is exclusive at the exact boundary");
+        Check.True(
+            expired.ActiveBoosts.All(static boost =>
+                boost.Kind != AppBoostKinds.Donator),
+            "finite donator membership expiry is exclusive at the exact boundary");
+
+        var permanent = await reader.ReadAsync(
+            new ExperienceBoostReadRequest(
+                fixture.OtherAccountId,
+                fixture.DwargonCharacterId,
+                0,
+                fixture.ConfiguredMapId,
+                fixture.ReadAtUtc));
+        var permanentDonator = permanent.ActiveBoosts.Single(
+            static boost => boost.Kind == AppBoostKinds.Donator);
+        Check.True(
+            permanentDonator.ExpiresAtUtc is null,
+            "permanent donator membership remains expiry-free");
+        var permanentBattlePass = permanent.ActiveBoosts.Single(
+            static boost => boost.Kind == AppBoostKinds.BattlePass);
+        Check.True(
+            permanentBattlePass.ExpiresAtUtc is null,
+            "a permanent Battle Pass grant dominates overlapping finite grants");
 
         var crossAccount = await reader.ReadAsync(
             request with { AccountId = fixture.OtherAccountId });
         Check.Equal(
             0,
             crossAccount.ActiveBoosts.Length,
-            "another account cannot read a character's boosts or VIP projection");
+            "another account cannot read a character's boosts or entitlements");
     }
 
     private static async Task AssertDeletedCharacterIsExcludedAsync(

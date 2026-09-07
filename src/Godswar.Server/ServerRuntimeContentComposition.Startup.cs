@@ -1,10 +1,12 @@
 using Godswar.Server.Application.Inventory;
 using Godswar.Server.Application.Pets;
+using Godswar.Server.Application.Rewards;
 using Godswar.Server.Application.Warehouse;
 using Godswar.Server.Application.World;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Game;
 using Godswar.Server.Infrastructure.WorldInstances;
+using Godswar.Server.Infrastructure.Rewards;
 using Godswar.Server.State;
 
 namespace Godswar.Server;
@@ -17,6 +19,7 @@ internal sealed record ServerStartupContent(
     PinnedPetLearnedSkillContentCatalog LearnedSkills,
     HolySpiritBalanceSnapshot HolySpiritBalance,
     WarehouseExpansionPolicySnapshot WarehouseExpansionPolicy,
+    MonsterRewardPolicySnapshot MonsterRewardPolicy,
     GameplayRuntimeCatalogs GameplayCatalogs);
 
 internal static partial class ServerRuntimeContentComposition
@@ -41,6 +44,9 @@ internal static partial class ServerRuntimeContentComposition
         var medusaMonsters =
             await PostgresMedusaMonsterContentSnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString);
+        var monsterRewardPolicy =
+            await PostgresMonsterRewardPolicySnapshotReader.LoadAsync(
+                options.Storage.PostgresConnectionString);
         MedusaRewardPolicyCatalog.Install(medusaRewards);
         MedusaMonsterContentCatalog.Install(medusaMonsters);
         var world = await ServerWorldContentComposition.TryLoadAsync(options);
@@ -60,6 +66,9 @@ internal static partial class ServerRuntimeContentComposition
             learnedSkills,
             holySpiritBalance,
             warehouseExpansionPolicy,
-            GameplayRuntimeCatalogs.Create(world.Gameplay));
+            monsterRewardPolicy,
+            GameplayRuntimeCatalogs.Create(
+                world.Gameplay,
+                monsterRewardPolicy));
     }
 }

@@ -1,0 +1,175 @@
+using Godswar.Server.Application.Characters;
+using Godswar.Server.Domain.World.Instances;
+using Godswar.Server.Packets;
+
+namespace Godswar.Server.Game;
+
+internal sealed partial class GameClientHandler
+{
+    private async Task<bool> TryBeginSameMapSceneTransitionAsync(
+        float targetX,
+        float targetZ,
+        string source,
+        Func<bool>? continuationGuard,
+        CancellationToken cancellationToken)
+    {
+        if (_pendingMapTransition is not null ||
+            _account is null ||
+            _character is null ||
+            !_registered ||
+            !_worldPresenceAnnounced ||
+            continuationGuard?.Invoke() == false ||
+            !MapTraversalLimits.IsFiniteAndBounded(
+                new MapTraversalPosition(targetX, targetZ)))
+        {
+            return false;
+        }
+        if (!TryCaptureCurrentPlayerOwnership(out var ownership))
+        {
+            RejectLostPlayerOwnership();
+            return false;
+        }
+        var sourceMapId = _character.CurrentMap;
+        if (!_registry.TryGetSessionWorldInstanceId(
+                _session,
+                out var sourceWorldInstanceId) ||
+            !HasSameMapSceneAuthority(
+                sourceMapId,
+                sourceWorldInstanceId))
+        {
+            return false;
+        }
+
+        await InterruptPendingSkillCastAsync(
+            SkillCastInterruptionReason.MapTransition,
+            cancellationToken);
+        if (!RevalidateCurrentPlayerOwnership(ownership) ||
+            continuationGuard?.Invoke() == false ||
+            !HasSameMapSceneAuthority(
+                sourceMapId,
+                sourceWorldInstanceId))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!await PersistRelocationCheckpointAsync(
+                    sourceMapId,
+                    targetX,
+                    targetZ,
+                    cancellationToken))
+            {
+                return false;
+            }
+        }
+        catch (PlayerOwnershipValidationException)
+        {
+            RejectLostPlayerOwnership();
+            return false;
+        }
+        catch (Exception error)
+            when (error is not OperationCanceledException ||
+                  !cancellationToken.IsCancellationRequested)
+        {
+            Console.WriteLine(
+                $"[map] same-scene persistence rejected source={source}: " +
+                error.Message);
+            return false;
+        }
+        if (!RevalidateCurrentPlayerOwnership(ownership) ||
+            continuationGuard?.Invoke() == false ||
+            !HasSameMapSceneAuthority(
+                sourceMapId,
+                sourceWorldInstanceId))
+        {
+            // The target checkpoint is already durable. Continuing in the
+            // old live position would split authority; reconnecting enters
+            // the persisted destination cleanly.
+            _session.Disconnect();
+            return false;
+        }
+
+        if (!_registry.TryHideForSameWorldSceneTransition(
+                _session,
+                ownership,
+                sourceMapId,
+                sourceWorldInstanceId,
+                out _))
+        {
+            _session.Disconnect();
+            return false;
+        }
+
+        _character.PositionX = targetX;
+        _character.PositionZ = targetZ;
+        _positionDirty = false;
+        _lastPositionPersistUtc = DateTime.UtcNow;
+        _registry.UpdateCharacter(
+            _session,
+            _character,
+            advanceWorldRevision: false);
+
+        _worldPresenceAnnounced = false;
+        ClearLocalNpcCatalog();
+        ClearForgeSelection();
+        ClearGearEnhancerSelection();
+        _warehouseAccessContext = null;
+        ResetPlayerMovementEcs();
+        RebaseRealtimeWorld();
+        _nextBasicAttackAt = DateTimeOffset.MinValue;
+        _nextSkillCastAt.Clear();
+
+        var transition = new PendingMapTransition(
+            sourceMapId,
+            sourceMapId,
+            targetX,
+            targetZ);
+        _pendingMapTransition = transition;
+        _mapTransitionTimeoutTask = MonitorMapTransitionTimeoutAsync(
+            transition,
+            _realtimeMovementStop.Token);
+
+        try
+        {
+            await _registry.BroadcastToWorldInstanceAsync(
+                sourceWorldInstanceId,
+                PacketBuilder.RemoveWorldObjects(CurrentPlayerObjectId),
+                cancellationToken,
+                _session,
+                "SameMapSceneTransitionSourceRemove");
+            await _session.SendAsync(
+                PacketBuilder.SceneChange(
+                    LocalPlayerObjectId,
+                    targetX,
+                    y: 0f,
+                    targetZ,
+                    sourceMapId),
+                cancellationToken,
+                "SameMapSceneChange");
+            await PublishPartyPositionRefreshAsync(cancellationToken);
+        }
+        catch
+        {
+            // The destination is already durable and the source scene is
+            // hidden. Reconnect rather than expose split scene authority.
+            _session.Disconnect();
+            throw;
+        }
+
+        Console.WriteLine(
+            $"[map] same-scene change queued character={_character.Name} " +
+            $"map={sourceMapId} arrival={targetX:F2},{targetZ:F2} " +
+            $"source={source}");
+        return true;
+    }
+
+    private bool HasSameMapSceneAuthority(
+        byte expectedMapId,
+        WorldInstanceId expectedWorldInstanceId) =>
+        _character is not null &&
+        _character.CurrentMap == expectedMapId &&
+        _registry.IsSessionInWorldInstance(
+            _session,
+            expectedWorldInstanceId);
+}

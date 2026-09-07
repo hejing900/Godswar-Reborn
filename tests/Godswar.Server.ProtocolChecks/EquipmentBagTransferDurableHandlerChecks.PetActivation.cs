@@ -1,13 +1,49 @@
+using System.Buffers.Binary;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Inventory;
 using Godswar.Server.Application.Pets;
+using Godswar.Server.Application.World;
+using Godswar.Server.Game;
 using Godswar.Server.Networking.Secure;
+using Godswar.Server.Protocol;
 using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
 
 internal static partial class EquipmentBagTransferDurableHandlerChecks
 {
+    private const uint PlayerSkillBookItemId = 5_019;
+    private static readonly CompactItemEntry PlayerSkillBookItem =
+        CompactItemEntry.Empty with
+        {
+            Id = PlayerSkillBookItemId,
+            Bound = 1,
+            Stack = 1
+        };
+    private static readonly GameplayRuntimeCatalogs
+        PlayerSkillBookGameplayCatalogs =
+            GameplayRuntimeCatalogs.Empty with
+            {
+                Content = GameplayContentCatalog.Empty with
+                {
+                    SkillBooks =
+                    [
+                        new GameplaySkillBookDefinition(
+                            checked((int)PlayerSkillBookItemId),
+                            "skill_blood_claw_1_book",
+                            "Blood Claw I",
+                            SkillId: 50,
+                            BaseName: "Blood Claw",
+                            SkillLevel: 1,
+                            ClassIds: [0],
+                            MinLevel: 4,
+                            MaxLevel: null,
+                            PreviousSkillId: null,
+                            StatsJson: "{}")
+                    ]
+                }
+            };
+
     private static async Task
         CheckActiveRideBlocksDurableRightClickMountAsync()
     {
@@ -51,6 +87,106 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
             result.AuthoritativeRevision == 0 &&
             result.OperationId == OperationId,
             "Ride-active right-click mount replacement returns a finite family-26 rejection");
+    }
+
+    private static async Task
+        CheckPlayerSkillBookBagSlotPacketOnlyAcknowledgesAsync()
+    {
+        var petExecutor = new PetActivationExecutor();
+        await using var fixture = CreateLegacyRawFixture(
+            hasLocalLegacyAuthenticationAccess: true,
+            petDurableCommands: petExecutor,
+            activationState: new TransferSlotState(
+                CompactItemEntry.Empty,
+                PlayerSkillBookItem),
+            gameplayCatalogs: PlayerSkillBookGameplayCatalogs);
+        var request = CreateBagItemActionPacket();
+
+        await InvokePacketAsync(fixture.Handler, request);
+
+        Check.Equal(
+            0,
+            petExecutor.ExecuteCount,
+            "opcode 10056 player-book slot projection never activates the book");
+        Check.Equal(
+            0,
+            fixture.Store.EquipCount,
+            "opcode 10056 player-book slot projection never downgrades to equip");
+        var packets = fixture.Transport.ReadLegacyPackets();
+        Check.True(
+            packets.Count == 1 &&
+            packets[0].AsSpan().SequenceEqual(request.Buffer),
+            "opcode 10056 player-book slot projection receives only its native echo acknowledgement");
+        Check.True(
+            !fixture.Transport.Disconnected,
+            "opcode 10056 player-book slot projection keeps the session connected");
+    }
+
+    private static async Task
+        CheckLocalRawPlayerSkillBookBindsConstraintAsync()
+    {
+        var petExecutor = new PetActivationExecutor();
+        await using var fixture = CreateLegacyRawFixture(
+            hasLocalLegacyAuthenticationAccess: true,
+            petDurableCommands: petExecutor,
+            activationState: new TransferSlotState(
+                CompactItemEntry.Empty,
+                PlayerSkillBookItem),
+            gameplayCatalogs: PlayerSkillBookGameplayCatalogs);
+
+        await InvokePacketAsync(
+            fixture.Handler,
+            CreateBreakItemPacket());
+
+        Check.Equal(
+            1,
+            petExecutor.ExecuteCount,
+            "opcode 10051 player skill book reaches durable persistence");
+        Check.True(
+            petExecutor.ExecutedCommand is
+            {
+                ExecutionConstraint:
+                    BagItemActivationExecutionConstraint
+                        .PlayerSkillBookOnly,
+                KitBagSlot: KitBagSlot
+            },
+            "opcode 10051 player skill-book classification is bound as a fail-closed " +
+            "execution constraint");
+        Check.Equal(
+            0,
+            fixture.Store.EquipCount,
+            "player skill-book activation cannot downgrade into compatibility equip");
+        Check.True(
+            !fixture.Transport.Disconnected,
+            "validated local raw player skill-book activation keeps the session connected");
+    }
+
+    private static GamePacket CreateBagItemActionPacket()
+    {
+        const int packetLength = 40;
+        var packet = new byte[packetLength];
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet,
+            packetLength);
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(2, sizeof(ushort)),
+            Opcodes.BagItemAction);
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            packet.AsSpan(4, sizeof(uint)),
+            0x0000_1448);
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(8, sizeof(ushort)),
+            checked((ushort)(KitBagSlot / 24)));
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(10, sizeof(ushort)),
+            checked((ushort)(KitBagSlot % 24)));
+        BinaryPrimitives.WriteInt32LittleEndian(
+            packet.AsSpan(16, sizeof(int)),
+            KitBagSlot);
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            packet.AsSpan(20, sizeof(uint)),
+            PlayerSkillBookItemId);
+        return new GamePacket(packet);
     }
 
     private sealed class PetActivationExecutor :

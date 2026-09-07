@@ -14,23 +14,15 @@ internal sealed partial class GameClientHandler
         }
 
         var now = DateTimeOffset.UtcNow;
-        var status = await _registry.GetStatusSnapshotAsync(
+        var status = await _registry.SendStatusSnapshotToSelfAsync(
             _session,
             now,
-            cancellationToken);
-        await _session.SendAsync(
-            PacketBuilder.PlayerStatusEffects(
-                _character,
-                status.Effects,
-                status.Aggregate),
             cancellationToken,
             $"{reason}ExtendedStatus");
-        await _session.SendAsync(
-            BuildLocalPlayerStatusUpdateAt(
-                status.Aggregate,
-                now),
-            cancellationToken,
-            $"{reason}GameData");
+        if (status is null)
+        {
+            return false;
+        }
         return true;
     }
 }

@@ -21,6 +21,34 @@ $elementalNames = @(
     'ELEMENT_LIGHT_COLOR',
     'ELEMENT_DARK_COLOR'
 )
+$expectedQualityColors = [ordered]@{
+    5 = 'QUALITY_Q05={r=255,g=153,b=0,a=255}'
+    11 = 'QUALITY_Q11={r=255,g=240,b=176,a=255}'
+    12 = 'QUALITY_Q12={r=196,g=220,b=242,a=255}'
+    13 = 'QUALITY_Q13={r=141,g=188,b=227,a=255}'
+    14 = 'QUALITY_Q14={r=127,g=145,b=217,a=255}'
+    15 = 'QUALITY_Q15={r=145,g=120,b=200,a=255}'
+    16 = 'QUALITY_Q16={r=168,g=223,b=216,a=255}'
+    17 = 'QUALITY_Q17={r=232,g=214,b=111,a=255}'
+    18 = 'QUALITY_Q18={r=214,g=154,b=80,a=255}'
+    19 = 'QUALITY_Q19={r=227,g=96,b=51,a=255}'
+    20 = 'QUALITY_Q20={r=255,g=59,b=48,a=255}'
+}
+$expectedGradeColors = [ordered]@{
+    13 = 'GRADE_G13={r=113,g=129,b=208,a=255}'
+    14 = 'GRADE_G14={r=125,g=142,b=219,a=255}'
+    15 = 'GRADE_G15={r=137,g=155,b=230,a=255}'
+    16 = 'GRADE_G16={r=151,g=170,b=241,a=255}'
+    17 = 'GRADE_G17={r=191,g=118,b=64,a=255}'
+    18 = 'GRADE_G18={r=199,g=125,b=64,a=255}'
+    19 = 'GRADE_G19={r=214,g=140,b=70,a=255}'
+    20 = 'GRADE_G20={r=230,g=157,b=78,a=255}'
+    21 = 'GRADE_G21={r=211,g=154,b=45,a=255}'
+    22 = 'GRADE_G22={r=226,g=170,b=52,a=255}'
+    23 = 'GRADE_G23={r=240,g=187,b=60,a=255}'
+    24 = 'GRADE_G24={r=255,g=206,b=73,a=255}'
+    25 = 'GRADE_G25={r=255,g=240,b=106,a=255}'
+}
 
 function Assert-Equal($Actual, $Expected, [string]$Label) {
     if ($Actual -cne $Expected) {
@@ -157,15 +185,15 @@ try {
                 $font,
                 '(?m)^GRADE_G\d{2}='
             ).Count) 25 "$locale grade constants"
-        if (-not $font.Contains(
-                'QUALITY_Q20={r=255,g=72,b=226,a=255}'
-            )) {
-            throw "$locale Boundless cap color is not electric magenta."
+        foreach ($entry in $expectedQualityColors.GetEnumerator()) {
+            if (-not $font.Contains([string]$entry.Value)) {
+                throw "$locale approved quality Q$($entry.Key) color is missing."
+            }
         }
-        if (-not $font.Contains(
-                'GRADE_G25={r=56,g=232,b=255,a=255}'
-            )) {
-            throw "$locale G25 cap color is not diamond cyan."
+        foreach ($entry in $expectedGradeColors.GetEnumerator()) {
+            if (-not $font.Contains([string]$entry.Value)) {
+                throw "$locale approved grade G$($entry.Key) color is missing."
+            }
         }
         if (-not $font.Contains(
                 'UNRELATED_UI_COLOR={r=1,g=2,b=3,a=255}'

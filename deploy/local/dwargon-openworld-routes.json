@@ -21,5 +21,9 @@
   { "realmId": 2, "mapId": 19, "worldInstanceId": "5769d299-63e6-4ad4-9ade-15d5b3e3f004" },
   { "realmId": 2, "mapId": 20, "worldInstanceId": "cf22715e-b892-4e6b-a7e4-f302ebb745b9" },
   { "realmId": 2, "mapId": 21, "worldInstanceId": "4f103d2d-cc39-40f9-91a1-ca1918923e3c" },
-  { "realmId": 2, "mapId": 22, "worldInstanceId": "2da0232a-23dc-4499-b0f4-2f1ef9730436" }
+  { "realmId": 2, "mapId": 22, "worldInstanceId": "2da0232a-23dc-4499-b0f4-2f1ef9730436" },
+  { "realmId": 2, "mapId": 27, "worldInstanceId": "ba3f0f73-77d8-44d5-978a-278656a7c85f" },
+  { "realmId": 2, "mapId": 34, "worldInstanceId": "6aec2d03-54ea-427d-aa0f-20cbf2b3f134" },
+  { "realmId": 2, "mapId": 38, "worldInstanceId": "52b225e8-c7ac-4f48-a680-6536af088930" },
+  { "realmId": 2, "mapId": 57, "worldInstanceId": "fd9d909c-4fc5-4f57-8431-753e14d8ef2e" }
 ]

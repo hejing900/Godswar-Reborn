@@ -111,9 +111,19 @@ internal static partial class Program
         character.Gold = 73;
         character.MedusaHonorPoints = 2_025;
         character.BindingGold = 8_642;
+        character.CurrentHp = 196_614;
+        character.CurrentMp = 2_559;
         var localPacket = PacketBuilder.PlayerStatusUpdate(
             character,
             movementSpeedMultiplier: 1f);
+        Check.Equal(
+            character.CurrentHp,
+            ReadInt32(localPacket, 104),
+            "local wallet status preserves live current HP");
+        Check.Equal(
+            character.CurrentMp,
+            ReadInt32(localPacket, 108),
+            "local wallet status preserves live current MP");
         Check.Equal(character.Silver, ReadInt32(localPacket, 120), "local PlayerStatusUpdate silver");
         Check.Equal(character.Gold, ReadInt32(localPacket, 124), "local PlayerStatusUpdate gold");
         Check.Equal(character.MedusaHonorPoints, ReadInt32(localPacket, 128), "local PlayerStatusUpdate Honor");

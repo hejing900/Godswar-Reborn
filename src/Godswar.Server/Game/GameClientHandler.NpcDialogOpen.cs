@@ -20,6 +20,9 @@ internal sealed partial class GameClientHandler
 
         ClearGearEnhancerSelection();
         ClearInstanceCallerPageContext();
+        ClearTransporterDialogueContext();
+        ClearBattlefieldTransporterDialogueContext();
+        ClearDuelArenaTransporterDialogueContext();
         var npcId = BinaryPrimitives.ReadUInt32LittleEndian(
             packet.Payload[..sizeof(uint)]);
         if (!TryResolveMapNpc(npcId, out var npc))
@@ -31,8 +34,10 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        // The stock client can leave storage open while the related manager
-        // dialogue is used. Every unrelated NPC click invalidates the lease.
+        // The stock client can leave normal storage open while the related
+        // manager dialogue is used. Preserve only an access lease that was
+        // already issued by the normal Warehouse NPC; the manager never
+        // grants one. Every unrelated NPC click still invalidates the lease.
         if (!WarehouseNpcProtocol.IsManagerEndpoint(
                 npc.NpcKey,
                 npc.InteractionId))
@@ -44,12 +49,14 @@ internal sealed partial class GameClientHandler
                 npc.NpcKey,
                 npc.InteractionId))
         {
-            if (packet.Length == 48 && packet.Buffer.Length == 48)
+            if (packet.Length == 48 && packet.Buffer.Length == 48 &&
+                CanUseDuelArenaWarehouseNpc(npc))
             {
                 await _session.SendAsync(
                     PacketBuilder.WarehouseDialogOpenAck(
                         npc.InteractionId,
-                        npc.NpcKey),
+                        WarehouseNpcProtocol.ClientScriptKey(
+                            npc.NpcKey, npc.InteractionId)),
                     cancellationToken,
                     "WarehouseDialogOpenAck");
             }
@@ -59,6 +66,12 @@ internal sealed partial class GameClientHandler
                     "[warehouse] rejected non-canonical NPC click " +
                     $"npc={npc.InteractionId} length={packet.Length}");
             }
+            return;
+        }
+
+        if (await TryHandleDuelArenaNpcDialogOpenAsync(
+                packet, npc, cancellationToken))
+        {
             return;
         }
 
@@ -96,6 +109,24 @@ internal sealed partial class GameClientHandler
         var dialogIndices = routes
             .Select(static route => route.DialogIndex)
             .ToArray();
+        if (routes.Any(DuelArenaCapturedTransportProtocol.IsCapturedRoute) &&
+            (packet.Length != 48 || packet.Buffer.Length != 48 ||
+                !TryIssueDuelArenaTransporterDialogueContext(npc)))
+        {
+            return;
+        }
+        if (routes.Any(static route =>
+                route.Behavior == NpcDialogueBehavior.DuelArenaServices) &&
+            (packet.Length != 48 || packet.Buffer.Length != 48 ||
+                !CanUseCapturedArenaNpc(npc)))
+        {
+            return;
+        }
+        if (routes.Any(DuelArenaExitProtocol.IsRoute) &&
+            !TryIssueDuelArenaTransporterDialogueContext(npc))
+        {
+            return;
+        }
         await _session.SendAsync(
             PacketBuilder.NpcDialogOpenAck(
                 npc.InteractionId,
@@ -137,6 +168,11 @@ internal sealed partial class GameClientHandler
                 npc.NpcKey,
                 npc.InteractionId))
         {
+            if (!CanUseDuelArenaWarehouseNpc(npc))
+            {
+                _warehouseAccessContext = null;
+                return;
+            }
             if (packet.Length == 8 && packet.Buffer.Length == 8)
             {
                 await HandleWarehouseOpenAsync(npc, cancellationToken);

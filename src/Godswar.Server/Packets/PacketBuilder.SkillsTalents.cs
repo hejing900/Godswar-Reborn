@@ -50,36 +50,48 @@ internal static partial class PacketBuilder
         return packet;
     }
 
-    public static byte[] TalentSkillUnlockList(IReadOnlyList<SkillState> skills)
+    /// <summary>
+    /// Synchronizes the complete learned active-skill set. The second field
+    /// in each native record is remaining cooldown, not skill level.
+    /// </summary>
+    public static byte[] ActiveSkillInfo(IReadOnlyList<SkillState> skills)
     {
         if (skills.Count == 0)
         {
             return [];
         }
 
+        var orderedSkills = skills
+            .OrderBy(static skill => skill.SkillId)
+            .ToArray();
         const int headerLength = 12;
         const int recordLength = 8;
-        var packet = new byte[headerLength + (skills.Count * recordLength)];
+        var packet = new byte[
+            headerLength + (orderedSkills.Length * recordLength)];
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(0, 2), (ushort)packet.Length);
-        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), TalentSkillUnlockListOpcode);
+        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), ActiveSkillInfoOpcode);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(4, 4), LocalPlayerObjectId);
-        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(8, 4), skills.Count);
+        BinaryPrimitives.WriteInt32LittleEndian(
+            packet.AsSpan(8, 4),
+            orderedSkills.Length);
 
-        for (var i = 0; i < skills.Count; i++)
+        for (var i = 0; i < orderedSkills.Length; i++)
         {
             var offset = headerLength + (i * recordLength);
-            BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(offset, 4), skills[i].SkillId);
+            BinaryPrimitives.WriteInt32LittleEndian(
+                packet.AsSpan(offset, 4),
+                orderedSkills[i].SkillId);
             BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(offset + 4, 4), 0);
         }
 
         return packet;
     }
 
-    public static byte[] ChampionTalentSkillUnlockList()
+    public static byte[] ChampionActiveSkillInfo()
     {
         var packet = new byte[28];
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(0, 2), (ushort)packet.Length);
-        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), TalentSkillUnlockListOpcode);
+        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), ActiveSkillInfoOpcode);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(4, 4), LocalPlayerObjectId);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(8, 4), 2);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(12, 4), 250);

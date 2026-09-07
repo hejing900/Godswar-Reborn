@@ -140,7 +140,9 @@ internal sealed partial class GameSessionRegistry
             return false;
         }
 
-        if (!force && string.Equals(
+        if (!force &&
+            !forceLocalGameDataSynchronization &&
+            string.Equals(
                 state.LastFingerprint,
                 snapshot.Fingerprint,
                 StringComparison.Ordinal))

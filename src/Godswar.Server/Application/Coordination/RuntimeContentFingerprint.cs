@@ -7,7 +7,8 @@ namespace Godswar.Server.Application.Coordination;
 /// Identifies the complete process-pinned gameplay content set used by a
 /// worker. Coordination must reject placement across workers that pin a
 /// different world, item, pet, pet owner-Merge, learned pet-skill, or Holy
-/// Spirit balance, Faction Crier balance, or realm-calendar catalog revision.
+/// Spirit balance, Faction Crier balance, realm-calendar catalog, or monster
+/// reward-policy revision.
 /// </summary>
 internal static class RuntimeContentFingerprint
 {
@@ -61,6 +62,64 @@ internal static class RuntimeContentFingerprint
             $"pet-learned-skills:{petLearnedSkillRevision}\n" +
             $"holy-spirit-balance:{holySpiritBalanceRevision}\n" +
             $"faction-crier-balance:{factionCrierBalanceRevision}\n");
+        return Convert.ToHexString(SHA256.HashData(canonical));
+    }
+
+    public static string Create(
+        string worldRevision,
+        string itemRevision,
+        string petRevision,
+        string petOwnerMergeRevision,
+        string petLearnedSkillRevision,
+        string holySpiritBalanceRevision,
+        string factionCrierBalanceRevision,
+        string realmCalendarCatalogRevision,
+        string onlineAwardBalanceRevision,
+        string warehouseExpansionPolicyRevision,
+        string monsterRewardPolicyRevision)
+    {
+        ValidateRevision(worldRevision, nameof(worldRevision));
+        ValidateRevision(itemRevision, nameof(itemRevision));
+        ValidateRevision(petRevision, nameof(petRevision));
+        ValidateRevision(
+            petOwnerMergeRevision,
+            nameof(petOwnerMergeRevision));
+        ValidateRevision(
+            petLearnedSkillRevision,
+            nameof(petLearnedSkillRevision));
+        ValidateRevision(
+            holySpiritBalanceRevision,
+            nameof(holySpiritBalanceRevision));
+        ValidateRevision(
+            factionCrierBalanceRevision,
+            nameof(factionCrierBalanceRevision));
+        ValidateRevision(
+            realmCalendarCatalogRevision,
+            nameof(realmCalendarCatalogRevision));
+        ValidateRevision(
+            onlineAwardBalanceRevision,
+            nameof(onlineAwardBalanceRevision));
+        ValidateRevision(
+            warehouseExpansionPolicyRevision,
+            nameof(warehouseExpansionPolicyRevision));
+        ValidateRevision(
+            monsterRewardPolicyRevision,
+            nameof(monsterRewardPolicyRevision));
+
+        var canonical = Encoding.UTF8.GetBytes(
+            "runtime-content-v10\n" +
+            $"world:{worldRevision}\n" +
+            $"items:{itemRevision}\n" +
+            $"pets:{petRevision}\n" +
+            $"pet-owner-merge:{petOwnerMergeRevision}\n" +
+            $"pet-learned-skills:{petLearnedSkillRevision}\n" +
+            $"holy-spirit-balance:{holySpiritBalanceRevision}\n" +
+            $"faction-crier-balance:{factionCrierBalanceRevision}\n" +
+            $"realm-calendars:{realmCalendarCatalogRevision}\n" +
+            $"online-award-balance:{onlineAwardBalanceRevision}\n" +
+            "warehouse-expansion-policy:" +
+            $"{warehouseExpansionPolicyRevision}\n" +
+            $"monster-reward-policy:{monsterRewardPolicyRevision}\n");
         return Convert.ToHexString(SHA256.HashData(canonical));
     }
 

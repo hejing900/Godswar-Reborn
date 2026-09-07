@@ -33,8 +33,8 @@ internal static class AccountCredentialPersistence
             Id = account.Id,
             Username = account.Username,
             Password = string.Empty,
-            VipTier = account.VipTier,
-            VipExpiresAt = account.VipExpiresAt,
+            DonatorTier = account.DonatorTier,
+            DonatorExpiresAt = account.DonatorExpiresAt,
             CreatedUtc = account.CreatedUtc
         };
     }

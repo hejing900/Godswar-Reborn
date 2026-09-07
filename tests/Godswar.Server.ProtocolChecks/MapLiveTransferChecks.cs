@@ -146,6 +146,20 @@ internal static class MapLiveTransferChecks
                     MapTraversalLimits.MaximumCoordinateMagnitude + 1f,
                 targetZ: 0f),
             "out-of-world destination cannot become authoritative");
+        foreach (var dungeonMapId in new byte[] { 200, 204, 205, 207 })
+        {
+            Check.True(
+                !registry.TryTransferMap(
+                    socket.Session,
+                    expectedSourceMapId: TargetMapId,
+                    targetMapId: dungeonMapId,
+                    targetX: 1f,
+                    targetZ: 1f) &&
+                character.CurrentMap == TargetMapId &&
+                registry.GetMapPopulation(dungeonMapId) == 0,
+                "legacy map-only transfer cannot create unbound dynamic " +
+                $"dungeon map {dungeonMapId}");
+        }
         Check.Equal(
             0,
             socket.Available,

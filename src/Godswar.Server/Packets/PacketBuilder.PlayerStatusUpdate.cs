@@ -8,6 +8,8 @@ internal static partial class PacketBuilder
     private const ushort PlayerStatusUpdateOpcode = 0x27B6;
     private const int PlayerStatusMapIdOffset = 42;
     private const int PlayerStatusMovementSpeedMultiplierOffset = 56;
+    private const int PlayerStatusCurrentHpOffset = 104;
+    private const int PlayerStatusCurrentMpOffset = 108;
     // Wire offset 60 is copied to GameData+0x290. Although that dword looks
     // unused in the status panel, the native NPC interaction path reads byte
     // GameData+0x292 as the local interaction identity/faction. Writing a
@@ -120,6 +122,17 @@ internal static partial class PacketBuilder
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), PlayerStatusUpdateOpcode);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(4, 4), objectId);
         PatchReferencePlayerPacket(packet, character, nameOffset: 8);
+        // MSG_SYN_GAMEDATA copies wire offset 8 to GameData+0x25C.
+        // Therefore wire 104/108 land on GameData+0x2BC/+0x2C0, the
+        // native current-HP/current-MP fields. Keep these explicit here so a
+        // wallet-only local status refresh cannot replay the captured
+        // template fighter's vitals.
+        BinaryPrimitives.WriteInt32LittleEndian(
+            packet.AsSpan(PlayerStatusCurrentHpOffset, sizeof(int)),
+            character.CurrentHp);
+        BinaryPrimitives.WriteInt32LittleEndian(
+            packet.AsSpan(PlayerStatusCurrentMpOffset, sizeof(int)),
+            character.CurrentMp);
         // MSG_SYN_GAMEDATA copies wire offset 8 to GameData+0x25C. Preserve
         // the current-map word at GameData+0x27E across status refreshes.
         BinaryPrimitives.WriteUInt16LittleEndian(

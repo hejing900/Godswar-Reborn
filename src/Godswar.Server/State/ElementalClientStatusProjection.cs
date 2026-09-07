@@ -62,28 +62,18 @@ internal static class ElementalClientStatusProjection
             return baseline;
         }
 
-        var remainingCapacity = Math.Max(
-            0,
-            PlayerStatusComposer.MaximumTotalStatuses -
-                baseline.Effects.Count);
-        var existingIds = baseline.Effects
-            .Select(static effect => effect.StatusId)
-            .ToHashSet();
-        var admitted = overlay.Effects
-            .Where(effect => !existingIds.Contains(effect.StatusId))
-            .Take(remainingCapacity);
-        var effects = baseline.Effects
-            .Concat(admitted)
-            .OrderBy(static effect => effect.StatusId)
+        var presentations = baseline.Presentations
+            .Concat(overlay.Effects.Select(static effect =>
+                new ClientStatusPresentation(
+                    effect,
+                    Beneficial: false,
+                    BurnStatusPriority,
+                    ClientStatusPresentationClass.DisplayOnly)))
             .ToArray();
-
-        // The overlay fingerprint remains even when the packet is at capacity.
-        // That keeps apply/clear observation monotonic without evicting any
-        // pre-existing status from this complete replacement snapshot.
-        return baseline with
+        return PlayerStatusCapacityPolicy.Apply(baseline with
         {
-            Effects = effects,
+            Presentations = presentations,
             Fingerprint = $"{baseline.Fingerprint}#{overlay.Fingerprint}"
-        };
+        });
     }
 }

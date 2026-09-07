@@ -4,6 +4,7 @@ using System.Text;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.World;
+using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Networking;
 using Godswar.Server.Operations;
 using Godswar.Server.Packets;
@@ -398,15 +399,25 @@ internal sealed partial class GameClientHandler
         var npcDefinitions = new List<NpcSpawnDefinition>(loadedNpcDefinitions.Count);
         foreach (var npc in loadedNpcDefinitions)
         {
-            if (WorldObjectIds.IsReservedForPlayer(npc.ObjectId) ||
-                !WorldSectorVisibilityTracker<NpcSpawnDefinition>.TryGetCell(npc.X, npc.Z, out _))
+            var effectiveNpc =
+                CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility(npc);
+            if (CapitalNpcServiceProtocol.IsSuppressedSpawn(effectiveNpc))
             {
-                Console.WriteLine(
-                    $"[npc] skipped invalid world object map={_character.CurrentMap} object={npc.ObjectId} key={npc.NpcKey} x={npc.X} z={npc.Z}");
                 continue;
             }
 
-            npcDefinitions.Add(npc);
+            if (WorldObjectIds.IsReservedForPlayer(effectiveNpc.ObjectId) ||
+                !WorldSectorVisibilityTracker<NpcSpawnDefinition>.TryGetCell(
+                    effectiveNpc.X,
+                    effectiveNpc.Z,
+                    out _))
+            {
+                Console.WriteLine(
+                    $"[npc] skipped invalid world object map={_character.CurrentMap} object={effectiveNpc.ObjectId} key={effectiveNpc.NpcKey} x={effectiveNpc.X} z={effectiveNpc.Z}");
+                continue;
+            }
+
+            npcDefinitions.Add(effectiveNpc);
         }
 
         var npcCatalog = await _registry.PublishMapNpcDefinitionsAsync(

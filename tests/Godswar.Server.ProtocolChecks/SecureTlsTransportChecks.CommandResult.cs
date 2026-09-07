@@ -60,6 +60,35 @@ internal static partial class SecureTlsTransportChecks
                 out var decoded) &&
             decoded == result,
             "TLS command result payload round trips");
+
+        var fighterResult = new SecureLegacyCommandResult(
+            SecureLegacyCommandDisposition.Applied,
+            SecureProtocolConstants.FighterLevelSealCommandFamily,
+            SecureProtocolConstants.FighterLevelSealedResultCode,
+            authoritativeRevision: 43,
+            Guid.Parse("40516273-8495-a6b7-c8d9-eafb0c1d2e3f"),
+            new SecureFighterExperienceProjection(
+                currentExperience: 4_000_000_000,
+                maximumExperience: uint.MaxValue));
+        var fighterWrite = session.SendLegacyCommandResultAsync(
+            fighterResult,
+            CancellationToken.None).AsTask();
+        var fighterFrame = await ReadFrameAsync(
+            fixture.Pair.ClientStream,
+            SecureEndpointRole.Game,
+            SecureFrameDirection.ServerToClient,
+            expectedSequence: 4);
+        await fighterWrite;
+        Check.True(
+            fighterFrame.Header.Type ==
+                SecureFrameType.LegacyCommandResult &&
+            fighterFrame.Payload.Length ==
+                SecureProtocolConstants.LegacyCommandResultV2Bytes &&
+            SecureLegacyCommandResultCodec.TryDecode(
+                fighterFrame.Payload,
+                out decoded) &&
+            decoded == fighterResult,
+            "TLS mux preserves the bounded fighter EXP v2 result");
     }
 
     private static async Task

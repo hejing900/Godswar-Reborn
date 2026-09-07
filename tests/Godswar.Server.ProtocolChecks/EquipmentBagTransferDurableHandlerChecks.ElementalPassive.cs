@@ -29,8 +29,8 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
             Id = 51,
             AccountId = 61,
             Profession = 0,
-            MaxHp = 1_000,
-            CurrentHp = 1_000,
+            MaxHp = 1_080,
+            CurrentHp = 1_070,
             Equipment = GameDefaults.DefaultEquipment(profession: 0)
         };
         var persisted = new GameCharacter
@@ -57,8 +57,9 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
         Check.True(
             live.CalculatedStats!.MaxHp == 1_000 &&
             live.MaxHp == 1_080 &&
-            live.CurrentHp == 1_000,
-            "durable equipment refresh applies Gaia once over base MaxHP");
+            live.CurrentHp == 1_070,
+            "durable equipment refresh applies Gaia once and preserves " +
+                "current HP above the base maximum");
 
         GameClientHandler.ApplyDurableEquipmentBagTransferProjection(
             live,
@@ -67,6 +68,18 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
             1_080,
             live.MaxHp,
             "replaying the durable projection does not double-add Gaia");
+        Check.Equal(
+            1_070,
+            live.CurrentHp,
+            "replaying the durable projection preserves effective-range HP");
+
+        persisted.Equipment = GameDefaults.DefaultEquipment(profession: 0);
+        GameClientHandler.ApplyDurableEquipmentBagTransferProjection(
+            live,
+            persisted);
+        Check.True(
+            live.MaxHp == 1_000 && live.CurrentHp == 1_000,
+            "removing Gaia clamps current HP to the new effective maximum");
     }
 
     private static CompactItemEntry ElementalTierThreeGear(

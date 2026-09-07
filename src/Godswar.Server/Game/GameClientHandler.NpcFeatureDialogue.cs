@@ -14,6 +14,19 @@ internal sealed partial class GameClientHandler
         IReadOnlyList<int> arguments,
         CancellationToken cancellationToken)
     {
+        if (route.Behavior == NpcDialogueBehavior.CapturedCapital)
+        {
+            await HandleCapturedCapitalNpcFunctionAsync(
+                packet,
+                route,
+                npcId,
+                dialogIndex,
+                subId,
+                arguments,
+                cancellationToken);
+            return true;
+        }
+
         if (route.Behavior == NpcDialogueBehavior.CreditExchange)
         {
             await HandleCapitalNpcCreditExchangeAsync(
@@ -36,6 +49,19 @@ internal sealed partial class GameClientHandler
             return true;
         }
 
+        if (route.Behavior == NpcDialogueBehavior.FactionCrier)
+        {
+            await HandleFactionCrierAsync(
+                packet,
+                route,
+                npcId,
+                dialogIndex,
+                subId,
+                arguments,
+                cancellationToken);
+            return true;
+        }
+
         if (route.Behavior == NpcDialogueBehavior.WarehouseManager)
         {
             await HandleWarehouseManagerAsync(
@@ -52,6 +78,47 @@ internal sealed partial class GameClientHandler
         if (route.Behavior == NpcDialogueBehavior.InstanceCaller)
         {
             await HandleInstanceCallerAsync(
+                packet,
+                route,
+                npcId,
+                dialogIndex,
+                subId,
+                arguments,
+                cancellationToken);
+            return true;
+        }
+
+        if (route.Behavior == NpcDialogueBehavior.Transporter)
+        {
+            await HandleTransporterAsync(
+                packet,
+                route,
+                npcId,
+                dialogIndex,
+                subId,
+                arguments,
+                cancellationToken);
+            return true;
+        }
+
+        if (route.Behavior ==
+            NpcDialogueBehavior.BattlefieldTransporter)
+        {
+            await HandleBattlefieldTransporterAsync(
+                packet,
+                route,
+                npcId,
+                dialogIndex,
+                subId,
+                arguments,
+                cancellationToken);
+            return true;
+        }
+
+        if (route.Behavior ==
+            NpcDialogueBehavior.DuelArenaTransporter)
+        {
+            await HandleDuelArenaTransporterAsync(
                 packet,
                 route,
                 npcId,

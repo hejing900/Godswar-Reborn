@@ -118,6 +118,20 @@ internal static class WorldInstanceRuntimeOptionsChecks
                 }
             ],
             "route from another realm");
+        foreach (var mapId in new short[] { 200, 204, 205, 207 })
+        {
+            CheckInvalid(
+                options => options.StaticOpenWorldInstances =
+                [
+                    new StaticOpenWorldInstanceOptions
+                    {
+                        RealmId = 1,
+                        MapId = mapId,
+                        WorldInstanceId = Guid.NewGuid().ToString()
+                    }
+                ],
+                $"dynamic-dungeon map {mapId} static open-world route");
+        }
     }
 
     private static void CheckConfigurationBinding()

@@ -337,4 +337,53 @@ internal sealed partial class GameClientHandler
             $"[world] player presence map={_character.CurrentMap} character={_character.Name} object={objectId} receivedExisting={currentObjectIds.Count} announcedTo={spawnRecipients}");
     }
 
+    private async Task BroadcastToCurrentMapAsync(
+        GamePacket packet,
+        CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            Console.WriteLine(
+                $"[world] ignored {Opcodes.Name(packet.Opcode)} " +
+                "broadcast before character enter");
+            return;
+        }
+
+        if (!RevalidateCurrentWorldEffectOwnership(
+                packet.Opcode == Opcodes.Talk
+                    ? "chat_broadcast"
+                    : "world_broadcast"))
+        {
+            return;
+        }
+
+        var outboundPacket = packet.Opcode == Opcodes.Walk
+            ? PacketBuilder.PlayerWorldMovement(
+                packet.Buffer.AsSpan(),
+                CurrentPlayerObjectId)
+            : packet.Buffer;
+        var recipients =
+            await _registry.BroadcastToCurrentWorldInstanceAsync(
+                _session,
+                outboundPacket,
+                cancellationToken,
+                includeRoutingSession:
+                    packet.Opcode != Opcodes.Walk);
+
+        if (packet.Opcode == Opcodes.Walk && recipients > 0)
+        {
+            Console.WriteLine(
+                $"[world] broadcast walk map={_character.CurrentMap} " +
+                $"character={_character.Name} " +
+                $"object={CurrentPlayerObjectId} recipients={recipients}");
+        }
+
+        if (packet.Opcode == Opcodes.Talk)
+        {
+            Console.WriteLine(
+                $"[world] broadcast talk map={_character.CurrentMap} " +
+                $"character={_character.Name} recipients={recipients}");
+        }
+    }
+
 }

@@ -115,8 +115,8 @@ internal sealed class PlayerCombatMutationOutcomeSystem : IEcsSystem
 
     private static PlayerCombatMutationRejectionReason
         ResolveMutationRejection(
-            in PlayerCombatReservedTarget expected,
-            in PlayerCombatMutationOutcomeComponent outcome)
+        in PlayerCombatReservedTarget expected,
+        in PlayerCombatMutationOutcomeComponent outcome)
     {
         if (!outcome.Applied)
         {
@@ -141,12 +141,14 @@ internal sealed class PlayerCombatMutationOutcomeSystem : IEcsSystem
             return PlayerCombatMutationRejectionReason.RevisionMismatch;
         }
 
+        var requestedDamage = outcome.AuthoritativeRequestedDamage ??
+            expected.RequestedDamage;
         if (outcome.BeforeHealth != expected.BeforeHealth ||
             outcome.AfterHealth >= outcome.BeforeHealth ||
             outcome.AfterHealth !=
-                (expected.RequestedDamage >= expected.BeforeHealth
+                (requestedDamage >= expected.BeforeHealth
                     ? 0
-                    : expected.BeforeHealth - expected.RequestedDamage))
+                    : expected.BeforeHealth - requestedDamage))
         {
             return PlayerCombatMutationRejectionReason.NoHealthChange;
         }
@@ -230,6 +232,8 @@ internal sealed class PlayerCombatMutationOutcomeSystem : IEcsSystem
         ref PlayerCombatResourceComponent resources)
     {
         var appliedDamage = outcome.BeforeHealth - outcome.AfterHealth;
+        var requestedDamage = outcome.AuthoritativeRequestedDamage ??
+            expected.RequestedDamage;
         context.Events.Publish(
             new PlayerCombatTargetMutationCommittedEvent(
                 PlayerCombatIntentSystem.NextSequence(ref resources),
@@ -239,7 +243,7 @@ internal sealed class PlayerCombatMutationOutcomeSystem : IEcsSystem
                 reservation.SkillId,
                 expected.TargetOrder,
                 expected.ObjectId,
-                expected.RequestedDamage,
+                requestedDamage,
                 appliedDamage,
                 outcome.BeforeHealth,
                 outcome.AfterHealth,

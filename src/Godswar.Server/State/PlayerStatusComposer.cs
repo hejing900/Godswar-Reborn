@@ -1,3 +1,4 @@
+using System.Globalization;
 using Godswar.Server.Packets;
 
 namespace Godswar.Server.State;
@@ -105,7 +106,8 @@ internal static class PlayerStatusComposer
             .ToArray();
 
         var experienceBonusBasisPoints = activeExperience
-            .Where(static boost => boost.Kind != ExperienceBoostKinds.Talent)
+            .Where(static boost =>
+                ExperienceBoostKinds.AffectsFighter(boost.Kind))
             .Aggregate(
                 0L,
                 static (sum, boost) => sum + boost.BonusBasisPoints);
@@ -152,12 +154,14 @@ internal static class PlayerStatusComposer
                 int.MaxValue),
             Control: control);
 
-        // Remaining seconds intentionally do not participate. Otherwise the
-        // periodic reconciliation loop would resend an unchanged status set.
+        // The changing remaining-seconds countdown does not participate.
+        // Absolute expiry identity does, so renewals and finite/permanent
+        // transitions publish once without causing per-tick churn.
         var experienceFingerprint = string.Join(
             '|',
             activeExperience.Select(static boost =>
                 $"exp:{boost.StatusId}:{boost.Kind}:{boost.BonusBasisPoints}:{boost.Priority}:" +
+                $"{ExperienceExpiryFingerprint(boost.ExpiresAt)}:" +
                 boost.Source));
         var runtimeFingerprint = string.Join(
             '|',
@@ -186,4 +190,9 @@ internal static class PlayerStatusComposer
                 Presentations = presentations
             });
     }
+
+    private static string ExperienceExpiryFingerprint(
+        DateTimeOffset? expiresAt) =>
+        expiresAt?.UtcTicks.ToString(CultureInfo.InvariantCulture) ??
+        "permanent";
 }

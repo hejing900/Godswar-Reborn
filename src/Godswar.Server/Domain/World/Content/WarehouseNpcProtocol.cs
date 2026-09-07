@@ -9,6 +9,7 @@ internal static class WarehouseNpcProtocol
 {
     public const uint AthensWarehouseNpcId = 5164;
     public const uint SpartaWarehouseNpcId = 47750;
+    public const uint DuelArenaWarehouseNpcId = 5202;
     public const uint AthensManagerNpcId = 5273;
     public const uint SpartaManagerNpcId = 5131;
 
@@ -25,7 +26,19 @@ internal static class WarehouseNpcProtocol
         uint interactionId) =>
         (npcKey, interactionId) is
             ("Athens_025", AthensWarehouseNpcId) or
-            ("Sparta_023", SpartaWarehouseNpcId);
+            ("Sparta_023", SpartaWarehouseNpcId) or
+            ("DuelArena_001", DuelArenaWarehouseNpcId);
+
+    public static bool IsDuelArenaWarehouseEndpoint(
+        string npcKey,
+        uint interactionId) =>
+        npcKey == "DuelArena_001" &&
+        interactionId == DuelArenaWarehouseNpcId;
+
+    public static string ClientScriptKey(string npcKey, uint interactionId) =>
+        IsDuelArenaWarehouseEndpoint(npcKey, interactionId)
+            ? "Sparta_023"
+            : npcKey;
 
     public static bool IsManagerEndpoint(
         string npcKey,

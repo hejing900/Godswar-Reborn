@@ -158,6 +158,15 @@ internal static partial class PacketBuilder
             packedDialog: 0,
             scriptKey);
 
+    public static byte[] NpcPrizeChestDialogOpenAck(
+        uint npcId,
+        string scriptKey) =>
+        NpcDialogOpenAck(
+            npcId,
+            flags: CapitalNpcServiceProtocol.PrizeChestOpenFlags,
+            packedDialog: 0,
+            scriptKey);
+
     private static byte[] NpcDialogOpenAck(
         uint npcId,
         int flags,
@@ -267,6 +276,35 @@ internal static partial class PacketBuilder
         return packet;
     }
 
+    public static byte[] CapturedNpcFunctionActionResponse(
+        uint npcId,
+        int dialogIndex,
+        params int[] subIds)
+    {
+        if (subIds.Length > 20)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(subIds),
+                "Captured NPC menus support at most twenty entries.");
+        }
+
+        var packet = new byte[96];
+        BinaryPrimitives.WriteUInt16LittleEndian(packet, (ushort)packet.Length);
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(2),
+            NpcFunctionActionResponseOpcode);
+        BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(4), npcId);
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(8), dialogIndex);
+        for (var index = 0; index < subIds.Length; index++)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(
+                packet.AsSpan(12 + (index * sizeof(int))),
+                subIds[index]);
+        }
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(92), 6_496_257);
+        return packet;
+    }
+
     private static void WriteNpcWorldObjectAppearance(
         Span<byte> packet,
         NpcSpawnDefinition spawn)
@@ -274,11 +312,12 @@ internal static partial class PacketBuilder
         packet.Clear();
         BinaryPrimitives.WriteUInt16LittleEndian(packet[..2], WorldObjectAppearanceLength);
         BinaryPrimitives.WriteUInt16LittleEndian(packet.Slice(2, 2), 0x2724);
+        var appearanceType = spawn.AppearanceType == 0
+            ? NpcAppearanceDefaults.AppearanceType
+            : spawn.AppearanceType;
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.Slice(4, 4),
-            spawn.AppearanceType == 0
-                ? NpcAppearanceDefaults.AppearanceType
-                : spawn.AppearanceType);
+            ComposeNpcObjectType(spawn.MapId, appearanceType));
         BinaryPrimitives.WriteUInt32LittleEndian(packet.Slice(8, 4), spawn.ObjectId);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.Slice(12, 4), 1);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.Slice(24, 4), 1521);
@@ -293,5 +332,23 @@ internal static partial class PacketBuilder
         PacketText.WriteFixedAscii(
             packet.Slice(WorldObjectTemplateOffset, WorldObjectTemplateLength),
             spawn.TemplateKey);
+    }
+
+    private static uint ComposeNpcObjectType(
+        short mapId,
+        uint appearanceType)
+    {
+        if (mapId < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(mapId),
+                "An NPC appearance requires a nonnegative map ID.");
+        }
+
+        // Origin reads the high word as MapID and rejects the object before
+        // creation when it differs from the local player's current map. The
+        // low word retains the NPC appearance flags captured from the server.
+        return ((uint)(ushort)mapId << 16) |
+            (appearanceType & ushort.MaxValue);
     }
 }

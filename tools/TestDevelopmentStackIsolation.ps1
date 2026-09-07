@@ -140,12 +140,22 @@ Assert-Condition `
 Assert-Condition `
     ($dwargonPublished -contains '127.1.1.112:7000:7000/tcp') `
     'Dwargon game endpoint is not 127.1.1.112:7000.'
-$postgresPublished = @($postgres.ports | ForEach-Object {
-    "$($_.host_ip):$($_.published):$($_.target)/$($_.protocol)"
-})
+$postgresPorts = @($postgres.ports)
 Assert-Condition `
-    ($postgresPublished -contains '127.0.0.1:55432:5432/tcp') `
-    'Development PostgreSQL host port must be 127.0.0.1:55432.'
+    ($postgresPorts.Count -eq 1) `
+    'Development PostgreSQL must publish exactly one loopback endpoint.'
+$postgresPort = $postgresPorts[0]
+$postgresHostPort = 0
+Assert-Condition `
+    ([int]::TryParse([string]$postgresPort.published, [ref]$postgresHostPort) -and
+        $postgresHostPort -ge 1 -and $postgresHostPort -le 65535 -and
+        $postgresHostPort -ne 5432) `
+    'Development PostgreSQL host port must be valid and differ from main port 5432.'
+Assert-Condition `
+    ($postgresPort.host_ip -ceq '127.0.0.1' -and
+        $postgresPort.target -eq 5432 -and $postgresPort.protocol -ceq 'tcp') `
+    'Development PostgreSQL must publish container port 5432/tcp on 127.0.0.1.'
+$postgresEndpoint = "127.0.0.1:$postgresHostPort"
 
 Assert-Condition `
     ($rendered.volumes.'godswar-dev-postgres-data'.name -ceq
@@ -233,7 +243,7 @@ if ($RequireLive) {
     GameEndpoint = '127.1.1.111:7000'
     DwargonLoginEndpoint = '127.1.1.112:5998'
     DwargonGameEndpoint = '127.1.1.112:7000'
-    PostgreSqlEndpoint = '127.0.0.1:55432'
+    PostgreSqlEndpoint = $postgresEndpoint
     Network = 'reborn_dev_runtime'
     Volume = 'godswar-dev-postgres-data'
 }

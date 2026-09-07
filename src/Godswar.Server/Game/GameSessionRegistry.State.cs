@@ -174,6 +174,8 @@ internal sealed partial class GameSessionRegistry
         public ClientStatusAggregate LastPublishedAggregate { get; set; } =
             ClientStatusAggregate.Empty;
 
+        public bool LocalCalculatedStatsSynchronizationPending { get; set; }
+
         public long Revision { get; set; }
 
         public bool CharacterUiStatsV1Enabled { get; set; }

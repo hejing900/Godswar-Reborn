@@ -39,14 +39,13 @@ internal sealed partial class GameClientHandler
                 "TalentRankList");
         }
 
-        var talentSkillUnlockList =
-            PacketBuilder.TalentSkillUnlockList(skillStates);
-        if (talentSkillUnlockList.Length > 0)
+        var activeSkillInfo = PacketBuilder.ActiveSkillInfo(skillStates);
+        if (activeSkillInfo.Length > 0)
         {
             await _session.SendAsync(
-                talentSkillUnlockList,
+                activeSkillInfo,
                 cancellationToken,
-                "TalentSkillUnlockList");
+                "ActiveSkillInfo");
         }
     }
 
@@ -68,14 +67,13 @@ internal sealed partial class GameClientHandler
                 "TalentRankList");
         }
 
-        var talentSkillUnlockList =
-            PacketBuilder.TalentSkillUnlockList(skillStates);
-        if (talentSkillUnlockList.Length > 0)
+        var activeSkillInfo = PacketBuilder.ActiveSkillInfo(skillStates);
+        if (activeSkillInfo.Length > 0)
         {
             await _session.SendAsync(
-                talentSkillUnlockList,
+                activeSkillInfo,
                 cancellationToken,
-                "TalentSkillUnlockList");
+                "ActiveSkillInfo");
         }
     }
 }

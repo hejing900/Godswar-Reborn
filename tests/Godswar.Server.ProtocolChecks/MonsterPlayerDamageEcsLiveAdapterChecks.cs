@@ -189,8 +189,8 @@ internal static partial class MonsterPlayerDamageEcsLiveAdapterChecks
             "live death advances registry life revision once");
         Check.True(
             registry.GetPlayerVitalsDamageEcsDiagnostics(
-                session) is { Killed: true },
-            "live lethal decision remains observable");
+                session) is null,
+            "live lethal cleanup immediately resets old-life incoming-damage diagnostics");
     }
 
     private static void CheckReviveLifecycleReset(

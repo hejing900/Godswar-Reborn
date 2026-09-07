@@ -56,6 +56,33 @@ internal static class DataArchitectureCheckCatalog
             PostgresHolySpiritBalanceIntegrationChecks.CheckName,
             PostgresHolySpiritBalanceIntegrationChecks.RunAsync),
         (
+            FactionCrierDatabaseFoundationChecks.CheckName,
+            FactionCrierDatabaseFoundationChecks.RunAsync),
+        (
+            PostgresFactionCrierFoundationIntegrationChecks.CheckName,
+            PostgresFactionCrierFoundationIntegrationChecks.RunAsync),
+        (
+            PostgresFactionCrierCommandIntegrationChecks.CheckName,
+            PostgresFactionCrierCommandIntegrationChecks.RunAsync),
+        (
+            FactionCrierRewardPolicyChecks.CheckName,
+            FactionCrierRewardPolicyChecks.RunAsync),
+        (
+            OnlineAwardProtocolChecks.CheckName,
+            OnlineAwardProtocolChecks.RunAsync),
+        (
+            WarehouseWireProtocolChecks.CheckName,
+            WarehouseWireProtocolChecks.RunAsync),
+        (
+            WarehouseHandlerChecks.CheckName,
+            WarehouseHandlerChecks.RunAsync),
+        (
+            OnlineAwardHandlerChecks.CheckName,
+            OnlineAwardHandlerChecks.RunAsync),
+        (
+            PostgresOnlineAwardIntegrationChecks.CheckName,
+            PostgresOnlineAwardIntegrationChecks.RunAsync),
+        (
             MountGearPassiveChecks.CheckName,
             MountGearPassiveChecks.RunAsync),
         (
@@ -67,6 +94,9 @@ internal static class DataArchitectureCheckCatalog
         (
             CharacterStatusRatingProjectionChecks.CheckName,
             CharacterStatusRatingProjectionChecks.RunAsync),
+        (
+            DonatorStatProjectionChecks.CheckName,
+            DonatorStatProjectionChecks.RunAsync),
         (
             PvpBasicAttackRuntimeChecks.CheckName,
             PvpBasicAttackRuntimeChecks.RunAsync),
@@ -232,6 +262,9 @@ internal static class DataArchitectureCheckCatalog
             PostgresFighterLevelSealMigrationChecks.CheckName,
             PostgresFighterLevelSealMigrationChecks.RunAsync),
         (
+            FighterLevelSealDurabilityChecks.CheckName,
+            FighterLevelSealDurabilityChecks.RunAsync),
+        (
             PostgresFighterExperienceUInt32MigrationChecks.CheckName,
             PostgresFighterExperienceUInt32MigrationChecks.RunAsync),
         (
@@ -243,6 +276,12 @@ internal static class DataArchitectureCheckCatalog
         (
             PostgresWorldBossRealmMigrationChecks.CheckName,
             PostgresWorldBossRealmMigrationChecks.RunAsync),
+        (
+            RealmCalendarAuthorityChecks.CheckName,
+            RealmCalendarAuthorityChecks.RunAsync),
+        (
+            PostgresRealmCalendarIntegrationChecks.CheckName,
+            PostgresRealmCalendarIntegrationChecks.RunAsync),
         (
             ExplicitCharacterRealmInsertChecks.CheckName,
             ExplicitCharacterRealmInsertChecks.RunAsync),
@@ -273,6 +312,9 @@ internal static class DataArchitectureCheckCatalog
         (
             "Durable pet command contracts",
             PetDurableCommandContractChecks.RunAsync),
+        (
+            PlayerSkillBookContractChecks.CheckName,
+            PlayerSkillBookContractChecks.RunAsync),
         (
             "Snapshot-backed character client bootstrap",
             CharacterSnapshotHandlerChecks.RunAsync),

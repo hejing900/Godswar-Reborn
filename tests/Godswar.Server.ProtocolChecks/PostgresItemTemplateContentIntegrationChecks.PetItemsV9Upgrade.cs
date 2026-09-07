@@ -27,6 +27,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
         var historicalExclusions = bookIds.Concat(nameplateIds)
             .Append(WarehouseItemContentBaseline.StorageBoxKeyItemId)
             .Append(CaptureToolItemId)
+            .Append(LegacyInstanceOpalItemContentBaseline.ItemId)
             .ToArray();
         var tombstones = await BuildOfficialElementalTombstonesAsync(
             dataSource);
@@ -100,13 +101,13 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             await using var reader = await command.ExecuteReaderAsync();
             Check.True(
                 await reader.ReadAsync() &&
-                reader.GetInt32(0) == 1772 &&
+                reader.GetInt32(0) == 1773 &&
                 reader.GetInt32(1) == 30 &&
                 reader.GetInt32(2) == 14 &&
                 reader.GetInt32(3) == 1,
                 "exact live pets-v2 upgrade retains tombstones, books, Nameplates, the Storage Box Key, and the capture tool");
             Check.True(
-                upgraded.Revision == OfficialPetItemsV5Revision &&
+                upgraded.Revision == OfficialOpalV1Revision &&
                 await ReadCompleteRevisionFingerprintAsync(
                     dataSource,
                     computed) == predecessorFingerprint,
@@ -155,8 +156,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             }
             catch (InvalidOperationException exception) when (
                 exception.Message.Contains(
-                    "exact reviewed pets-v2/v3/v4, Nameplates-v1, or " +
-                    "Warehouse-v1 predecessor",
+                    "exact reviewed pets-v2/v3/v4",
                     StringComparison.Ordinal))
             {
                 return;

@@ -13,6 +13,7 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         await AssertFighterExperienceUInt32StorageAsync(
             connectionString);
         await AssertDatabaseSealConstraintAsync(connectionString);
+        await AssertDurableSealedArbitraryLevelAsync(connectionString);
         await AssertDurableSealedThresholdAndReplayAsync(
             connectionString);
         await AssertDurableSealedSaturationAsync(connectionString);
@@ -113,30 +114,22 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         await using var connection =
             new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
-        var rejected = false;
-        try
+        await using (var valid = new NpgsqlCommand(
+            """
+            UPDATE public.character_base
+            SET fighter_level_sealed = true
+            WHERE id = @characterId;
+            """,
+            connection))
         {
-            await using var invalid = new NpgsqlCommand(
-                """
-                UPDATE public.character_base
-                SET fighter_level_sealed = true
-                WHERE id = @characterId;
-                """,
-                connection);
-            invalid.Parameters.AddWithValue(
+            valid.Parameters.AddWithValue(
                 "characterId",
                 fixture.CharacterId);
-            await invalid.ExecuteNonQueryAsync();
+            Check.Equal(
+                1,
+                await valid.ExecuteNonQueryAsync(),
+                "PostgreSQL accepts sealing the default level-80 fixture");
         }
-        catch (PostgresException exception)
-            when (exception.SqlState ==
-                  PostgresErrorCodes.CheckViolation)
-        {
-            rejected = true;
-        }
-        Check.True(
-            rejected,
-            "PostgreSQL rejects sealing the default level-80 fixture");
 
         await using var verify = new NpgsqlCommand(
             """
@@ -149,9 +142,41 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
             "characterId",
             fixture.CharacterId);
         Check.Equal(
-            false,
+            true,
             Convert.ToBoolean(await verify.ExecuteScalarAsync()),
-            "failed constraint write leaves the durable seal disabled");
+            "the valid non-89 seal is stored durably");
+    }
+
+    private static async Task AssertDurableSealedArbitraryLevelAsync(
+        string connectionString)
+    {
+        const int fighterLevel = 80;
+        var threshold = PlayerExperienceCatalog.GetNextLevelExperience(
+            fighterLevel);
+        var fixture = await CreateSealedFixtureAsync(
+            connectionString,
+            "seal_arbitrary_level",
+            threshold - 3,
+            talentExperience: 0,
+            talentPoints: 0,
+            fighterLevel);
+        await using var source = NpgsqlDataSource.Create(connectionString);
+        var executor = CreateExecutor(source);
+        var result = await executor.ExecuteAsync(CreateEnvelope(
+            fixture,
+            CreateCommand(
+                Guid.NewGuid(),
+                experience: 10,
+                talentExperience: 0)));
+        Check.True(
+            result.Disposition ==
+                MonsterDeathRewardExecutionDisposition.Committed &&
+            result.Receipt?.PreviousLevel == fighterLevel &&
+            result.Receipt.CurrentLevel == fighterLevel &&
+            result.Receipt.CurrentExperience == threshold + 7 &&
+            result.Receipt.ExperienceGained == 10 &&
+            result.Receipt.LevelUps.Count == 0,
+            "a sealed non-89 fighter stores EXP past its threshold without leveling");
     }
 
     private static async Task AssertDurableSealedThresholdAndReplayAsync(
@@ -300,7 +325,8 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         string scenario,
         long experience,
         int talentExperience,
-        int talentPoints)
+        int talentPoints,
+        int fighterLevel = 89)
     {
         var fixture = await CreateFixtureAsync(
             connectionString,
@@ -311,7 +337,7 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         await using var command = new NpgsqlCommand(
             """
             UPDATE public.character_base
-            SET fighter_job_lv = 89,
+            SET fighter_job_lv = @fighterLevel,
                 fighter_job_exp = @experience,
                 fighter_level_sealed = true,
                 "SkillExp" = @talentExperience,
@@ -319,6 +345,7 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
             WHERE id = @characterId;
             """,
             connection);
+        command.Parameters.AddWithValue("fighterLevel", fighterLevel);
         command.Parameters.AddWithValue("experience", experience);
         command.Parameters.AddWithValue(
             "talentExperience",

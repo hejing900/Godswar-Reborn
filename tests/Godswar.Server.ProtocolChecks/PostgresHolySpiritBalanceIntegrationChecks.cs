@@ -8,7 +8,7 @@ using NpgsqlTypes;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class PostgresHolySpiritBalanceIntegrationChecks
+internal static partial class PostgresHolySpiritBalanceIntegrationChecks
 {
     public const string CheckName =
         "PostgreSQL mutable Holy Spirit balance authority";
@@ -45,18 +45,7 @@ internal static class PostgresHolySpiritBalanceIntegrationChecks
         var fresh = await IsFreshAsync(dataSource);
         if (fresh)
         {
-            var prefix = PostgresSchemaMigrationCatalog.All
-                .Take(PostgresSchemaMigrationCatalog.All.Count - 1)
-                .ToArray();
-            var runner = new PostgresSchemaMigrationRunner(dataSource);
-            await runner.InitializeAsync(
-                LegacySchemaBootstrap.LoadAsync,
-                prefix);
-            var fixture = await SeedOverCapSocketsAsync(dataSource);
-            await runner.InitializeAsync(
-                LegacySchemaBootstrap.LoadAsync,
-                PostgresSchemaMigrationCatalog.All);
-            await AssertSocketsClampedAsync(dataSource, fixture);
+            await AssertSevenPercentForwardMigrationAsync(dataSource);
         }
         else
         {
@@ -72,10 +61,10 @@ internal static class PostgresHolySpiritBalanceIntegrationChecks
         var pinned = await PostgresHolySpiritBalanceSnapshotReader
             .LoadAsync(connectionString);
         Check.True(
-            pinned.CooledPhysicalReductionGradeOneMaximum == 55 &&
-            pinned.CooledMagicReductionGradeOneMaximum == 55 &&
+            pinned.CooledPhysicalReductionGradeOneMaximum == 70 &&
+            pinned.CooledMagicReductionGradeOneMaximum == 70 &&
             pinned.CooledCriticalReductionGradeOneMaximum == 60,
-            "migration seeds the reviewed 5.5/5.5/6.0 balance");
+            "migration advances the reviewed balance to 7.0/7.0/6.0");
 
         await using var dataSource = NpgsqlDataSource.Create(
             connectionString);
@@ -133,8 +122,8 @@ internal static class PostgresHolySpiritBalanceIntegrationChecks
                 beforeStale.SequenceEqual(afterStale),
                 "stale CAS does not mutate raw socket values");
             Check.True(
-                pinned.CooledPhysicalReductionGradeOneMaximum == 55 &&
-                pinned.CooledMagicReductionGradeOneMaximum == 55 &&
+                pinned.CooledPhysicalReductionGradeOneMaximum == 70 &&
+                pinned.CooledMagicReductionGradeOneMaximum == 70 &&
                 pinned.CooledCriticalReductionGradeOneMaximum == 60,
                 "an active worker snapshot does not hot-reload management edits");
         }
@@ -160,10 +149,11 @@ internal static class PostgresHolySpiritBalanceIntegrationChecks
                 await AssertSocketValuesAsync(
                     dataSource,
                     fixture,
-                    [550, 550, 550, 550],
-                    [550, 550, 550, 550],
+                    [560, 560, 550, 560],
+                    [570, 570, 570, 550],
                     [600, 600, 600, 599],
-                    "lowering the balance irreversibly clamps existing rolls");
+                    "raising a management cap does not inflate rolls that " +
+                    "a prior management update already clamped");
             }
             await CleanupFixtureAsync(dataSource, fixture);
         }

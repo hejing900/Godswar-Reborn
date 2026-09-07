@@ -57,6 +57,8 @@ internal sealed class GameClientHandlerFactory(
                 postgresRuntime?.DeveloperItemGrantCommands,
             developerBagClearCommands:
                 postgresRuntime?.DeveloperBagClearCommands,
+            developerProgressionCommands:
+                postgresRuntime?.DeveloperProgressionCommands,
             makeAttributeStoneCommands:
                 postgresRuntime?.MakeAttributeStoneCommands,
             gearMentorMaterialConversionCommands:
@@ -93,6 +95,14 @@ internal sealed class GameClientHandlerFactory(
                 postgresRuntime?.MonsterDeathRewardCommands,
             petDurableCommands:
                 postgresRuntime?.PetDurableCommands,
+            factionCrierCommands:
+                postgresRuntime?.FactionCrierCommands,
+            factionCrierBalance:
+                postgresRuntime?.FactionCrierBalance,
+            onlineAwardCommands:
+                postgresRuntime?.OnlineAwardCommands,
+            onlineAwardBalance:
+                postgresRuntime?.OnlineAwardBalance,
             characterRuntimeProjections:
                 gameplayPersistence.CharacterRuntime,
             ownedPetSnapshots:
@@ -136,6 +146,10 @@ internal sealed class GameClientHandlerFactory(
             warehouseExpansionPolicy:
                 postgresRuntime?.WarehouseExpansionPolicy,
             medusaDailyEntries:
-                postgresRuntime?.MedusaDailyEntries);
+                postgresRuntime?.MedusaDailyEntries,
+            legacyInstanceDailyEntries:
+                postgresRuntime?.LegacyInstanceDailyEntries,
+            legacyInstanceOpalPayments:
+                postgresRuntime?.LegacyInstanceOpalPayments);
     }
 }

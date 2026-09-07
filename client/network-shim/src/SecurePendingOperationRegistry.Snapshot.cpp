@@ -45,6 +45,8 @@ SecurePendingOperationRegistry::Snapshot() noexcept {
     snapshot.forgePrimaryMaterialBagSlot =
         forgePrimaryMaterialBagSlot_;
     snapshot.forgeOddsCount = forgeOddsCount_;
+    snapshot.fighterExperienceProjectionCount =
+        fighterExperienceProjectionCount_;
     std::memcpy(
         snapshot.forgeOdds,
         forgeOdds_,

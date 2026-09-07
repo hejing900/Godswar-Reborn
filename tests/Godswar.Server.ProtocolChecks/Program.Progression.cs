@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
+using Godswar.Server.Application.Rewards;
 using Godswar.Server.Game;
 using Godswar.Server.Networking;
 using Godswar.Server.Packets;
@@ -75,52 +76,97 @@ internal static partial class Program
             Check.Equal(584435250, PlayerExperienceCatalog.GetNextLevelExperience(200), "level-cap EXP table entry");
             Check.Equal(80, MonsterRewardCatalog.Resolve(1, 1).Experience, "captured tier-one reward");
             Check.Equal(120, MonsterRewardCatalog.Resolve(11, 1).Experience, "tier-eleven reward follows original curve");
-            Check.Equal(8, MonsterRewardCatalog.Resolve(1, 10).Experience, "level-difference reward scales deterministically");
-            Check.Equal(0, MonsterRewardCatalog.Resolve(1, 11).Experience, "ten-level reward falloff reaches zero");
-            Check.Equal(0, MonsterRewardCatalog.Resolve(1, 12).TalentExperience, "over-level kills do not award Talent EXP");
+            Check.Equal(
+                10,
+                MonsterRewardCatalog.NormalTalentExperience,
+                "captured normal monster Talent EXP baseline");
+            var defaultRewardPolicy =
+                MonsterRewardPolicySnapshot.Default;
+            var tier120BaseReward = MonsterRewardCatalog.Resolve(
+                monsterTier: 120,
+                playerLevel: 120,
+                defaultRewardPolicy);
+            var inclusiveGapReward = MonsterRewardCatalog.Resolve(
+                monsterTier: 120,
+                playerLevel: 140,
+                defaultRewardPolicy);
+            Check.True(
+                tier120BaseReward.Experience > 0,
+                "eligible tier has a positive fighter EXP baseline");
+            Check.Equal(
+                tier120BaseReward.Experience,
+                inclusiveGapReward.Experience,
+                "configured lower-level gap is inclusive at twenty levels");
+            Check.Equal(
+                MonsterRewardCatalog.NormalTalentExperience,
+                inclusiveGapReward.TalentExperience,
+                "inclusive lower-level gap retains Talent EXP");
+            Check.Equal(
+                tier120BaseReward.Experience,
+                MonsterRewardCatalog.ResolvePetExperience(
+                    monsterTier: 120,
+                    playerLevel: 140,
+                    defaultRewardPolicy),
+                "inclusive lower-level gap retains Pet EXP");
+
+            var beyondDefaultGap = MonsterRewardCatalog.Resolve(
+                monsterTier: 119,
+                playerLevel: 140,
+                defaultRewardPolicy);
+            Check.Equal(
+                0,
+                beyondDefaultGap.Experience,
+                "twenty-one-level gap awards no fighter EXP");
+            Check.Equal(
+                0,
+                beyondDefaultGap.TalentExperience,
+                "twenty-one-level gap awards no Talent EXP");
+            Check.Equal(
+                0,
+                MonsterRewardCatalog.ResolvePetExperience(
+                    monsterTier: 119,
+                    playerLevel: 140,
+                    defaultRewardPolicy),
+                "twenty-one-level gap awards no Pet EXP");
+
+            var narrowRewardPolicy = new MonsterRewardPolicySnapshot(
+                MaximumLowerLevelGap: 7,
+                GlobalExperienceMultiplierBasisPoints: 10_000,
+                Revision: 1,
+                UpdatedAtUtc: DateTimeOffset.UnixEpoch,
+                UpdatedBy: "progression-check");
+            narrowRewardPolicy.Validate();
+            var tier133BaseReward = MonsterRewardCatalog.Resolve(
+                monsterTier: 133,
+                playerLevel: 133,
+                narrowRewardPolicy);
+            Check.Equal(
+                tier133BaseReward.Experience,
+                MonsterRewardCatalog.Resolve(
+                    monsterTier: 133,
+                    playerLevel: 140,
+                    narrowRewardPolicy).Experience,
+                "non-default lower-level gap remains inclusive");
+            Check.Equal(
+                0,
+                MonsterRewardCatalog.Resolve(
+                    monsterTier: 132,
+                    playerLevel: 140,
+                    narrowRewardPolicy).Experience,
+                "non-default lower-level gap rejects its next level");
+            Check.Equal(
+                0,
+                MonsterRewardCatalog.ResolvePetExperience(
+                    monsterTier: 132,
+                    playerLevel: 140,
+                    narrowRewardPolicy),
+                "non-default lower-level gap also gates Pet EXP");
             Check.Equal(0, MonsterRewardCatalog.Resolve(200, 200).TalentExperience, "level-cap kills award no progression");
         }
         finally
         {
             Directory.Delete(dataPath, recursive: true);
         }
-    }
-
-    private static async Task CheckExperienceBoostStackingAsync()
-    {
-        var expiresAt = DateTimeOffset.UtcNow.AddHours(1);
-        var state = new ExperienceBoostState(
-        [
-            new(ExperienceStatusIds.MaxExperiencePotion, ExperienceBoostKinds.Consumable, 30_000, 11, expiresAt, "potion"),
-            new(ExperienceStatusIds.Weekend, ExperienceBoostKinds.Weekend, 20_000, 1, expiresAt, "weekend"),
-            new(ExperienceStatusIds.TrickOrTreat, ExperienceBoostKinds.TrickOrTreat, 1_000, 1, expiresAt, "event"),
-            new(ExperienceStatusIds.GuildDoubleExperience16Hours, ExperienceBoostKinds.Guild, 10_000, 1, expiresAt, "guild"),
-            new(ExperienceStatusIds.MaxTalentPotion400Percent, ExperienceBoostKinds.Talent, 40_000, 10, expiresAt, "talent"),
-            new(ExperienceStatusIds.VipPlatinum, ExperienceBoostKinds.Vip, 2_000, 4, null, "vip:platinum"),
-            new(ExperienceStatusIds.FactionAreaExperience, ExperienceBoostKinds.FactionArea, 2_500, 1, expiresAt, "world-boss")
-        ]);
-
-        Check.Equal(65_500, state.TotalBonusBasisPoints, "all six fighter EXP families add their bonus rates");
-        Check.Equal(604, state.ApplyTo(80), "base 80 EXP receives the additive 7.55x total multiplier");
-        Check.Equal(40_000, state.TotalTalentBonusBasisPoints, "Talent EXP boost is isolated from fighter EXP");
-        Check.Equal(10, state.ApplyToTalent(2), "base 2 Talent EXP receives the 5x Talent-only multiplier");
-        var statusSnapshot = PlayerStatusComposer.Compose(state, [], DateTimeOffset.UtcNow);
-        Check.Equal(6.55f, statusSnapshot.Aggregate.ExperienceBonus, "Talent status does not inflate fighter EXP wire aggregate");
-        Check.Equal(0, state.ApplyTo(0), "zero base reward remains zero");
-        Check.Equal(2_000, VipExperienceBoosts.BonusBasisPoints(VipTier.Platinum), "Platinum VIP grants 20 percent");
-        Check.Equal(ExperienceStatusIds.VipPlatinum, VipExperienceBoosts.StatusId(VipTier.Platinum), "Platinum VIP status ID");
-        var finiteVip = new ActiveExperienceBoost(
-            ExperienceStatusIds.VipGold,
-            ExperienceBoostKinds.Vip,
-            1_500,
-            3,
-            expiresAt.AddDays(30),
-            "vip:gold");
-        Check.Equal(
-            uint.MaxValue,
-            finiteVip.RemainingSeconds(DateTimeOffset.UtcNow),
-            "finite VIP status remains permanent-looking until server reconciliation removes it");
-        await CheckJsonFocusedExperienceBoostReadAsync();
     }
 
     private static async Task CheckOnlineProgressionBoostDurationAsync()
@@ -191,8 +237,8 @@ internal static partial class Program
             };
             var accountNode = legacyState["accounts"]?.AsArray().Single()?.AsObject()
                 ?? throw new InvalidOperationException("JSON online-boost account is missing");
-            accountNode["vipTier"] = (short)VipTier.Platinum;
-            accountNode["vipExpiresAt"] = grantedAt.AddDays(1);
+            accountNode["donatorTier"] = (short)DonatorTier.OctagramPatron;
+            accountNode["donatorExpiresAt"] = grantedAt.AddDays(1);
             await File.WriteAllTextAsync(statePath, legacyState.ToJsonString(JsonDefaults.Indented));
 
             var firstOnlineAt = grantedAt.AddDays(3);
@@ -209,8 +255,9 @@ internal static partial class Program
                 Check.Equal(30_000, restored.TotalBonusBasisPoints, "personal EXP grants remain active after offline gap");
                 Check.Equal(10_000, restored.TotalTalentBonusBasisPoints, "personal Talent grant remains active after offline gap");
                 Check.True(
-                    restored.ActiveBoosts.All(boost => boost.Kind != ExperienceBoostKinds.Vip),
-                    "expired VIP membership remains calendar-based");
+                    restored.ActiveBoosts.All(boost =>
+                        boost.Kind != ExperienceBoostKinds.Donator),
+                    "expired donator membership remains calendar-based");
                 Check.Equal(
                     57_600u,
                     restored.ActiveBoosts.Single(boost => boost.Kind == ExperienceBoostKinds.Guild)

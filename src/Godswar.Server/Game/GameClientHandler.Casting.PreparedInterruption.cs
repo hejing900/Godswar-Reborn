@@ -189,6 +189,17 @@ internal sealed partial class GameClientHandler
                 _registry.RegisterInstanceTransitionSink(
                     _session,
                     HandlePartyInstanceTransitionAsync);
+                try
+                {
+                    _registry.RegisterAuthoritativeInstanceTransitionSink(
+                        _session,
+                        HandleAuthoritativeInstanceTransitionAsync);
+                }
+                catch
+                {
+                    _registry.UnregisterInstanceTransitionSink(_session);
+                    throw;
+                }
             }
             catch
             {
@@ -206,6 +217,7 @@ internal sealed partial class GameClientHandler
 
     private void UnregisterSkillCastInterruption()
     {
+        _registry.UnregisterAuthoritativeInstanceTransitionSink(_session);
         _registry.UnregisterInstanceTransitionSink(_session);
         _registry.UnregisterPreparedSkillCastInterruptionSink(_session);
         _registry.UnregisterSkillCastInterruptionSink(_session);

@@ -16,6 +16,7 @@ internal static partial class Program
 {
     private static async Task CheckDeveloperForgingMaterialCommandAsync()
     {
+        await DeveloperProgressionCommandChecks.RunAsync();
         DeveloperItemGrantCommandEnvelopeChecks.Run();
         DeveloperItemGrantProjectionChecks.Run();
         CheckDeveloperForgingMaterialCatalogAndPlanning();

@@ -215,6 +215,7 @@ void SecurePendingOperationRegistry::SetPrincipal(
     if (changed) {
         hasCharacter_ = false;
         characterId_ = -1;
+        ClearFighterExperienceProjections();
         ResetSelectionState();
         ResetForgeState();
         combinePageArmed_ = false;

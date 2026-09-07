@@ -29,6 +29,22 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 KitBagSlot: command.KitBagSlot);
         }
 
+        if (command.ExecutionConstraint ==
+            BagItemActivationExecutionConstraint.PlayerSkillBookOnly)
+        {
+            return await TryLearnPlayerSkillBookAsync(
+                    connection,
+                    transaction,
+                    envelope.Subject.CharacterId,
+                    command.KitBagSlot,
+                    item,
+                    character,
+                    cancellationToken) ??
+                new PetTransition(
+                    PetDurableReceiptStatus.UnsupportedItem,
+                    KitBagSlot: command.KitBagSlot);
+        }
+
         if (command.Capture is { } capture)
         {
             return await CapturePetEggAsync(
@@ -157,6 +173,18 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                         character,
                         activationCancellationToken),
                 cancellationToken);
+        }
+
+        if (await TryLearnPlayerSkillBookAsync(
+                connection,
+                transaction,
+                envelope.Subject.CharacterId,
+                command.KitBagSlot,
+                item,
+                character,
+                cancellationToken) is { } playerSkillBook)
+        {
+            return playerSkillBook;
         }
 
         return await EquipBagItemAsync(

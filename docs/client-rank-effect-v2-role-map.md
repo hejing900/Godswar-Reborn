@@ -37,10 +37,10 @@ Earlier `.08` full-cage, `.03/.04/.05` AR8-sheet, Aether Laurel, and AR10 atlas
 experiments remain rejected and must not be reinstalled. The three other class
 WR10 effects remain outside the package; B20H must not be touched.
 
-The separate cap-label palette is also corrected in the development client:
-Boundless is electric magenta and G25 is diamond cyan instead of near-white.
-Its rollback is
-`C:\Reborn\backups\client-gear-palette-20260808-214529681`.
+The separate text palette is also installed in the development client:
+Superior is native orange, Boundless is imperial scarlet, and G25 is crown
+gold. Its rollback is
+`C:\Reborn\backups\client-gear-palette-20260830-111710740`.
 
 ## What v1 got wrong
 

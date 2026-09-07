@@ -264,7 +264,7 @@ internal sealed partial class PostgresGameStore
                  )
              )
             WHERE st.previous_skill_id IS NULL
-              AND COALESCE(st.min_level, 1) <= cb.fighter_job_lv
+              AND COALESCE(st.min_level, 1) <= 1
               AND st.skill_level = 1
               AND NOT EXISTS (
                   SELECT 1

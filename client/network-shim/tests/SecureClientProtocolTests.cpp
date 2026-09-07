@@ -495,6 +495,126 @@ void CheckLegacyCommandResult() {
                 sizeof(golden) - 1,
                 &decoded),
         "legacy command result accepted zero UUID or wrong length");
+
+    SecureLegacyCommandResult fighter{};
+    fighter.disposition =
+        SecureLegacyCommandDisposition::Replayed;
+    fighter.commandFamily =
+        SecureLegacyCommandFamily::FighterLevelSeal;
+    fighter.resultCode = 109;
+    fighter.inventoryRevision =
+        0x0102030405060708ULL;
+    fighter.hasFighterExperienceProjection = true;
+    fighter.currentExperience = 0x01020304U;
+    fighter.maximumExperience = 117'174'640U;
+    std::memcpy(
+        fighter.operationId,
+        golden + 16,
+        sizeof(fighter.operationId));
+    std::uint8_t fighterEncoded[
+        godswar::network::
+            SecureLegacyCommandResultV2PayloadBytes]{};
+    SecureLegacyCommandResult fighterDecoded{};
+    Check(
+        TryEncodeSecureLegacyCommandResult(
+            fighter,
+            fighterEncoded,
+            sizeof(fighterEncoded)) &&
+        fighterEncoded[0] == 2 &&
+        fighterEncoded[2] == 0 &&
+        fighterEncoded[3] == 60 &&
+        fighterEncoded[32] == 0x01 &&
+        fighterEncoded[33] == 0x02 &&
+        fighterEncoded[34] == 0x03 &&
+        fighterEncoded[35] == 0x04 &&
+        fighterEncoded[36] == 0x06 &&
+        fighterEncoded[37] == 0xFB &&
+        fighterEncoded[38] == 0xF1 &&
+        fighterEncoded[39] == 0x70 &&
+        TryDecodeSecureLegacyCommandResult(
+            fighterEncoded,
+            sizeof(fighterEncoded),
+            &fighterDecoded) &&
+        fighterDecoded.hasFighterExperienceProjection &&
+        fighterDecoded.currentExperience ==
+            fighter.currentExperience &&
+        fighterDecoded.maximumExperience ==
+            fighter.maximumExperience,
+        "fighter EXP result v2 did not round-trip exact uint32 values");
+
+    Check(
+        TryEncodeSecureFrameHeader(
+            SecureFrameHeader{
+                sizeof(fighterEncoded),
+                SecureFrameType::LegacyCommandResult,
+                2},
+            SecureEndpointRole::Game,
+            SecureFrameDirection::ServerToClient,
+            frameHeader,
+            sizeof(frameHeader)) &&
+        !TryEncodeSecureFrameHeader(
+            SecureFrameHeader{
+                sizeof(fighterEncoded) - 1,
+                SecureFrameType::LegacyCommandResult,
+                2},
+            SecureEndpointRole::Game,
+            SecureFrameDirection::ServerToClient,
+            frameHeader,
+            sizeof(frameHeader)) &&
+        !TryEncodeSecureFrameHeader(
+            SecureFrameHeader{
+                sizeof(fighterEncoded) + 1,
+                SecureFrameType::LegacyCommandResult,
+                2},
+            SecureEndpointRole::Game,
+            SecureFrameDirection::ServerToClient,
+            frameHeader,
+            sizeof(frameHeader)),
+        "fighter EXP result frame did not enforce v1/v2 lengths");
+
+    auto malformedFighter = fighter;
+    malformedFighter.commandFamily =
+        SecureLegacyCommandFamily::MakeAttributeStone;
+    Check(
+        !TryEncodeSecureLegacyCommandResult(
+            malformedFighter,
+            fighterEncoded,
+            sizeof(fighterEncoded)),
+        "fighter EXP projection encoded for another command family");
+    malformedFighter = fighter;
+    malformedFighter.disposition =
+        SecureLegacyCommandDisposition::Rejected;
+    Check(
+        !TryEncodeSecureLegacyCommandResult(
+            malformedFighter,
+            fighterEncoded,
+            sizeof(fighterEncoded)),
+        "fighter EXP projection encoded for a rejected result");
+    malformedFighter = fighter;
+    malformedFighter.maximumExperience = 0;
+    Check(
+        !TryEncodeSecureLegacyCommandResult(
+            malformedFighter,
+            fighterEncoded,
+            sizeof(fighterEncoded)),
+        "fighter EXP projection encoded a zero maximum");
+    malformedFighter = fighter;
+    malformedFighter.currentExperience =
+        malformedFighter.maximumExperience + 1;
+    Check(
+        TryEncodeSecureLegacyCommandResult(
+            malformedFighter,
+            fighterEncoded,
+            sizeof(fighterEncoded)) &&
+        TryDecodeSecureLegacyCommandResult(
+            fighterEncoded,
+            sizeof(fighterEncoded),
+            &fighterDecoded) &&
+        fighterDecoded.currentExperience ==
+            malformedFighter.currentExperience &&
+        fighterDecoded.maximumExperience ==
+            malformedFighter.maximumExperience,
+        "fighter EXP projection rejected valid stored current above threshold");
 }
 
 } // namespace

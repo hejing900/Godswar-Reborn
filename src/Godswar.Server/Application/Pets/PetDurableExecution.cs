@@ -119,7 +119,13 @@ internal enum PetDurableReceiptStatus : byte
     PetSkillBookNoOpenSlot = 103,
     PetSkillBookInvalidState = 104,
     PetCaptured = 105,
-    PetCaptureBagFull = 106
+    PetCaptureBagFull = 106,
+    PlayerSkillLearned = 107,
+    PlayerSkillBookWrongClass = 108,
+    PlayerSkillBookLevelRestricted = 109,
+    PlayerSkillBookAlreadyLearned = 110,
+    PlayerSkillBookPriorTierRequired = 111,
+    PlayerSkillBookInvalidState = 112
 }
 
 internal sealed partial record PetDurableReceipt(
@@ -148,7 +154,8 @@ internal sealed partial record PetDurableReceipt(
     PetSoulContractEvidence? SoulContract = null,
     PetManagerUtilityEvidence? PetManagerUtility = null,
     PetRebirthGrowthEvidence? RebirthGrowth = null,
-    PetSkillLearnEvidence? SkillLearn = null)
+    PetSkillLearnEvidence? SkillLearn = null,
+    PlayerSkillLearnEvidence? PlayerSkillLearn = null)
 {
     public bool Succeeded =>
         Status is PetDurableReceiptStatus.PetCaptured or
@@ -178,6 +185,7 @@ internal sealed partial record PetDurableReceipt(
             PetDurableReceiptStatus.PetAppearanceChanged or
             PetDurableReceiptStatus.PetBound or
             PetDurableReceiptStatus.PetSkillLearned or
+            PetDurableReceiptStatus.PlayerSkillLearned or
             PetDurableReceiptStatus.OwnerMerged or
             PetDurableReceiptStatus.OwnerUnmerged;
 
@@ -284,6 +292,12 @@ internal sealed partial record PetDurableReceipt(
                  learned.ItemTemplateId == 0) ||
             Status != PetDurableReceiptStatus.PetSkillLearned &&
                 SkillLearn is not null ||
+            Status == PetDurableReceiptStatus.PlayerSkillLearned &&
+                (KitBagSlot < 0 || PetId != 0 || PetRevision != 0 ||
+                 PlayerSkillLearn is not { IsValid: true } playerSkill ||
+                 playerSkill.KitBagSlot != KitBagSlot) ||
+            Status != PetDurableReceiptStatus.PlayerSkillLearned &&
+                PlayerSkillLearn is not null ||
             Family == CommandFamily.PetGrowthReset &&
                 Status != PetDurableReceiptStatus.PetGrowthPreviewed &&
                 GrowthPreview is not null ||

@@ -15,6 +15,16 @@ internal static partial class PostgresItemTemplateBaselinePublisher
     private const string OfficialPetItemsV3Source =
         "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
         "zephyr-v1+mount-speed-v3+pets-v3";
+    private const string OfficialWarehouseV1Revision =
+        "2E324B0C9892CD0801CD0A93EEC3C0EC4E459317A23D8FF0FB090D5A901BD113";
+    private const string OfficialWarehouseV1Source =
+        "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
+        "zephyr-v1+mount-speed-v3+pets-v4+nameplates-v1+warehouse-v1";
+    private const string OfficialPetItemsV5Revision =
+        "9A6D6087087937D57DAED7DD93871F02CAED74124166A5CC1EB69D86DBACD121";
+    private const string OfficialPetItemsV5Source =
+        "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
+        "zephyr-v1+mount-speed-v3+pets-v5+nameplates-v1+warehouse-v1";
 
     private sealed record V9PublicationSnapshot(
         IReadOnlyList<ItemTemplateDefinition> Definitions,
@@ -89,7 +99,17 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             transaction,
             definitions,
             cancellationToken);
+        definitions = await ReconcileReviewedNameplatesAsync(
+            connection,
+            transaction,
+            definitions,
+            cancellationToken);
         definitions = await ReconcileReviewedWarehouseItemsAsync(
+            connection,
+            transaction,
+            definitions,
+            cancellationToken);
+        definitions = await ReconcileReviewedOpalAsync(
             connection,
             transaction,
             definitions,
@@ -134,12 +154,33 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                 "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
                 "zephyr-v1+mount-speed-v3+pets-v4",
                 StringComparison.Ordinal);
-        if (!isV2 && !isV3 && !isV4)
+        var isNameplatesV1 = release.Revision.Equals(
+                "AC11E2A725B0450B93D9C71F021F2D95B19EB4204ACC8E36B54CFEF1F8B9A063",
+                StringComparison.Ordinal) &&
+            release.Source.Equals(
+                "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
+                "zephyr-v1+mount-speed-v3+pets-v4+nameplates-v1",
+                StringComparison.Ordinal);
+        var isWarehouseV1 = release.Revision.Equals(
+                OfficialWarehouseV1Revision,
+                StringComparison.Ordinal) &&
+            release.Source.Equals(
+                OfficialWarehouseV1Source,
+                StringComparison.Ordinal);
+        var isPetItemsV5 = release.Revision.Equals(
+                OfficialPetItemsV5Revision,
+                StringComparison.Ordinal) &&
+            release.Source.Equals(
+                OfficialPetItemsV5Source,
+                StringComparison.Ordinal);
+        if (!isV2 && !isV3 && !isV4 && !isNameplatesV1 &&
+            !isWarehouseV1 && !isPetItemsV5)
         {
             throw new InvalidOperationException(
                 $"Manifest-v9 item revision {release.Revision} is not the " +
-                "exact reviewed pets-v2/v3/v4 predecessor; Warehouse items " +
-                "were not reconciled.");
+                "exact reviewed pets-v2/v3/v4, Nameplates-v1, or " +
+                "Warehouse-v1/pets-v5 predecessor; pet items were not " +
+                "reconciled.");
         }
     }
 

@@ -1,3 +1,5 @@
+using Godswar.Server.Domain.World.Instances;
+
 namespace Godswar.Server.State;
 
 internal static class GameDefaults
@@ -34,7 +36,8 @@ internal static class GameDefaults
         GameCharacter character)
     {
         ArgumentNullException.ThrowIfNull(character);
-        if (character.CurrentMap is not (200 or 204))
+        if (!DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(
+                character.CurrentMap))
         {
             return false;
         }

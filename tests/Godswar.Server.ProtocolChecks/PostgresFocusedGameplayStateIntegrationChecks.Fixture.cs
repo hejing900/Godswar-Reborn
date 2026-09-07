@@ -16,7 +16,9 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             nowTicks - nowTicks % TimeSpan.TicksPerSecond,
             TimeSpan.Zero);
         var killedAtUtc = readAtUtc.AddMinutes(-5);
-        var vipExpiresAtUtc = readAtUtc.AddHours(2);
+        var donatorExpiresAtUtc = readAtUtc.AddHours(2);
+        var battlePassExpiresAtUtc = readAtUtc.AddHours(1);
+        var battlePassFutureExpiresAtUtc = readAtUtc.AddHours(2);
         var unconfiguredSceneKey = $"B20C_Unconfigured_{token}";
         var deathToken = $"b20c-death:{token}";
 
@@ -38,14 +40,14 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             connection,
             transaction,
             $"b20c_primary_{token}",
-            vipTier: 3,
-            vipExpiresAtUtc);
+            donatorTier: 5,
+            donatorExpiresAtUtc);
         var otherAccountId = await InsertAccountAsync(
             connection,
             transaction,
             $"b20c_other_{token}",
-            vipTier: 4,
-            vipExpiresAtUtc);
+            donatorTier: 4,
+            donatorExpiresAtUtc: null);
         await InsertAccountRealmAsync(
             connection,
             transaction,
@@ -75,6 +77,19 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             transaction,
             characterId,
             readAtUtc.AddMinutes(-10));
+        await InsertBattlePassEntitlementsAsync(
+            connection,
+            transaction,
+            primaryAccountId,
+            token,
+            readAtUtc,
+            battlePassExpiresAtUtc);
+        await InsertPermanentBattlePassEntitlementsAsync(
+            connection,
+            transaction,
+            otherAccountId,
+            token,
+            readAtUtc);
         await transaction.CommitAsync();
 
         return new Fixture(
@@ -93,7 +108,9 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
             deathToken,
             readAtUtc,
             killedAtUtc,
-            vipExpiresAtUtc);
+            donatorExpiresAtUtc,
+            battlePassExpiresAtUtc,
+            battlePassFutureExpiresAtUtc);
     }
 
     private static async Task<short> InsertAvailableMapAsync(
@@ -181,28 +198,30 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         string username,
-        short vipTier,
-        DateTimeOffset vipExpiresAtUtc)
+        short donatorTier,
+        DateTimeOffset? donatorExpiresAtUtc)
     {
         await using var command = new NpgsqlCommand(
             """
             INSERT INTO public.accounts (
                 username,
                 password,
-                vip_tier,
-                vip_expires_at
+                donator_tier,
+                donator_expires_at
             )
-            VALUES (@username, '', @vipTier, @vipExpiresAt)
+            VALUES (@username, '', @donatorTier, @donatorExpiresAt)
             RETURNING id;
             """,
             connection,
             transaction);
         command.Parameters.AddWithValue("username", username);
-        command.Parameters.AddWithValue("vipTier", vipTier);
+        command.Parameters.AddWithValue("donatorTier", donatorTier);
         command.Parameters.Add(
-            "vipExpiresAt",
+            "donatorExpiresAt",
             NpgsqlDbType.TimestampTz).Value =
-            vipExpiresAtUtc.UtcDateTime;
+            donatorExpiresAtUtc is { } expiry
+                ? expiry.UtcDateTime
+                : DBNull.Value;
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
@@ -464,7 +483,9 @@ internal static partial class PostgresFocusedGameplayStateIntegrationChecks
         string DeathToken,
         DateTimeOffset ReadAtUtc,
         DateTimeOffset KilledAtUtc,
-        DateTimeOffset VipExpiresAtUtc);
+        DateTimeOffset DonatorExpiresAtUtc,
+        DateTimeOffset BattlePassExpiresAtUtc,
+        DateTimeOffset BattlePassFutureExpiresAtUtc);
 
     private readonly record struct ConfiguredWorldBossArea(
         short MapId,

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Domain.World.Instances;
+using Godswar.Server.Game;
 
 namespace Godswar.Server.State;
 
@@ -283,6 +284,8 @@ internal sealed partial class JsonGameStore :
         SkillTalentSeeds.Skills
             .Where(skill =>
                 (skill.SkillId == MountCatalog.RideSkillId ||
+                 skill.SkillId == checked((int)FactionPortalSkillPolicy
+                     .ResolveCapitalPortalSkillId(character.Camp)) ||
                  (skill.PreviousSkillId is null &&
                   skill.SkillLevel == 1 &&
                   (skill.MinLevel ?? 1) <= character.Level)) &&
@@ -290,7 +293,9 @@ internal sealed partial class JsonGameStore :
             .OrderBy(skill => skill.SkillId)
             .Select(skill => new CharacterSkillSnapshot(
                 skill.SkillId,
-                skill.SkillId == MountCatalog.RideSkillId
+                skill.SkillId == MountCatalog.RideSkillId ||
+                skill.SkillId == checked((int)FactionPortalSkillPolicy
+                    .ResolveCapitalPortalSkillId(character.Camp))
                     ? 1
                     : skill.SkillLevel!.Value))
             .ToImmutableArray();

@@ -36,6 +36,7 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
     {
         await CheckFailedRefreshReleasesCapturedIdentityAsync();
         await CheckFinalFlushesAreIndependentAsync();
+        await CheckRuntimeStatsRefreshPreservesLiveVitalsAsync();
         await CheckVitalsClampAdvancesRevisionAsync();
         await CheckCoordinationFailureReleasesPostgresFenceAsync();
         await CheckCoordinationReleasePrecedesPostgresReleaseAsync();
@@ -204,6 +205,15 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
 
     private static async Task CheckVitalsClampAdvancesRevisionAsync()
     {
+        await CheckVitalsClampAdvancesRevisionAsync(
+            hasCalculatedStats: false);
+        await CheckVitalsClampAdvancesRevisionAsync(
+            hasCalculatedStats: true);
+    }
+
+    private static async Task CheckVitalsClampAdvancesRevisionAsync(
+        bool hasCalculatedStats)
+    {
         await using var session = new ClientSession(
             new ScriptedLegacyByteTransport(),
             endpointRole: NetworkEndpointRole.Game);
@@ -223,7 +233,10 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
             VitalsRevision = 7,
             PositionRevision = 3,
             CheckpointOwnerId = ownerId,
-            CheckpointOwnerGeneration = 9
+            CheckpointOwnerGeneration = 9,
+            CalculatedStats = hasCalculatedStats
+                ? new CharacterStats()
+                : null
         };
         CharacterField.SetValue(handler, current);
         var reduced = new GameCharacter
@@ -232,7 +245,10 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
             AccountId = current.AccountId,
             MaxHp = 60,
             MaxMp = 30,
-            VitalsRevision = 7
+            VitalsRevision = 7,
+            CalculatedStats = hasCalculatedStats
+                ? new CharacterStats()
+                : null
         };
 
         Invoke(InstallCharacterMethod, handler, reduced);
@@ -260,7 +276,10 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
             AccountId = installed.AccountId,
             MaxHp = 120,
             MaxMp = 80,
-            VitalsRevision = installed.VitalsRevision
+            VitalsRevision = installed.VitalsRevision,
+            CalculatedStats = hasCalculatedStats
+                ? new CharacterStats()
+                : null
         };
         Invoke(InstallCharacterMethod, handler, expanded);
         installed =
@@ -416,6 +435,12 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
 
         public int VitalsWrites { get; private set; }
 
+        public CharacterVitalsCheckpoint? LastVitalsCheckpoint
+        {
+            get;
+            private set;
+        }
+
         public Task<CharacterCheckpointOwnership?> AcquireAsync(
             int accountId,
             int characterId,
@@ -448,6 +473,7 @@ internal static partial class GameHandlerCheckpointLifecycleChecks
         {
             Operations.Add("vitals");
             VitalsWrites++;
+            LastVitalsCheckpoint = checkpoint;
             return Task.FromResult(Applied(checkpoint.Revision));
         }
 

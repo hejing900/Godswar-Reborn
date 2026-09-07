@@ -18,7 +18,7 @@ internal sealed partial class GameSessionRegistry
         float targetZ)
     {
         ArgumentNullException.ThrowIfNull(session);
-        if (targetMapId is 200 or 204 ||
+        if (DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(targetMapId) ||
             targetMapId == expectedSourceMapId ||
             !_gameplayCatalogs.MapTraversal.TryGetMap(
                 expectedSourceMapId,

@@ -39,12 +39,12 @@ internal static class FighterLevelSealToolChecks
             "tool refuses a character with a checkpoint owner");
         Check.True(
             script.Contains(
-                "IF $desiredSql AND v_level <> 89",
+                "IF v_level NOT BETWEEN 1 AND 200",
                 StringComparison.Ordinal) &&
             script.Contains(
                 "fighter_level_sealed IS DISTINCT FROM $desiredSql",
                 StringComparison.Ordinal),
-            "tool seals only exact level 89 and changes state idempotently");
+            "tool accepts every supported level and changes state idempotently");
         Check.True(
             script.Contains(
                 "INSERT INTO public.command_audit",
@@ -59,9 +59,9 @@ internal static class FighterLevelSealToolChecks
                 "does not advance `progression_reward_revision`",
                 StringComparison.Ordinal) &&
             documentation.Contains(
-                "does not charge Gold",
+                "does not charge currency",
                 StringComparison.Ordinal),
-            "offline no-Gold and unchanged progression-revision scope is explicit");
+            "offline no-currency and unchanged progression-revision scope is explicit");
     }
 
     private static string FindRepositoryRoot()

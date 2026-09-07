@@ -77,8 +77,7 @@ internal static partial class JsonCharacterSnapshotReaderChecks
             var talent = SkillTalentSeeds.Talents.First(seed =>
                 seed.ClassId == 1);
             var character = CreateCharacter(711, 411, "JsonSnapshot");
-            character.Level =
-                PlayerExperienceCatalog.FighterLevelSealLevel;
+            character.Level = 88;
             character.Experience = 4_000_000_000L;
             character.FighterLevelSealed = true;
             character.CurrentHp = character.MaxHp + 250;

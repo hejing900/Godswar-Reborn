@@ -121,8 +121,24 @@ internal sealed partial class GameSessionRegistry
         await state.Gate.WaitAsync(cancellationToken);
         try
         {
+            var donatorStatsChanged =
+                HasDonatorStatProjectionChanged(
+                    state.ExperienceBoosts,
+                    boosts);
+            if (donatorStatsChanged &&
+                !await RefreshDonatorCalculatedStatsAsync(
+                    session,
+                    cancellationToken))
+            {
+                return false;
+            }
+            if (donatorStatsChanged)
+            {
+                state.LocalCalculatedStatsSynchronizationPending = true;
+            }
+
             state.ExperienceBoosts = boosts;
-            return await PublishStatusSnapshotLockedAsync(
+            var published = await PublishStatusSnapshotLockedAsync(
                 session,
                 state,
                 now,
@@ -130,7 +146,15 @@ internal sealed partial class GameSessionRegistry
                 force,
                 broadcast,
                 cancellationToken,
+                forceLocalGameDataSynchronization:
+                    state.LocalCalculatedStatsSynchronizationPending,
                 claimedDisconnects: admissionClaims);
+            if (published)
+            {
+                state.LocalCalculatedStatsSynchronizationPending = false;
+            }
+
+            return published;
         }
         finally
         {

@@ -28,6 +28,37 @@ internal sealed partial class GameClientHandler
         MedusaInstanceTransitionCommand command,
         CancellationToken cancellationToken)
     {
+        if (!IsSupportedMedusaTransition(command))
+        {
+            return false;
+        }
+
+        return await TryBeginAuthoritativeInstanceTransitionAsync(
+            AuthoritativeInstanceTransitionCommand.FromMedusa(command),
+            cancellationToken);
+    }
+
+    private async Task<bool> HandleAuthoritativeInstanceTransitionAsync(
+        AuthoritativeInstanceTransitionCommand command,
+        CancellationToken cancellationToken)
+    {
+        await _characterStateGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await TryBeginAuthoritativeInstanceTransitionAsync(
+                command,
+                cancellationToken);
+        }
+        finally
+        {
+            _characterStateGate.Release();
+        }
+    }
+
+    private async Task<bool> TryBeginAuthoritativeInstanceTransitionAsync(
+        AuthoritativeInstanceTransitionCommand command,
+        CancellationToken cancellationToken)
+    {
         if (_pendingMapTransition is not null ||
             _account is null ||
             _character is null ||
@@ -35,7 +66,6 @@ internal sealed partial class GameClientHandler
             !_worldPresenceAnnounced ||
             _character.Id != command.CharacterId ||
             _character.CurrentMap != command.ExpectedSourceMapId ||
-            !IsSupportedMedusaTransition(command) ||
             command.ExpectedSourceWorldInstanceId ==
                 command.TargetWorldInstanceId ||
             !command.TargetWorldInstanceId.IsValid ||
@@ -49,10 +79,21 @@ internal sealed partial class GameClientHandler
             currentWorldInstanceId !=
                 command.ExpectedSourceWorldInstanceId ||
             !_registry.TryGetWorldInstance(
+                currentWorldInstanceId,
+                out var source) ||
+            source.MapId.Value != command.ExpectedSourceMapId ||
+            !_registry.TryGetWorldInstance(
                 command.TargetWorldInstanceId,
                 out var target) ||
             target.MapId.Value != command.TargetMapId ||
             target.LifecycleState != WorldInstanceLifecycleState.Active ||
+            source.RealmId != target.RealmId ||
+            !AuthoritativeInstanceTransitionPolicy.IsSupported(
+                command.ExpectedSourceMapId,
+                source.Kind,
+                command.TargetMapId,
+                target.Kind,
+                _character.Camp) ||
             !_registry.EnsurePlayerStatusState(_session) ||
             !TryCaptureCurrentPlayerOwnership(out var ownership) ||
             ownership != command.ExpectedOwnership ||
@@ -138,7 +179,7 @@ internal sealed partial class GameClientHandler
                 sourceMapId,
                 sourceX,
                 sourceZ,
-                "registry rejected the Medusa transfer",
+                "registry rejected the authoritative instance transfer",
                 ownership,
                 CancellationToken.None);
             return false;
@@ -188,7 +229,7 @@ internal sealed partial class GameClientHandler
                     command.TargetZ,
                     command.TargetMapId),
                 cancellationToken,
-                "MedusaSceneChange");
+                "AuthoritativeInstanceSceneChange");
             await PublishPartyDeliveriesAsync(
                 _registry.GetPartyRefreshDeliveries(_session),
                 CancellationToken.None);
@@ -200,7 +241,7 @@ internal sealed partial class GameClientHandler
         }
 
         Console.WriteLine(
-            "[instance] Medusa scene change queued " +
+            "[instance] authoritative scene change queued " +
             $"character={_character.Name} map={sourceMapId}" +
             $"->{command.TargetMapId} instance=" +
             command.TargetWorldInstanceId);
@@ -210,14 +251,18 @@ internal sealed partial class GameClientHandler
     private bool IsSupportedMedusaTransition(
         in MedusaInstanceTransitionCommand command)
     {
-        var entering = command.ExpectedSourceMapId is not (200 or 204) &&
-            command.TargetMapId is 200 or 204;
+        var entering =
+            !DynamicDungeonContentMapPolicy.IsMedusaMap(
+                command.ExpectedSourceMapId) &&
+            DynamicDungeonContentMapPolicy.IsMedusaMap(
+                command.TargetMapId);
         if (entering)
         {
             return true;
         }
 
-        if (command.ExpectedSourceMapId is not (200 or 204) ||
+        if (!DynamicDungeonContentMapPolicy.IsMedusaMap(
+                command.ExpectedSourceMapId) ||
             _character is null)
         {
             return false;

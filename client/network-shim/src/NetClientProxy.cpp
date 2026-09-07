@@ -5,6 +5,21 @@
 
 namespace godswar::network {
 
+namespace net_client_proxy_detail {
+
+bool IsRawFighterProjectionEligible(
+    SecureClientRuntimeState runtimeState,
+    const NativeClientSnapshot& client,
+    bool originHostSupported) noexcept {
+    return runtimeState == SecureClientRuntimeState::Disabled &&
+        client.registered &&
+        client.state == NativeClientState::Connected &&
+        client.decision == ClientRouteDecision::PassThrough &&
+        originHostSupported;
+}
+
+} // namespace net_client_proxy_detail
+
 NetClientProxy::NetClientProxy(
     ILegacyNetClient* legacyClient,
     NativeClientCoordinator* coordinator,
@@ -109,6 +124,7 @@ std::uint32_t NetClientProxy::Release() {
     auto* legacyClient = legacyClient_;
     avatarPreviewGate_.Reset();
     warehousePageHost_.Reset();
+    rawFighterProjectionBridge_.Reset();
     StopSecureSession();
     legacyClient_ = nullptr;
     if (coordinator_ != nullptr) {
@@ -154,6 +170,7 @@ void NetClientProxy::SetHost(const char* host, std::uint16_t port) {
 bool NetClientProxy::Connect() {
     avatarPreviewGate_.Reset();
     warehousePageHost_.Reset();
+    rawFighterProjectionBridge_.Reset();
 
     if (coordinator_ == nullptr) {
         return legacyClient_->Connect();
@@ -198,6 +215,7 @@ bool NetClientProxy::Connect() {
 void NetClientProxy::DisConnect() {
     avatarPreviewGate_.Reset();
     warehousePageHost_.Reset();
+    rawFighterProjectionBridge_.Reset();
     if (secureSession_ != nullptr) {
         StopSecureSession();
     } else {
@@ -216,6 +234,15 @@ void NetClientProxy::Process() {
         StopSecureSession();
         if (coordinator_ != nullptr) {
             static_cast<void>(coordinator_->Reset(proxyId_));
+        }
+    }
+    if (!ApplyPendingFighterExperienceProjections()) {
+        rawFighterProjectionBridge_.Reset();
+        if (secureSession_ != nullptr) {
+            StopSecureSession();
+            if (coordinator_ != nullptr) {
+                static_cast<void>(coordinator_->Reset(proxyId_));
+            }
         }
     }
     std::uint8_t pageRequest[12]{};
@@ -240,6 +267,10 @@ void* NetClientProxy::PickMsg() {
     }
 
     void* message = legacyClient_->PickMsg();
+    if (IsRawPassThroughConnected()) {
+        static_cast<void>(
+            rawFighterProjectionBridge_.ObserveServerMessage(message));
+    }
     warehousePageHost_.ObserveServerMessage(message);
     if (secureSession_ != nullptr) {
         secureSession_->ObserveLegacyServerMessage(message);
@@ -250,6 +281,9 @@ void* NetClientProxy::PickMsg() {
 bool NetClientProxy::SendMsg(const void* data, int size) {
     AcquireSRWLockExclusive(&secureSendLock_);
     std::uint8_t warehousePacket[20]{};
+    std::uint8_t rawFighterPacket[
+        LegacyFighterLevelSealActionPacketBytes]{};
+    RawFighterLevelSealPreparedSend rawFighterPrepared{};
     const void* routedData = data;
     if (warehousePageHost_.TryRewriteClientPacket(
             data,
@@ -257,6 +291,15 @@ bool NetClientProxy::SendMsg(const void* data, int size) {
             warehousePacket,
             sizeof(warehousePacket))) {
         routedData = warehousePacket;
+    }
+    if (IsRawPassThroughConnected() &&
+        rawFighterProjectionBridge_.TryPrepareClientPacket(
+            routedData,
+            size,
+            rawFighterPacket,
+            sizeof(rawFighterPacket),
+            &rawFighterPrepared)) {
+        routedData = rawFighterPacket;
     }
     if (secureSession_ != nullptr) {
         const auto routed =
@@ -288,6 +331,9 @@ bool NetClientProxy::SendMsg(const void* data, int size) {
     }
 
     const bool sent = legacyClient_->SendMsg(routedData, size);
+    rawFighterProjectionBridge_.CompleteClientSend(
+        rawFighterPrepared,
+        sent);
     if (sent) {
         warehousePageHost_.ObserveClientPacket(routedData, size);
     }
@@ -391,6 +437,52 @@ bool NetClientProxy::TryBuildSecureConfiguration(
         };
     return configuration->grantRegistry != nullptr &&
         configuration->operationRegistry != nullptr;
+}
+
+bool NetClientProxy::IsRawPassThroughConnected() const noexcept {
+    if (secureSession_ != nullptr || coordinator_ == nullptr ||
+        secureRuntime_ == nullptr) {
+        return false;
+    }
+    NativeClientSnapshot snapshot{};
+    return coordinator_->TryGetSnapshot(proxyId_, &snapshot) &&
+        net_client_proxy_detail::IsRawFighterProjectionEligible(
+            secureRuntime_->Snapshot().state,
+            snapshot,
+            fighterExperienceHost_.IsSupported());
+}
+
+bool NetClientProxy::
+ApplyPendingFighterExperienceProjections() noexcept {
+    RawFighterExperienceProjection rawProjection{};
+    while (rawFighterProjectionBridge_.TryTakeProjection(
+            &rawProjection)) {
+        if (!fighterExperienceHost_.Apply(
+                rawProjection.currentExperience,
+                rawProjection.maximumExperience)) {
+            return false;
+        }
+    }
+
+    auto* registry = secureRuntime_ == nullptr
+        ? nullptr
+        : secureRuntime_->OperationRegistry();
+    if (registry == nullptr) {
+        return true;
+    }
+
+    // SecureOuterStream validates and publishes on its bridge worker. Origin
+    // state and UI are mutated only here, from the stock client's Process
+    // thread, after UUID/family/action/result validation has succeeded.
+    SecureFighterExperienceProjection projection{};
+    while (registry->TryTakeFighterExperienceProjection(&projection)) {
+        if (!fighterExperienceHost_.Apply(
+                projection.currentExperience,
+                projection.maximumExperience)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void NetClientProxy::StopSecureSession() noexcept {

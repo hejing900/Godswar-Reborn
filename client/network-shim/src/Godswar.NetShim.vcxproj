@@ -83,7 +83,9 @@
     <ClInclude Include="NativeClientCoordinator.h" />
     <ClInclude Include="NativeNetworkLimits.h" />
     <ClInclude Include="NetClientProxy.h" />
+    <ClInclude Include="OriginFighterExperienceHost.h" />
     <ClInclude Include="OriginWarehousePageHost.h" />
+    <ClInclude Include="RawFighterLevelSealProjectionBridge.h" />
     <ClInclude Include="OpaqueDuplexPump.h" />
     <ClInclude Include="SocketHandle.h" />
     <ClInclude Include="SchannelClientStream.h" />
@@ -103,6 +105,9 @@
     <ClInclude Include="SecurePetAlterCommandIdentity.h" />
     <ClInclude Include="SecurePetManagerUtilityIdentity.h" />
     <ClInclude Include="SecureEquipmentBagTransferIdentity.h" />
+    <ClInclude Include="SecureFactionCrierCommandIdentity.h" />
+    <ClInclude Include="SecureFighterLevelSealCommandIdentity.h" />
+    <ClInclude Include="SecureOnlineAwardCommandIdentity.h" />
     <ClInclude Include="SecureWarehouseCommandIdentity.h" />
     <ClInclude Include="SecureForgeCommandIdentity.h" />
     <ClInclude Include="SecureHolyStoneCommandIdentity.h" />
@@ -133,8 +138,10 @@
   <ItemGroup>
     <ClCompile Include="AvatarPreviewGate.cpp" />
     <ClCompile Include="OriginAvatarPreviewHost.cpp" />
+    <ClCompile Include="OriginFighterExperienceHost.cpp" />
     <ClCompile Include="OriginWarehousePageHost.cpp" />
     <ClCompile Include="OriginWarehousePageHost.Patches.cpp" />
+    <ClCompile Include="RawFighterLevelSealProjectionBridge.cpp" />
     <ClCompile Include="BoundedChunkQueue.cpp" />
     <ClCompile Include="DevelopmentTlsCertificate.cpp" />
     <ClCompile Include="EndpointManifest.cpp" />
@@ -169,6 +176,9 @@
     <ClCompile Include="SecureGameControl.cpp" />
     <ClCompile Include="SecureGameGrantRegistry.cpp" />
     <ClCompile Include="SecureEquipmentBagTransferIdentity.cpp" />
+    <ClCompile Include="SecureFactionCrierCommandIdentity.cpp" />
+    <ClCompile Include="SecureFighterLevelSealCommandIdentity.cpp" />
+    <ClCompile Include="SecureOnlineAwardCommandIdentity.cpp" />
     <ClCompile Include="SecureWarehouseCommandIdentity.cpp" />
     <ClCompile Include="SecureForgeCommandIdentity.cpp" />
     <ClCompile Include="SecureHolyStoneCommandIdentity.cpp" />
@@ -186,6 +196,10 @@
     <ClCompile Include="SecurePendingOperationRegistry.ClassSuit.cpp" />
     <ClCompile Include="SecurePendingOperationRegistry.Pets.cpp" />
     <ClCompile Include="SecurePendingOperationRegistry.EquipmentBagTransfer.cpp" />
+    <ClCompile Include="SecurePendingOperationRegistry.FactionCrier.cpp" />
+    <ClCompile Include="SecurePendingOperationRegistry.FighterExperience.cpp" />
+    <ClCompile Include="SecurePendingOperationRegistry.FighterLevelSeal.cpp" />
+    <ClCompile Include="SecurePendingOperationRegistry.OnlineAward.cpp" />
     <ClCompile Include="SecurePendingOperationRegistry.Warehouse.cpp" />
     <ClCompile Include="SecurePendingOperationRegistry.Forge.cpp" />
     <ClCompile Include="SecurePendingOperationRegistry.HolyEquipment.cpp" />

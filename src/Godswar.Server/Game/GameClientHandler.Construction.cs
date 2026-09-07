@@ -1,8 +1,11 @@
 using Godswar.Server.Application.Accounts;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Coordination;
+using Godswar.Server.Application.FactionCrier;
 using Godswar.Server.Application.Inventory;
+using Godswar.Server.Application.OnlineAwards;
 using Godswar.Server.Application.Pets;
+using Godswar.Server.Application.Progression;
 using Godswar.Server.Application.Rewards;
 using Godswar.Server.Application.Realms;
 using Godswar.Server.Application.Talents;
@@ -39,6 +42,8 @@ internal sealed partial class GameClientHandler
             developerItemGrantCommands = null,
         IDeveloperBagClearCommandExecutor?
             developerBagClearCommands = null,
+        IDeveloperProgressionCommandExecutor?
+            developerProgressionCommands = null,
         IMakeAttributeStoneCommandExecutor?
             makeAttributeStoneCommands = null,
         IGearMentorMaterialConversionCommandExecutor?
@@ -75,6 +80,14 @@ internal sealed partial class GameClientHandler
             monsterDeathRewardCommands = null,
         IPetDurableCommandExecutor?
             petDurableCommands = null,
+        IFactionCrierCommandExecutor?
+            factionCrierCommands = null,
+        FactionCrierBalanceSnapshot?
+            factionCrierBalance = null,
+        IOnlineAwardCommandExecutor?
+            onlineAwardCommands = null,
+        OnlineAwardBalanceSnapshot?
+            onlineAwardBalance = null,
         ICharacterRuntimeProjectionReader?
             characterRuntimeProjections = null,
         IOwnedPetSnapshotReader?
@@ -102,7 +115,11 @@ internal sealed partial class GameClientHandler
         IWarehouseTransferCommandExecutor? warehouseTransferCommands = null,
         IWarehouseExpansionCommandExecutor? warehouseExpansionCommands = null,
         WarehouseExpansionPolicySnapshot? warehouseExpansionPolicy = null,
-        IMedusaDailyEntryClaimStore? medusaDailyEntries = null)
+        IMedusaDailyEntryClaimStore? medusaDailyEntries = null,
+        ILegacyInstanceDailyEntryClaimStore?
+            legacyInstanceDailyEntries = null,
+        ILegacyInstanceOpalPaymentStore?
+            legacyInstanceOpalPayments = null)
     {
         if (backhaulSkillCastTime < TimeSpan.Zero)
         {
@@ -168,6 +185,8 @@ internal sealed partial class GameClientHandler
         _talentUpgradeCommands = talentUpgradeCommands;
         _developerItemGrantCommands = developerItemGrantCommands;
         _developerBagClearCommands = developerBagClearCommands;
+        _developerProgressionCommands =
+            developerProgressionCommands;
         _makeAttributeStoneCommands = makeAttributeStoneCommands;
         _gearMentorMaterialConversionCommands =
             gearMentorMaterialConversionCommands;
@@ -197,11 +216,17 @@ internal sealed partial class GameClientHandler
         _requiresDurablePlayerCommands =
             requiresDurablePlayerCommands;
         _petDurableCommands = petDurableCommands;
+        _factionCrierCommands = factionCrierCommands;
+        _factionCrierBalance = factionCrierBalance;
+        _onlineAwardCommands = onlineAwardCommands;
+        _onlineAwardBalance = onlineAwardBalance;
         _warehouseSnapshots = warehouseSnapshots;
         _warehouseTransferCommands = warehouseTransferCommands;
         _warehouseExpansionCommands = warehouseExpansionCommands;
         _warehouseExpansionPolicy = warehouseExpansionPolicy;
         _medusaDailyEntries = medusaDailyEntries;
+        _legacyInstanceDailyEntries = legacyInstanceDailyEntries;
+        _legacyInstanceOpalPayments = legacyInstanceOpalPayments;
         _petOwnerMergeEnergyInterval =
             petOwnerMergeEnergyInterval ?? TimeSpan.FromSeconds(3);
         _petOwnerMergeRechargeInterval =
@@ -255,6 +280,10 @@ internal sealed partial class GameClientHandler
                 _zodiacSkillGridSelectionCommands,
                 _characterLifecycleCommands,
                 _petDurableCommands,
+                _factionCrierCommands,
+                _factionCrierBalance,
+                _onlineAwardCommands,
+                _onlineAwardBalance,
                 _warehouseSnapshots,
                 _warehouseTransferCommands,
                 _warehouseExpansionCommands,
@@ -271,6 +300,14 @@ internal sealed partial class GameClientHandler
 
         _developerCommands =
             developerCommands ?? new DeveloperCommandOptions();
+        if (_requiresDurablePlayerCommands &&
+            _developerCommands.Enabled &&
+            _developerProgressionCommands is null)
+        {
+            throw new InvalidOperationException(
+                "Enabled production developer commands require the " +
+                "durable developer progression executor.");
+        }
         _legacyAuthenticationAccess = legacyAuthenticationAccess;
         _phase4AcceptanceFaults = phase4AcceptanceFaults;
         _mapTransitionReadyTimeout =

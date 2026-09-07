@@ -1,6 +1,8 @@
 using Godswar.Server.Application.Messaging;
 using Godswar.Server.Infrastructure.Characters;
+using Godswar.Server.Infrastructure.FactionCrier;
 using Godswar.Server.Infrastructure.Inventory;
+using Godswar.Server.Infrastructure.OnlineAwards;
 using Godswar.Server.Infrastructure.Pets;
 using Godswar.Server.Infrastructure.Progression;
 using Godswar.Server.Infrastructure.Rewards;
@@ -23,6 +25,8 @@ internal static class PostgresOutboxConsumerCatalog
         new MonsterDeathRewardOutboxConsumer(),
         new ProgressionIntervalSettlementOutboxConsumer(),
         new PetDurableOutboxConsumer(),
+        new FactionCrierOutboxConsumer(),
+        new OnlineAwardOutboxConsumer(),
         new WarehouseProjectionOutboxConsumer()
     ];
 }

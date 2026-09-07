@@ -280,30 +280,30 @@ internal static partial class PostgresWorldContentReaderIntegrationChecks
             await reader.ReadAsync(),
             "official NPC release metadata exists");
         Check.Equal(
-            NpcContentBaselineV1.ExpectedRevision,
+            NpcContentBaselineV7.ExpectedRevision,
             reader.GetString(0),
             "official NPC publication revision");
         Check.Equal(
-            NpcContentBaselineV1.ExpectedEntryCount,
+            NpcContentBaselineV7.ExpectedEntryCount,
             reader.GetInt32(1),
             "official NPC release entry count");
         Check.Equal(
-            NpcContentBaselineV1.Source,
+            NpcContentBaselineV7.Source,
             reader.GetString(2),
             "official NPC release source");
         Check.Equal(
-            NpcContentBaselineV1.ExpectedEntryCount,
+            NpcContentBaselineV7.ExpectedEntryCount,
             reader.GetInt32(3),
             "official NPC release stored definition count");
         Check.True(
             !await reader.ReadAsync(),
             "official NPC publication metadata is singular");
         Check.Equal(
-            NpcContentBaselineV1.ExpectedRevision,
+            NpcContentBaselineV7.ExpectedRevision,
             postgres.Manifest.Npcs.Sha256,
             "pinned reader uses the official NPC release revision");
         Check.Equal(
-            NpcContentBaselineV1.ExpectedEntryCount,
+            NpcContentBaselineV7.ExpectedEntryCount,
             postgres.Manifest.Npcs.EntryCount,
             "pinned reader uses every official NPC definition");
     }

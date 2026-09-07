@@ -20,6 +20,13 @@ internal sealed partial class GameClientHandler
         GamePacket packet,
         CancellationToken cancellationToken)
     {
+        if (await HandleDeveloperProgressionCommandAsync(
+                packet,
+                cancellationToken))
+        {
+            return true;
+        }
+
         if (await HandleDeveloperMedusaTitleCommandAsync(
                 packet,
                 cancellationToken))

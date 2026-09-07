@@ -15,7 +15,8 @@ internal enum CriticalTaskKind : byte
     DurableProgressionRetry = 11,
     PostgresReadiness = 12,
     RedisCoordination = 13,
-    Reconciliation = 14
+    Reconciliation = 14,
+    LegacyInstanceOpalRecovery = 15
 }
 
 internal enum CriticalTaskState : byte
@@ -275,6 +276,8 @@ internal static class CriticalTaskCodes
                 "redis_coordination",
             CriticalTaskKind.Reconciliation =>
                 "reconciliation",
+            CriticalTaskKind.LegacyInstanceOpalRecovery =>
+                "legacy_instance_opal_recovery",
             _ => throw new ArgumentOutOfRangeException(nameof(task))
         };
 

@@ -14,9 +14,7 @@ internal static partial class CharacterSnapshotContractChecks
     {
         const int accountId = 7;
         const int characterId = 19;
-        var level = fighterLevelSealed
-            ? PlayerExperienceCatalog.FighterLevelSealLevel
-            : 80;
+        const int level = 80;
         var stats = new CharacterCalculatedStatsSnapshot(
             characterId,
             accountId,

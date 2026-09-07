@@ -200,12 +200,19 @@ internal static partial class Program
                 now.AddHours(8),
                 "weekend"),
             new ActiveExperienceBoost(
-                ExperienceStatusIds.VipPlatinum,
-                ExperienceBoostKinds.Vip,
-                2_000,
-                4,
+                ExperienceStatusIds.OctagramPatron,
+                ExperienceBoostKinds.Donator,
+                2_500,
+                5,
                 null,
-                "vip:platinum")
+                "donator:octagram_patron"),
+            new ActiveExperienceBoost(
+                ExperienceStatusIds.PremiumBattlePass,
+                ExperienceBoostKinds.BattlePass,
+                BattlePassBenefits.ExperienceBonusBasisPoints,
+                1,
+                now.AddDays(20),
+                "battle-pass:premium")
         ]);
         var runtime = new ActiveRuntimeStatus(
             204,
@@ -217,14 +224,15 @@ internal static partial class Program
             1);
         var snapshot = PlayerStatusComposer.Compose(boosts, [runtime], now);
 
-        Check.Equal(3, snapshot.Effects.Count, "EXP and Sacred Zeal status count");
+        Check.Equal(4, snapshot.Effects.Count, "EXP and Sacred Zeal status count");
         Check.Equal(204u, snapshot.Effects[0].StatusId, "Sacred Zeal remains in sorted full snapshot");
         Check.Equal(600u, snapshot.Effects[0].RemainingSeconds, "Sacred Zeal timer starts at 600 seconds");
         Check.Equal(511u, snapshot.Effects[1].StatusId, "weekend EXP status is preserved");
-        Check.Equal(1503u, snapshot.Effects[2].StatusId, "VIP EXP status is preserved");
+        Check.Equal(1506u, snapshot.Effects[2].StatusId, "Octagram Patron EXP status is preserved");
+        Check.Equal(1507u, snapshot.Effects[3].StatusId, "Battle Pass EXP status is preserved");
         Check.Equal(60, snapshot.Aggregate.Hit, "Sacred Zeal aggregate Hit bonus");
         Check.Equal(24, snapshot.Aggregate.CriticalAppend, "Sacred Zeal aggregate Critical bonus");
-        Check.Equal(2.2f, snapshot.Aggregate.ExperienceBonus, "EXP aggregate is preserved");
+        Check.Equal(2.3f, snapshot.Aggregate.ExperienceBonus, "donator and Battle Pass EXP aggregate is preserved");
 
         var character = CreateCharacter();
         var packet = PacketBuilder.PlayerStatusEffects(
@@ -241,7 +249,7 @@ internal static partial class Program
             character.CalculatedStats.Critical + 24,
             ReadInt32(packet, 212),
             "StatusData includes base and Sacred Zeal Critical");
-        Check.Equal(2.2f, ReadSingle(packet, 300), "StatusData EXP wire offset");
+        Check.Equal(2.3f, ReadSingle(packet, 300), "StatusData EXP wire offset");
 
         var oneSecondLater = PlayerStatusComposer.Compose(boosts, [runtime], now.AddSeconds(1));
         Check.Equal(
@@ -251,10 +259,10 @@ internal static partial class Program
         Check.Equal(599u, oneSecondLater.Effects[0].RemainingSeconds, "status countdown still updates when republished");
 
         var expired = PlayerStatusComposer.Compose(boosts, [runtime], now.AddSeconds(601));
-        Check.Equal(2, expired.Effects.Count, "Sacred Zeal expires without removing EXP statuses");
+        Check.Equal(3, expired.Effects.Count, "Sacred Zeal expires without removing EXP statuses");
         Check.Equal(0, expired.Aggregate.Hit, "expired Sacred Zeal removes aggregate Hit");
         Check.Equal(0, expired.Aggregate.CriticalAppend, "expired Sacred Zeal removes aggregate Critical");
-        Check.Equal(2.2f, expired.Aggregate.ExperienceBonus, "expired Sacred Zeal preserves aggregate EXP");
+        Check.Equal(2.3f, expired.Aggregate.ExperienceBonus, "expired Sacred Zeal preserves aggregate EXP");
 
         return Task.CompletedTask;
     }

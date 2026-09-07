@@ -1,4 +1,5 @@
 using Godswar.Server.Networking;
+using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.State;
 
 namespace Godswar.Server.Game;
@@ -17,10 +18,11 @@ internal sealed partial class GameSessionRegistry
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(character);
-        if (character.CurrentMap is 200 or 204)
+        if (DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(
+                character.CurrentMap))
         {
             throw new InvalidOperationException(
-                "Medusa Island reconnect requires a durable exact-instance " +
+                "Dynamic-dungeon reconnect requires a durable exact-instance " +
                 "assignment; default map-only fallback is forbidden.");
         }
 

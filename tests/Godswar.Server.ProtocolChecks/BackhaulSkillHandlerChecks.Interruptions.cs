@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Reflection;
 using Godswar.Server.Game;
+using Godswar.Server.Packets;
 using Godswar.Server.Protocol;
 using Godswar.Server.State;
 
@@ -255,9 +256,19 @@ internal static partial class BackhaulSkillHandlerChecks
 
     private static async Task AssertInterruptedAsync(
         InterruptFixture fixture,
-        string description)
+        string description,
+        uint? expectedClaimObjectId = null)
     {
         var interrupted = await fixture.Socket.ReadPacketAsync();
+        if (expectedClaimObjectId is { } monsterId &&
+            ReadUInt16(interrupted, 2) == Opcodes.MonsterClaimState)
+        {
+            Check.Equal(
+                Convert.ToHexString(PacketBuilder.MonsterClaimState(monsterId)),
+                Convert.ToHexString(interrupted),
+                $"{description} publishes only the expected monster claim before interruption");
+            interrupted = await fixture.Socket.ReadPacketAsync();
+        }
         Check.Equal(
             "0800BB2748140000",
             Convert.ToHexString(interrupted),

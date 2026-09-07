@@ -1,6 +1,7 @@
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Domain.World.Instances;
+using Godswar.Server.Game;
 using Godswar.Server.Infrastructure.Database;
 using Godswar.Server.State;
 using Npgsql;
@@ -70,6 +71,7 @@ internal sealed partial class PostgresCharacterLifecycleCommandExecutor
             transaction,
             characterId.Value,
             command.Profession,
+            command.Camp,
             cancellationToken);
         await AdvanceAccountVersionAsync(
             connection,
@@ -253,6 +255,7 @@ internal sealed partial class PostgresCharacterLifecycleCommandExecutor
         NpgsqlTransaction transaction,
         int characterId,
         byte profession,
+        byte camp,
         CancellationToken cancellationToken)
     {
         await using var command = CreateCommand(
@@ -302,6 +305,7 @@ internal sealed partial class PostgresCharacterLifecycleCommandExecutor
               )
               AND @profession = ANY(template.class_ids)
             ON CONFLICT (user_id, skill_id) DO NOTHING;
+
             """,
             connection,
             transaction);
@@ -313,5 +317,63 @@ internal sealed partial class PostgresCharacterLifecycleCommandExecutor
             command,
             _gameplayContentRevision);
         await command.ExecuteNonQueryAsync(cancellationToken);
+
+        await SeedFactionPortalSkillAsync(
+            connection,
+            transaction,
+            characterId,
+            profession,
+            camp,
+            cancellationToken);
+    }
+
+    private async Task SeedFactionPortalSkillAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        int characterId,
+        byte profession,
+        byte camp,
+        CancellationToken cancellationToken)
+    {
+        await using var command = CreateCommand(
+            """
+            INSERT INTO public.character_skills (
+                user_id,
+                skill_id,
+                skill_level,
+                source
+            )
+            SELECT @characterId, template.skill_id, 1, 'faction-starter'
+            FROM public.gameplay_skill_combat_definitions template
+            WHERE template.skill_id = @factionPortalSkillId
+              AND template.revision = COALESCE(
+                  @gameplayContentRevision,
+                  (
+                      SELECT publication.revision
+                      FROM public.gameplay_content_publication publication
+                      WHERE publication.family = 'gameplay'
+                  )
+              )
+              AND @profession = ANY(template.class_ids)
+            ON CONFLICT (user_id, skill_id) DO NOTHING;
+            """,
+            connection,
+            transaction);
+        command.Parameters.AddWithValue("characterId", characterId);
+        command.Parameters.AddWithValue(
+            "profession",
+            checked((short)profession));
+        command.Parameters.AddWithValue(
+            "factionPortalSkillId",
+            checked((int)FactionPortalSkillPolicy.ResolveCapitalPortalSkillId(
+                camp)));
+        PostgresGameplayContentBinding.AddParameter(
+            command,
+            _gameplayContentRevision);
+        if (await command.ExecuteNonQueryAsync(cancellationToken) != 1)
+        {
+            throw new InvalidOperationException(
+                "Character creation did not seed exactly one faction portal skill.");
+        }
     }
 }

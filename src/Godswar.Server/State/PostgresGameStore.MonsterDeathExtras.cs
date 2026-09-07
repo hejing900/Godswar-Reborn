@@ -172,7 +172,8 @@ internal sealed partial class PostgresGameStore
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand(
-            "SELECT stats::text FROM public.item_templates WHERE id = @itemId;",
+            "SELECT stats::text FROM public.official_item_template_content " +
+            "WHERE id = @itemId;",
             connection,
             transaction);
         command.Parameters.AddWithValue("itemId", checked((int)itemId));

@@ -33,6 +33,8 @@ artifacts/
 captures/
 phase4-completion/
 .scratch/
+.codex-tmp/
+Dump/
 .tmp*
 client/network-shim/diagnostics/
 **/__pycache__/

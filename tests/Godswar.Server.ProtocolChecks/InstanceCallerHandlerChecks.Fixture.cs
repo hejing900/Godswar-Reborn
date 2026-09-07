@@ -4,6 +4,7 @@ using System.Reflection;
 using Godswar.Server.Application.Accounts;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.World;
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game;
@@ -17,7 +18,11 @@ internal static partial class InstanceCallerHandlerChecks
 {
     private static async Task<InstanceCallerFixture> CreateFixtureAsync(
         int? level = null,
-        bool transitionReady = false)
+        bool transitionReady = false,
+        ILegacyInstanceDailyEntryClaimStore?
+            legacyInstanceDailyEntries = null,
+        ILegacyInstanceOpalPaymentStore?
+            legacyInstanceOpalPayments = null)
     {
         var snapshot = CharacterSnapshotContractChecks.CreateValidSnapshot();
         var hydrated = CharacterLoadSnapshotHydrator.Hydrate(snapshot) ??
@@ -80,7 +85,9 @@ internal static partial class InstanceCallerHandlerChecks
             new InstanceCallerGameStore(),
             registry,
             new InstanceCallerSnapshotReader(snapshot),
-            worldContent);
+            worldContent,
+            legacyInstanceDailyEntries: legacyInstanceDailyEntries,
+            legacyInstanceOpalPayments: legacyInstanceOpalPayments);
         SetHandlerField(
             handler,
             "_account",

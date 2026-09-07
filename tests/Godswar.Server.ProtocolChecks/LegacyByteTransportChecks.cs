@@ -156,8 +156,8 @@ internal static class LegacyByteTransportChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginGameStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 legacyAuthenticationAccess:
                     legacyAuthenticationAccess);
             await handler.RunAsync(CancellationToken.None);

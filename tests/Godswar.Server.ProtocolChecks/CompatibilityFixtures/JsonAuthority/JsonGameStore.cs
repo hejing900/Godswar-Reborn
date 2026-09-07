@@ -234,16 +234,18 @@ internal sealed partial class JsonGameStore :
 
             var account = db.Accounts.FirstOrDefault(candidate => candidate.Id == accountId);
             if (account is not null &&
-                account.VipTier != VipTier.None &&
-                (account.VipExpiresAt is null || account.VipExpiresAt > now))
+                account.DonatorTier != DonatorTier.None &&
+                (account.DonatorExpiresAt is null ||
+                 account.DonatorExpiresAt > now))
             {
                 boosts.Add(new ActiveExperienceBoost(
-                    VipExperienceBoosts.StatusId(account.VipTier),
-                    ExperienceBoostKinds.Vip,
-                    VipExperienceBoosts.BonusBasisPoints(account.VipTier),
-                    (int)account.VipTier,
-                    account.VipExpiresAt,
-                    $"vip:{account.VipTier.ToString().ToLowerInvariant()}"));
+                    DonatorBenefits.StatusId(account.DonatorTier),
+                    ExperienceBoostKinds.Donator,
+                    DonatorBenefits.ExperienceBonusBasisPoints(
+                        account.DonatorTier),
+                    (int)account.DonatorTier,
+                    account.DonatorExpiresAt,
+                    $"donator:{account.DonatorTier.ToString().ToLowerInvariant()}"));
             }
 
             var areaControl = db.FactionAreaExperienceControls.FirstOrDefault(control =>

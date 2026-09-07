@@ -21,7 +21,8 @@ internal static partial class PostgresItemTemplateBaselinePublisher
     private const long PublicationLockId = 0x4954454D53434F4E;
     private const string PublicationSource =
         "items-v9+holy-v3+element-v1+sockets-v1+holy-stones-v2+" +
-        "zephyr-v1+mount-speed-v3+pets-v5+warehouse-v1";
+        "zephyr-v1+mount-speed-v3+pets-v5+nameplates-v1+warehouse-v1+" +
+        "opal-v1";
 
     public static async Task<ItemTemplatePublicationResult>
         EnsurePublishedAsync(
@@ -86,12 +87,23 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                     transaction,
                     existing.Revision,
                     cancellationToken);
+            var hasNameplates =
+                await PublishedNameplatesAreCompleteAsync(
+                    connection,
+                    transaction,
+                    existing.Revision,
+                    cancellationToken);
             var hasWarehouseItems =
                 await PublishedWarehouseItemsAreCompleteAsync(
                     connection,
                     transaction,
                     existing.Revision,
                     cancellationToken);
+            var hasOpal = await PublishedOpalIsCompleteAsync(
+                connection,
+                transaction,
+                existing.Revision,
+                cancellationToken);
             var hasMountSpeedProfile =
                 await PublishedMountSpeedProfileIsCurrentAsync(
                     connection,
@@ -103,7 +115,9 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                 hasSocketSpells &&
                 hasHolyStoneMaterials &&
                 hasPetItems &&
+                hasNameplates &&
                 hasWarehouseItems &&
+                hasOpal &&
                 hasMountSpeedProfile &&
                 publishedHolySuit.OperationPolicy.Equals(
                     ReviewedHolySuitPolicy.OperationPolicy))
@@ -134,7 +148,17 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                     transaction,
                     existing.Revision,
                     cancellationToken);
+                await EnsureNameplateMutableCompatibilityAsync(
+                    connection,
+                    transaction,
+                    existing.Revision,
+                    cancellationToken);
                 await EnsureWarehouseMutableCompatibilityAsync(
+                    connection,
+                    transaction,
+                    existing.Revision,
+                    cancellationToken);
+                await EnsureOpalMutableCompatibilityAsync(
                     connection,
                     transaction,
                     existing.Revision,
@@ -229,7 +253,17 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             transaction,
             revision,
             cancellationToken);
+        await EnsureNameplateMutableCompatibilityAsync(
+            connection,
+            transaction,
+            revision,
+            cancellationToken);
         await EnsureWarehouseMutableCompatibilityAsync(
+            connection,
+            transaction,
+            revision,
+            cancellationToken);
+        await EnsureOpalMutableCompatibilityAsync(
             connection,
             transaction,
             revision,

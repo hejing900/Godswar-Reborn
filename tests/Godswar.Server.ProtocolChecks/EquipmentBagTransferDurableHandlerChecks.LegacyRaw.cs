@@ -180,17 +180,21 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
     private static LegacyRawTransferFixture CreateLegacyRawFixture(
         bool hasLocalLegacyAuthenticationAccess,
         bool equipFromBag = false,
-        IPetDurableCommandExecutor? petDurableCommands = null)
+        IPetDurableCommandExecutor? petDurableCommands = null,
+        TransferSlotState? activationState = null,
+        GameplayRuntimeCatalogs? gameplayCatalogs = null)
     {
         var baseSnapshot =
             CharacterSnapshotContractChecks.CreateValidSnapshot();
         var liveSnapshot = WithTransferState(
             baseSnapshot,
-            equipFromBag ? UnequipAfterState : UnequipBeforeState,
+            activationState ??
+                (equipFromBag ? UnequipAfterState : UnequipBeforeState),
             physicalAttack: 400);
         var movedSnapshot = WithTransferState(
             baseSnapshot,
-            equipFromBag ? UnequipBeforeState : UnequipAfterState,
+            activationState ??
+                (equipFromBag ? UnequipBeforeState : UnequipAfterState),
             PersistedPhysicalAttack);
         var live = CharacterLoadSnapshotHydrator
             .Hydrate(liveSnapshot)?.Character
@@ -235,6 +239,7 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
             snapshotReader,
             WorldContentReaderTestFixtures.Empty,
             legacyAuthenticationAccess: localAccess,
+            gameplayCatalogs: gameplayCatalogs,
             itemContent: TestItemContent.Content,
             petContent: PetContentTestCatalog.Instance,
             petDurableCommands: petDurableCommands);

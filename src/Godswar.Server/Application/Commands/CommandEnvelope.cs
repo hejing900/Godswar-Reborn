@@ -62,8 +62,11 @@ internal enum CommandFamily : ushort
     PetBind = 53,
     PetSoulContract = 54,
     PetManagerUtility = 55,
+    FactionCrier = 56,
+    OnlineAward = 57,
     WarehouseTransfer = 58,
-    WarehouseExpansion = 59
+    WarehouseExpansion = 59,
+    FighterLevelSeal = 60
 }
 
 internal enum CommandIdentityStrength : byte

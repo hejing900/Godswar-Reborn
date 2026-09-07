@@ -44,13 +44,13 @@ internal static partial class Program
                 PostgresKitBagItemMoveCommandIntegrationChecks
                     .RunAsync),
             (
+                PostgresWarehouseCommandIntegrationChecks.CheckName,
+                PostgresWarehouseCommandIntegrationChecks.RunAsync),
+            (
                 PostgresEquipmentBagTransferCommandIntegrationChecks
                     .CheckName,
                 PostgresEquipmentBagTransferCommandIntegrationChecks
                     .RunAsync),
-            (
-                PostgresWarehouseCommandIntegrationChecks.CheckName,
-                PostgresWarehouseCommandIntegrationChecks.RunAsync),
             (
                 PostgresHolyStoneCommandIntegrationChecks.CheckName,
                 PostgresHolyStoneCommandIntegrationChecks.RunAsync),
@@ -80,6 +80,9 @@ internal static partial class Program
             (
                 "PostgreSQL migration safety foundation",
                 PostgresMigrationFoundationChecks.RunAsync),
+            (
+                PostgresDonatorTierMigrationIntegrationChecks.CheckName,
+                PostgresDonatorTierMigrationIntegrationChecks.RunAsync),
             (
                 PostgresCharacterCheckpointIntegrationChecks.CheckName,
                 PostgresCharacterCheckpointIntegrationChecks.RunAsync),

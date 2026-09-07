@@ -61,7 +61,8 @@ internal sealed partial class GameClientHandler
             !TryResolveMapNpc(npc.InteractionId, out var currentNpc) ||
             !WarehouseNpcProtocol.IsWarehouseEndpoint(
                 currentNpc.NpcKey,
-                currentNpc.InteractionId))
+                currentNpc.InteractionId) ||
+            !CanUseDuelArenaWarehouseNpc(currentNpc))
         {
             return;
         }

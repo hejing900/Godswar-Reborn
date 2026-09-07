@@ -12,6 +12,7 @@ internal sealed record InstanceCallerPageContext(
     string NpcKey,
     uint NpcInteractionId,
     int DialogIndex,
+    int RootSubId,
     WorldInstanceId SourceWorldInstanceId,
     Guid PageNonce,
     DateTimeOffset ExpiresAt);

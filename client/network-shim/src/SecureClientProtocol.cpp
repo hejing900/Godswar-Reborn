@@ -105,8 +105,10 @@ bool IsPayloadValid(
         case SecureFrameType::LegacyCommandResult:
             return role == SecureEndpointRole::Game &&
                 direction == SecureFrameDirection::ServerToClient &&
-                payloadBytes ==
-                    SecureLegacyCommandResultPayloadBytes;
+                (payloadBytes ==
+                        SecureLegacyCommandResultPayloadBytes ||
+                    payloadBytes ==
+                        SecureLegacyCommandResultV2PayloadBytes);
         case SecureFrameType::GameGrant:
             return role == SecureEndpointRole::Login &&
                 direction == SecureFrameDirection::ServerToClient &&

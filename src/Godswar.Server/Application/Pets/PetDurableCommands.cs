@@ -52,7 +52,8 @@ internal readonly record struct PetCaptureIntent(
 internal enum BagItemActivationExecutionConstraint : byte
 {
     None = 0,
-    RideRuntimeBlocked = 1
+    RideRuntimeBlocked = 1,
+    PlayerSkillBookOnly = 2
 }
 
 internal readonly record struct PetLevelUpgradeCommand(

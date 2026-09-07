@@ -65,7 +65,9 @@ internal static partial class CharacterSnapshotContract
             "character name");
         RequireUtc(identity.CreatedAtUtc, "character creation time");
         if (identity.CharacterSlot != 0 ||
-            identity.LifecycleVersion < 1)
+            identity.LifecycleVersion < 1 ||
+            identity.FactionCrierRevision < 0 ||
+            identity.OnlineAwardRevision < 0)
         {
             throw Invalid(
                 "Character lifecycle identity is outside the " +
@@ -131,14 +133,6 @@ internal static partial class CharacterSnapshotContract
             throw Invalid("Character progression is outside persisted bounds.");
         }
 
-        if (progression.FighterLevelSealed &&
-            progression.Level !=
-            CharacterProgressionSnapshotRules.FighterLevelSealLevel)
-        {
-            throw Invalid(
-                $"Fighter level sealing is valid only at level " +
-                $"{CharacterProgressionSnapshotRules.FighterLevelSealLevel}.");
-        }
     }
 
     private static void ValidateVitals(CharacterVitalsSnapshot vitals)

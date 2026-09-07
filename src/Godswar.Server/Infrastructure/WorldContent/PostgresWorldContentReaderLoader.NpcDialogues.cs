@@ -69,8 +69,7 @@ internal static partial class PostgresWorldContentReaderLoader
             ValidateNpcDialogueCompatibility(
                 npcDefinitions,
                 texts,
-                routes,
-                profiles);
+                routes);
 
             var computed =
                 WorldContentRevisionHasher.HashNpcDialogues(texts, routes);
@@ -333,6 +332,7 @@ internal static partial class PostgresWorldContentReaderLoader
             CancellationToken cancellationToken)
     {
         var routes = new List<NpcDialogueRouteDefinition>(expectedCount);
+        var usedProfileKeys = new HashSet<string>(StringComparer.Ordinal);
         await using var command = new NpgsqlCommand(
             """
             SELECT npc_key, client_script_key, profile_key, route_order
@@ -357,6 +357,8 @@ internal static partial class PostgresWorldContentReaderLoader
                     "An NPC dialogue binding references an unknown profile.");
             }
 
+            usedProfileKeys.Add(profileKey);
+
             routes.Add(new NpcDialogueRouteDefinition(
                 reader.GetString(0),
                 reader.GetString(1),
@@ -374,6 +376,12 @@ internal static partial class PostgresWorldContentReaderLoader
             throw new InvalidDataException(
                 "The NPC dialogue route count is incomplete.");
         }
+        if (profiles.Keys.Any(profileKey =>
+                !usedProfileKeys.Contains(profileKey)))
+        {
+            throw new InvalidDataException(
+                "An NPC dialogue profile has no route binding.");
+        }
 
         return routes
             .OrderBy(static route => route.NpcKey, StringComparer.Ordinal)
@@ -384,8 +392,7 @@ internal static partial class PostgresWorldContentReaderLoader
     private static void ValidateNpcDialogueCompatibility(
         IReadOnlyList<NpcSpawnDefinition> npcDefinitions,
         IReadOnlyList<NpcTextDefinition> texts,
-        IReadOnlyList<NpcDialogueRouteDefinition> routes,
-        IReadOnlyDictionary<string, LoadedNpcDialogueProfile> profiles)
+        IReadOnlyList<NpcDialogueRouteDefinition> routes)
     {
         var spawns = npcDefinitions.ToDictionary(
             static spawn => spawn.NpcKey,
@@ -416,10 +423,9 @@ internal static partial class PostgresWorldContentReaderLoader
         {
             if (!textKeys.Contains(route.NpcKey) ||
                 !routeKeys.Add((route.NpcKey, route.RouteOrder)) ||
-                !string.Equals(
+                !DuelArenaCapturedTransportProtocol.IsAllowedClientScriptKey(
                     route.NpcKey,
-                    route.ClientScriptKey,
-                    StringComparison.Ordinal))
+                    route.ClientScriptKey))
             {
                 throw new InvalidDataException(
                     "An NPC dialogue route is invalid or duplicated.");
@@ -444,14 +450,5 @@ internal static partial class PostgresWorldContentReaderLoader
             }
         }
 
-        var usedBehaviors = routes
-            .Select(static route => route.Behavior)
-            .ToHashSet();
-        if (profiles.Values.Any(
-                profile => !usedBehaviors.Contains(profile.Behavior)))
-        {
-            throw new InvalidDataException(
-                "An NPC dialogue profile has no route binding.");
-        }
     }
 }

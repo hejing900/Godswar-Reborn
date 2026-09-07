@@ -47,13 +47,21 @@ function Write-Fixture {
 function Write-OriginFixture {
     param(
         [string]$Root,
-        [switch]$UnknownFormat
+        [switch]$UnknownFormat,
+        [switch]$LegacyPatched
     )
 
     $path = Join-Path $Root 'Origin.exe'
     [IO.Directory]::CreateDirectory($Root) | Out-Null
     $formatOffset = 0x554FCC
     $suffixOffset = 0x557904
+    $sharedOperand = [BitConverter]::GetBytes([uint32]0x00954FCC)
+    $sharedCallOperands = @(
+        0x0D8047,
+        0x17EB07,
+        0x1CEEA4,
+        0x1E487F,
+        0x1E743E)
     $bytes = [byte[]]::new($suffixOffset + 16)
     $bytes[0] = 0x4D
     $bytes[1] = 0x5A
@@ -63,8 +71,27 @@ function Write-OriginFixture {
         $bytes,
         0x554F78,
         9)
-    $format = [Text.Encoding]::Unicode.GetBytes(
-        $(if ($UnknownFormat) { "?s ?s`0" } else { "%s %s`0" }))
+    [Array]::Copy(
+        [Text.Encoding]::Unicode.GetBytes("%s`0"),
+        0,
+        $bytes,
+        0x551528,
+        6)
+    foreach ($operandOffset in $sharedCallOperands) {
+        $bytes[$operandOffset - 1] = 0x68
+        [Array]::Copy(
+            $sharedOperand, 0, $bytes, $operandOffset, 4)
+    }
+    $formatText = if ($UnknownFormat) {
+        "?s ?s`0"
+    }
+    elseif ($LegacyPatched) {
+        "%s`0`0`0`0"
+    }
+    else {
+        "%s %s`0"
+    }
+    $format = [Text.Encoding]::Unicode.GetBytes($formatText)
     [Array]::Copy($format, 0, $bytes, $formatOffset, $format.Length)
     $suffix = [Text.Encoding]::Unicode.GetBytes(" - `0")
     [Array]::Copy($suffix, 0, $bytes, $suffixOffset, $suffix.Length)
@@ -75,6 +102,19 @@ function Write-OriginFixture {
 function Get-Hash {
     param([string]$Path)
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+}
+
+function Get-BytesHash {
+    param([byte[]]$Bytes)
+
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        return ([BitConverter]::ToString(
+            $algorithm.ComputeHash($Bytes))).Replace('-', '')
+    }
+    finally {
+        $algorithm.Dispose()
+    }
 }
 
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) (
@@ -137,18 +177,31 @@ try {
             "(?m)^AreaTitle11\t$([regex]::Escape($chineseArea))\r`$") `
         'Apply changed the Chinese region suffix.'
     $originBytes = [IO.File]::ReadAllBytes($origin)
-    $baseOnly = [Text.Encoding]::Unicode.GetBytes("%s`0`0`0`0")
+    $sharedFormat = [Text.Encoding]::Unicode.GetBytes("%s %s`0")
+    $sharedOperand = [BitConverter]::GetBytes([uint32]0x00954FCC)
+    $baseOnlyOperand = [BitConverter]::GetBytes([uint32]0x00951528)
     $dynamicSuffix = [Text.Encoding]::Unicode.GetBytes(" - `0")
-    $actualBaseOnly = $originBytes[
-        0x554FCC..(0x554FCC + $baseOnly.Length - 1)]
+    $actualSharedFormat = $originBytes[
+        0x554FCC..(0x554FCC + $sharedFormat.Length - 1)]
+    $actualTitleOperand = $originBytes[
+        0x0D8047..(0x0D8047 + $baseOnlyOperand.Length - 1)]
     $actualDynamicSuffix = $originBytes[
         0x557904..(0x557904 + $dynamicSuffix.Length - 1)]
-    $baseDifference = Compare-Object $baseOnly $actualBaseOnly
-    $suffixDifference = Compare-Object `
-        $dynamicSuffix $actualDynamicSuffix
-    Assert-True ($null -eq $baseDifference) `
-        'Apply did not install the base-only title format.'
-    Assert-True ($null -eq $suffixDifference) `
+    Assert-True ($null -eq (Compare-Object `
+            $sharedFormat $actualSharedFormat)) `
+        'Apply changed the shared two-string format.'
+    Assert-True ($null -eq (Compare-Object `
+            $baseOnlyOperand $actualTitleOperand)) `
+        'Apply did not redirect only the title caller.'
+    foreach ($operandOffset in @(0x17EB07, 0x1CEEA4, 0x1E487F, 0x1E743E)) {
+        $actualOperand = $originBytes[
+            $operandOffset..($operandOffset + $sharedOperand.Length - 1)]
+        Assert-True ($null -eq (Compare-Object `
+                $sharedOperand $actualOperand)) `
+            "Apply redirected shared consumer 0x$($operandOffset.ToString('X'))."
+    }
+    Assert-True ($null -eq (Compare-Object `
+            $dynamicSuffix $actualDynamicSuffix)) `
         'Apply changed the native dynamic realm separator.'
 
     $second = & $patcher -Mode Apply -ClientRoot $clientRoot `
@@ -165,6 +218,51 @@ try {
         (Get-Hash $zh) -ceq $originalZhHash -and
         (Get-Hash $origin) -ceq $originalOriginHash) `
         'Rollback did not restore the exact original bytes.'
+
+    $legacyRoot = Join-Path $testRoot 'legacy-client'
+    $null = Write-Fixture $legacyRoot 'en_us' 'Godswar Reborn' '[USA]'
+    $null = Write-Fixture `
+        $legacyRoot 'zh_cn' 'Godswar Reborn' $chineseArea
+    $legacyOrigin = Write-OriginFixture $legacyRoot -LegacyPatched
+    $legacyHash = Get-Hash $legacyOrigin
+    $legacyBytes = [IO.File]::ReadAllBytes($legacyOrigin)
+    $legacyStatus = & $patcher -Mode Status -ClientRoot $legacyRoot
+    Assert-True ($legacyStatus.State -ceq 'LegacyPatched' -and
+        $legacyStatus.Executable.State -ceq 'LegacyPatched') `
+        'The shared-literal legacy patch was not recognized.'
+    $migrated = & $patcher -Mode Apply -ClientRoot $legacyRoot `
+        -BackupRoot $backupRoot -AllowMutation
+    Assert-True ($migrated.State -ceq 'Patched') `
+        'Apply did not migrate the shared-literal legacy patch.'
+    $legacyBackupOrigin = Join-Path $migrated.BackupDirectory 'Origin.exe'
+    $legacyManifest = Get-Content -LiteralPath (
+        Join-Path $migrated.BackupDirectory 'manifest.json') `
+        -Encoding UTF8 -Raw | ConvertFrom-Json
+    Assert-True ($legacyManifest.contractVersion -eq 3 -and
+        (Get-Hash $legacyBackupOrigin) -ceq $legacyHash) `
+        'Legacy migration did not retain a verified version-3 backup.'
+    $migratedBytes = [IO.File]::ReadAllBytes($legacyOrigin)
+    $expectedMigratedBytes = [byte[]]$legacyBytes.Clone()
+    [Array]::Copy(
+        $sharedFormat, 0, $expectedMigratedBytes, 0x554FCC, 12)
+    [Array]::Copy(
+        $baseOnlyOperand, 0, $expectedMigratedBytes, 0x0D8047, 4)
+    $migratedShared = $migratedBytes[
+        0x554FCC..(0x554FCC + $sharedFormat.Length - 1)]
+    $migratedTitle = $migratedBytes[
+        0x0D8047..(0x0D8047 + $baseOnlyOperand.Length - 1)]
+    Assert-True ($null -eq (Compare-Object `
+            $sharedFormat $migratedShared) -and
+        $null -eq (Compare-Object $baseOnlyOperand $migratedTitle)) `
+        'Legacy migration did not install the caller-specific contract.'
+    Assert-True ((Get-BytesHash $migratedBytes) -ceq
+        (Get-BytesHash $expectedMigratedBytes)) `
+        'Legacy migration changed bytes outside the two reviewed ranges.'
+    $legacyRollback = & $patcher -Mode Rollback -ClientRoot $legacyRoot `
+        -RollbackFrom $migrated.BackupDirectory -AllowMutation
+    Assert-True ($legacyRollback.State -ceq 'LegacyPatched' -and
+        (Get-Hash $legacyOrigin) -ceq $legacyHash) `
+        'Version-3 rollback did not restore the exact legacy executable.'
 
     $unknownRoot = Join-Path $testRoot 'unknown-client'
     $unknownEn = Write-Fixture $unknownRoot 'en_us' 'Unexpected Fork' '[USA]'

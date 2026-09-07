@@ -12,6 +12,8 @@
 #include "NativeClientBridgeTests.h"
 #include "NativeClientCoordinatorTests.h"
 #include "OpaqueDuplexPumpTests.h"
+#include "OriginFighterExperienceHostTests.h"
+#include "RawFighterLevelSealProjectionBridgeTests.h"
 #include "SchannelClientStreamTests.h"
 #include "SecureCharacterLifecycleIdentityTests.h"
 #include "SecureClientProtocolTests.h"
@@ -45,6 +47,8 @@ int RunNetworkShimTestSuite(bool offline) {
     failures += RunLoopbackPeerOwnerTests();
     failures += RunLegacyCommandDescriptorStreamTests();
     failures += RunOpaqueDuplexPumpTests();
+    failures += RunOriginFighterExperienceHostTests();
+    failures += RunRawFighterLevelSealProjectionBridgeTests();
     failures += RunSchannelClientStreamTests(!offline);
     failures += RunSecureClientRuntimeTests();
     failures += RunSecureClientSessionTests();

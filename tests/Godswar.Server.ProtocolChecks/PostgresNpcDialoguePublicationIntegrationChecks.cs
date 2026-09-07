@@ -65,6 +65,14 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
                 connectionString);
         AssertManifest(pinned.Manifest);
         await AssertRoutesAsync(pinned);
+        await AssertLevelSealerTextsAsync(pinned);
+        await AssertBattlefieldTextsAsync(pinned);
+        await AssertInstanceCallerTextsAsync(pinned);
+        await AssertTransporterRoutesAsync(dataSource, pinned);
+        await AssertBattlefieldRoutesAsync(dataSource, pinned);
+        await AssertDuelArenaRoutesAsync(dataSource, pinned);
+        await AssertInstanceCallerRoutesAsync(dataSource, pinned);
+        await AssertEndpointProfileSchemaAsync(dataSource);
 
         await AssertDatabaseCountsAsync(dataSource);
         await AssertLegacyMutationIsolationAsync(
@@ -109,29 +117,33 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
         NpcDialoguePublicationResult result)
     {
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedRevision,
+            NpcDialogueBaselineV21.ExpectedRevision,
             result.Revision,
             "dialogue release revision");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedSpawnRevision,
+            NpcDialogueBaselineV21.ExpectedSpawnRevision,
             result.SpawnRevision,
             "dialogue release spawn dependency");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedTextCount,
+            NpcDialogueBaselineV21.ExpectedTextCount,
             result.TextCount,
             "dialogue release text count");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedProfileCount,
+            NpcDialogueBaselineV21.ExpectedProfileCount,
             result.ProfileCount,
             "dialogue release profile count");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedRouteCount,
+            NpcDialogueBaselineV21.ExpectedRouteCount,
             result.RouteCount,
             "dialogue release route count");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedMenuEntryCount,
+            NpcDialogueBaselineV21.ExpectedMenuEntryCount,
             result.MenuEntryCount,
             "dialogue release menu count");
+        Check.Equal(
+            NpcDialogueBaselineV21.Source,
+            result.Source,
+            "dialogue release source");
     }
 
     private static void AssertManifest(WorldContentManifest manifest)
@@ -141,11 +153,11 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
             manifest.NpcDialogues.Family,
             "dialogue manifest family");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedRevision,
+            NpcDialogueBaselineV21.ExpectedRevision,
             manifest.NpcDialogues.Sha256,
             "dialogue manifest revision");
         Check.Equal(
-            NpcDialogueBaselineV8.ExpectedHashedEntryCount,
+            NpcDialogueBaselineV21.ExpectedHashedEntryCount,
             manifest.NpcDialogues.EntryCount,
             "dialogue manifest hashed entry count");
     }
@@ -153,7 +165,7 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
     private static async Task AssertRoutesAsync(
         IWorldContentReader reader)
     {
-        var expected = NpcDialogueBaselineV8.CreateRoutes()
+        var expected = NpcDialogueBaselineV21.CreateRoutes()
             .GroupBy(static route => route.NpcKey, StringComparer.Ordinal)
             .ToDictionary(
                 static group => group.Key,
@@ -197,6 +209,48 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
         }
     }
 
+    private static async Task AssertLevelSealerTextsAsync(
+        IWorldContentReader reader)
+    {
+        foreach (var npcKey in new[] { "Athens_142", "Sparta_142" })
+        {
+            var content = await reader.ReadNpcDialogueAsync(npcKey);
+            Check.True(
+                content.Text.Description ==
+                    NpcDialogueBaselineV10.LevelSealerDescription &&
+                content.Routes.Count == 0,
+                $"{npcKey} publishes the all-level description without " +
+                "altering its route geometry");
+        }
+    }
+
+    private static async Task AssertBattlefieldTextsAsync(
+        IWorldContentReader reader)
+    {
+        foreach (var npcKey in new[] { "Athens_056", "Sparta_056" })
+        {
+            var content = await reader.ReadNpcDialogueAsync(npcKey);
+            Check.Equal(
+                NpcDialogueBaselineV12.BattlefieldTransporterDescription,
+                content.Text.Description,
+                $"{npcKey} publishes its current event schedule");
+        }
+    }
+
+    private static async Task AssertInstanceCallerTextsAsync(
+        IWorldContentReader reader)
+    {
+        foreach (var npcKey in new[] { "Athens_060", "Sparta_060" })
+        {
+            var content = await reader.ReadNpcDialogueAsync(npcKey);
+            Check.Equal(
+                NpcDialogueBaselineV14.InstanceCallerDescription,
+                content.Text.Description,
+                $"{npcKey} publishes three free daily entries and one " +
+                "Opal-funded additional-entry guidance");
+        }
+    }
+
     private static async Task AssertDatabaseCountsAsync(
         NpgsqlDataSource dataSource)
     {
@@ -237,10 +291,10 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
             "dialogue publication exists");
         var expected = new[]
         {
-            NpcDialogueBaselineV8.ExpectedTextCount,
-            NpcDialogueBaselineV8.ExpectedProfileCount,
-            NpcDialogueBaselineV8.ExpectedRouteCount,
-            NpcDialogueBaselineV8.ExpectedMenuEntryCount
+            NpcDialogueBaselineV21.ExpectedTextCount,
+            NpcDialogueBaselineV21.ExpectedProfileCount,
+            NpcDialogueBaselineV21.ExpectedRouteCount,
+            NpcDialogueBaselineV21.ExpectedMenuEntryCount
         };
         for (var index = 0; index < expected.Length; index++)
         {

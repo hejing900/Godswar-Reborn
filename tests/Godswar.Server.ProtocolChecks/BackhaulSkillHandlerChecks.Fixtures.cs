@@ -37,6 +37,22 @@ internal static partial class BackhaulSkillHandlerChecks
 
         public List<VitalsWrite> VitalsWrites { get; } = [];
 
+        public bool RejectPositionWrite { get; set; }
+
+        public override Task<CharacterStats?> GetCharacterStatsAsync(
+            int accountId,
+            int characterId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Check.True(
+                accountId == _character.AccountId &&
+                characterId == _character.Id,
+                "backhaul readiness refreshes the active identity");
+            return Task.FromResult<CharacterStats?>(
+                CharacterStats.FromCharacter(_character));
+        }
+
         public override Task SaveCharacterPositionAsync(
             int accountId,
             int characterId,
@@ -49,6 +65,11 @@ internal static partial class BackhaulSkillHandlerChecks
                 accountId == _character.AccountId &&
                 characterId == _character.Id,
                 "backhaul persists the active identity");
+            if (RejectPositionWrite)
+            {
+                throw new InvalidOperationException(
+                    "Simulated backhaul position persistence failure.");
+            }
             PositionWrites.Add(new PositionWrite(
                 currentMap,
                 positionX,

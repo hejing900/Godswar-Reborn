@@ -36,6 +36,11 @@ internal sealed partial class GameClientHandler
             return compatibilityUsername;
         }
 
+        // The legacy game-login packet has no password or login ticket. This
+        // local rollback branch assumes the client completed the preceding
+        // password-verified login flow; username/realm matching here is not a
+        // second authentication boundary. Secure and semantic paths use the
+        // principal-bound branches above.
         // Constructors without a catalog are retained only for isolated
         // compatibility fixtures. Hosted PostgreSQL workers always receive
         // the catalog through GameClientHandlerFactory.

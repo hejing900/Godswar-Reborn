@@ -165,7 +165,7 @@ try {
             '127.1.1.112:7000'
         } else { $null }
         EnabledRealms = $enabledRealmCount
-        PostgreSqlEndpoint = '127.0.0.1:55432'
+        PostgreSqlEndpoint = [string]$isolation.PostgreSqlEndpoint
         DatabaseStatus = [string]$databaseResult.Status
         B20HStatus = if ($null -eq $mainAfter.ObservationStatus) {
             'not_active'

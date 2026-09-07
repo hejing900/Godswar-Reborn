@@ -109,7 +109,8 @@ internal static partial class BackhaulSkillHandlerChecks
             CreateInterruptionAttackPacket(fixture.Character));
         await AssertInterruptedAsync(
             fixture,
-            "admitted basic-attack interruption");
+            "admitted basic-attack interruption",
+            expectedClaimObjectId: InterruptionMonsterObjectId);
         Check.True(
             fixture.Registry.TryGetLatestAdmittedCombatRevision(
                 fixture.Character.AccountId,
@@ -171,7 +172,8 @@ internal static partial class BackhaulSkillHandlerChecks
             CreateInterruptionAttackPacket(fixture.Character));
         await AssertInterruptedAsync(
             fixture,
-            "admitted ECS basic-attack interruption");
+            "admitted ECS basic-attack interruption",
+            expectedClaimObjectId: InterruptionMonsterObjectId);
         Check.True(
             fixture.Registry.TryGetLatestAdmittedCombatRevision(
                 fixture.Character.AccountId,

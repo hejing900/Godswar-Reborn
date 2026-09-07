@@ -1,11 +1,6 @@
-using System.Buffers.Binary;
-using System.Diagnostics;
-using System.Text;
-using Godswar.Server.Networking;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.World;
 using Godswar.Server.Packets;
-using Godswar.Server.Protocol;
 using Godswar.Server.State;
 
 namespace Godswar.Server.Game;
@@ -21,19 +16,33 @@ internal sealed partial class GameClientHandler
             return null;
         }
 
-        var reward = MonsterRewardCatalog.Resolve(damageResult.Monster, _character.Level);
-        var awardedPetExperience =
-            MonsterRewardCatalog.ResolvePetExperience(damageResult.Monster);
-        if (_registry.TryResolveMedusaMonsterRule(
+        var rewardPolicy = _gameplayCatalogs.MonsterRewards;
+        var rewardEligible = MonsterRewardCatalog.IsEligible(
+            damageResult.Monster,
+            _character.Level,
+            rewardPolicy);
+        var reward = MonsterRewardCatalog.Resolve(
+            damageResult.Monster,
+            _character.Level,
+            rewardPolicy);
+        var basePetExperience =
+            MonsterRewardCatalog.ResolvePetExperience(
+                damageResult.Monster,
+                _character.Level,
+                rewardPolicy);
+        if (rewardEligible &&
+            _registry.TryResolveMedusaMonsterRule(
                 _session,
                 damageResult,
                 out var medusaRule))
         {
-            awardedPetExperience = medusaRule.PetExperience;
+            basePetExperience = medusaRule.PetExperience;
         }
         var rewardTime = DateTimeOffset.UtcNow;
         var experienceBoosts = ExperienceBoostState.Empty;
-        if (reward.Experience > 0 || reward.TalentExperience > 0)
+        if (reward.Experience > 0 ||
+            reward.TalentExperience > 0 ||
+            basePetExperience > 0)
         {
             try
             {
@@ -55,8 +64,15 @@ internal sealed partial class GameClientHandler
             }
         }
 
-        var awardedExperience = experienceBoosts.ApplyTo(reward.Experience);
-        var awardedTalentExperience = experienceBoosts.ApplyToTalent(reward.TalentExperience);
+        var awardedExperience = rewardPolicy.ApplyExperienceMultipliers(
+            reward.Experience,
+            experienceBoosts.TotalBonusBasisPoints);
+        var awardedTalentExperience = rewardPolicy.ApplyExperienceMultipliers(
+            reward.TalentExperience,
+            experienceBoosts.TotalTalentBonusBasisPoints);
+        var awardedPetExperience = rewardPolicy.ApplyExperienceMultipliers(
+            basePetExperience,
+            experienceBoosts.TotalPetBonusBasisPoints);
 
         MonsterRewardSettlement? settlement;
         try
@@ -136,7 +152,7 @@ internal sealed partial class GameClientHandler
         var progression = settlement.Progression;
 
         Console.WriteLine(
-            $"[reward] character={_character.Name} base-exp={reward.Experience} awarded-exp={awardedExperience} exp-bonus-bps={experienceBoosts.TotalBonusBasisPoints} base-talent-exp={reward.TalentExperience} awarded-talent-exp={awardedTalentExperience} talent-bonus-bps={experienceBoosts.TotalTalentBonusBasisPoints} boosts={string.Join(',', experienceBoosts.ActiveBoosts.Select(boost => boost.StatusId))}");
+            $"[reward] character={_character.Name} base-exp={reward.Experience} awarded-exp={awardedExperience} exp-bonus-bps={experienceBoosts.TotalBonusBasisPoints} base-talent-exp={reward.TalentExperience} awarded-talent-exp={awardedTalentExperience} talent-bonus-bps={experienceBoosts.TotalTalentBonusBasisPoints} global-exp-multiplier-bps={_gameplayCatalogs.MonsterRewards.GlobalExperienceMultiplierBasisPoints} boosts={string.Join(',', experienceBoosts.ActiveBoosts.Select(boost => boost.StatusId))}");
 
         if (settlement.IsFirstCommit &&
             _registry.PlayerRuntimeMode == PlayerRuntimeMode.Ecs)
@@ -471,44 +487,6 @@ internal sealed partial class GameClientHandler
             _character.Id,
             checked((int)skillId),
             cancellationToken);
-    }
-
-    private async Task BroadcastToCurrentMapAsync(GamePacket packet, CancellationToken cancellationToken)
-    {
-        if (_character is null)
-        {
-            Console.WriteLine($"[world] ignored {Opcodes.Name(packet.Opcode)} broadcast before character enter");
-            return;
-        }
-
-        if (!RevalidateCurrentWorldEffectOwnership(
-                packet.Opcode == Opcodes.Talk
-                    ? "chat_broadcast"
-                    : "world_broadcast"))
-        {
-            return;
-        }
-
-        var outboundPacket = packet.Opcode == Opcodes.Walk
-            ? PacketBuilder.PlayerWorldMovement(packet.Buffer.AsSpan(), CurrentPlayerObjectId)
-            : packet.Buffer;
-        var recipients =
-            await _registry.BroadcastToCurrentWorldInstanceAsync(
-            _session,
-            outboundPacket,
-            cancellationToken,
-            includeRoutingSession:
-                packet.Opcode != Opcodes.Walk);
-
-        if (packet.Opcode == Opcodes.Walk && recipients > 0)
-        {
-            Console.WriteLine($"[world] broadcast walk map={_character.CurrentMap} character={_character.Name} object={CurrentPlayerObjectId} recipients={recipients}");
-        }
-
-        if (packet.Opcode == Opcodes.Talk)
-        {
-            Console.WriteLine($"[world] broadcast talk map={_character.CurrentMap} character={_character.Name} recipients={recipients}");
-        }
     }
 
 }

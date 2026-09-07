@@ -107,10 +107,13 @@ Assert-True `
         'coordination, and local legacy-authentication settings'
     )
 $routes = @($workerOptions.game.worldInstances.staticOpenWorldInstances)
-Assert-True ($routes.Count -eq 23) 'worker must own exactly maps 0 through 22'
-$mapIds = @($routes | ForEach-Object { [int] $_.mapId } | Sort-Object)
 Assert-True `
-    (($mapIds -join ',') -eq ((0..22) -join ',')) `
+    ($routes.Count -eq 27) `
+    'worker must own ordinary maps 0 through 22 plus four battlefields'
+$mapIds = @($routes | ForEach-Object { [int] $_.mapId } | Sort-Object)
+$expectedMapIds = @((0..22) + 27 + 34 + 38 + 57)
+Assert-True `
+    (($mapIds -join ',') -eq ($expectedMapIds -join ',')) `
     'worker routes must contain each supported open-world map exactly once'
 Assert-True `
     (@($routes | Where-Object { [int] $_.realmId -ne 1 }).Count -eq 0) `

@@ -271,12 +271,10 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        if (subId == -1)
+        if (await TryHandleNpcInitialActionAsync(
+                packet, npc, route, npcId, dialogIndex, subId, args,
+                cancellationToken))
         {
-            await SendNpcInitialMenuAsync(
-                npc,
-                route,
-                cancellationToken);
             return;
         }
 

@@ -22,7 +22,7 @@ internal sealed partial class TlsMuxLegacyTransport
         }
 
         var payload = ArrayPool<byte>.Shared.Rent(
-            SecureProtocolConstants.LegacyCommandResultBytes);
+            SecureProtocolConstants.MaximumLegacyCommandResultBytes);
         var bytesWritten = 0;
         try
         {
@@ -30,8 +30,9 @@ internal sealed partial class TlsMuxLegacyTransport
                     result,
                     payload,
                     out bytesWritten) ||
-                bytesWritten !=
-                    SecureProtocolConstants.LegacyCommandResultBytes)
+                bytesWritten is not (
+                    SecureProtocolConstants.LegacyCommandResultBytes or
+                    SecureProtocolConstants.LegacyCommandResultV2Bytes))
             {
                 throw new ArgumentException(
                     "The bounded legacy command result is invalid.",
@@ -48,7 +49,7 @@ internal sealed partial class TlsMuxLegacyTransport
             CryptographicOperations.ZeroMemory(
                 payload.AsSpan(
                     0,
-                    SecureProtocolConstants.LegacyCommandResultBytes));
+                    SecureProtocolConstants.MaximumLegacyCommandResultBytes));
             ArrayPool<byte>.Shared.Return(payload);
         }
     }

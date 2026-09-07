@@ -12,6 +12,10 @@ namespace Godswar.Server.Game;
 internal sealed partial class GameClientHandler
 {
     private readonly IMedusaDailyEntryClaimStore? _medusaDailyEntries;
+    private readonly ILegacyInstanceDailyEntryClaimStore?
+        _legacyInstanceDailyEntries;
+    private readonly ILegacyInstanceOpalPaymentStore?
+        _legacyInstanceOpalPayments;
     private InstanceCallerPageContext? _instanceCallerPageContext;
 
     private async Task HandleInstanceCallerAsync(
@@ -29,10 +33,11 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        if (InstanceCallerProtocol.TryGetMedusaPage(
+        if (InstanceCallerProtocol.TryGetPage(
                 dialogIndex,
                 subId,
                 arguments,
+                out var rootSubId,
                 out var pageSubIds))
         {
             if (!IsCanonicalInstanceCallerAction(
@@ -42,7 +47,7 @@ internal sealed partial class GameClientHandler
                     dialogIndex))
             {
                 Console.Error.WriteLine(
-                    "[instance-caller] rejected non-canonical Medusa page " +
+                    "[instance-caller] rejected non-canonical page " +
                     $"request npc={npcId}");
                 return;
             }
@@ -61,6 +66,7 @@ internal sealed partial class GameClientHandler
                 route.NpcKey,
                 npcId,
                 dialogIndex,
+                rootSubId,
                 sourceWorldInstanceId,
                 Guid.NewGuid(),
                 DateTimeOffset.UtcNow +
@@ -71,7 +77,57 @@ internal sealed partial class GameClientHandler
                     dialogIndex,
                     pageSubIds),
                 cancellationToken,
-                "InstanceCallerMedusaPage");
+                "InstanceCallerPage");
+            return;
+        }
+
+        if (InstanceCallerProtocol.TryResolveEntry(
+                dialogIndex,
+                subId,
+                arguments,
+                out var destination))
+        {
+            if (!IsCanonicalInstanceCallerAction(
+                    packet,
+                    route,
+                    npcId,
+                    dialogIndex))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected non-canonical entry " +
+                    $"request npc={npcId} destination={destination.Kind}");
+                return;
+            }
+
+            var entryContext = _instanceCallerPageContext;
+            ClearInstanceCallerPageContext();
+            var expectedRootSubId = destination.Kind switch
+            {
+                InstanceCallerEntryKind.Atlantis =>
+                    InstanceCallerProtocol.AtlantisRootSubId,
+                InstanceCallerEntryKind.Wonderland =>
+                    InstanceCallerProtocol.WonderlandRootSubId,
+                _ => 0
+            };
+            if (!IsCurrentInstanceCallerPageContext(
+                    entryContext,
+                    route,
+                    npcId,
+                    dialogIndex,
+                    expectedRootSubId))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected entry without current " +
+                    $"page context npc={npcId} " +
+                    $"destination={destination.Kind}");
+                return;
+            }
+
+            await HandleLegacyInstanceEntryAsync(
+                npcId,
+                dialogIndex,
+                destination,
+                cancellationToken);
             return;
         }
 
@@ -102,7 +158,8 @@ internal sealed partial class GameClientHandler
                 context,
                 route,
                 npcId,
-                dialogIndex))
+                dialogIndex,
+                InstanceCallerProtocol.MedusaRootSubId))
         {
             Console.Error.WriteLine(
                 "[instance-caller] rejected Medusa difficulty without " +
@@ -202,7 +259,8 @@ internal sealed partial class GameClientHandler
         InstanceCallerPageContext? context,
         NpcDialogueRouteDefinition route,
         uint npcId,
-        int dialogIndex) =>
+        int dialogIndex,
+        int rootSubId) =>
         context is not null &&
         _account is not null &&
         _character is not null &&
@@ -212,6 +270,7 @@ internal sealed partial class GameClientHandler
         _character.AccountId == _account.Id &&
         context.NpcInteractionId == npcId &&
         context.DialogIndex == dialogIndex &&
+        context.RootSubId == rootSubId &&
         string.Equals(
             context.NpcKey,
             route.NpcKey,

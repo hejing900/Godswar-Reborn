@@ -191,8 +191,10 @@ internal sealed partial class PinnedWorldContentReader
             definition.InitialMenuSubIds.IsDefaultOrEmpty ||
             definition.InitialMenuSubIds.Length >
             MaximumInitialMenuItems ||
-            definition.InitialMenuSubIds.Any(
-                static subId => subId is <= 0 or > MaximumSubId) ||
+            (definition.InitialMenuSubIds.Any(
+                static subId => subId is <= 0 or > MaximumSubId) &&
+                !DuelArenaCapturedTransportProtocol.IsCapturedRoute(definition) &&
+                !DuelArenaServiceProtocol.IsCapturedRoute(definition)) ||
             definition.InitialMenuSubIds.Distinct().Count() !=
             definition.InitialMenuSubIds.Length)
         {

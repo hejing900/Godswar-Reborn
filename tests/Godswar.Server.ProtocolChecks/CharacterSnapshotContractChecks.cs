@@ -81,10 +81,6 @@ internal static partial class CharacterSnapshotContractChecks
     private static void CheckValidAndEmptySnapshots()
     {
         Check.Equal(
-            PlayerExperienceCatalog.FighterLevelSealLevel,
-            CharacterProgressionSnapshotRules.FighterLevelSealLevel,
-            "snapshot and gameplay level-seal rules agree");
-        Check.Equal(
             PlayerExperienceCatalog.MaximumLevel,
             CharacterProgressionSnapshotRules.MaximumCharacterLevel,
             "snapshot and gameplay maximum-level rules agree");
@@ -219,7 +215,7 @@ internal static partial class CharacterSnapshotContractChecks
             (int)invalid.Reason,
             "duplicate skill rows have a finite invalid-data reason");
 
-        var invalidLevelSeal = valid with
+        var sealedAtCurrentLevel = valid with
         {
             Character = valid.Character! with
             {
@@ -229,12 +225,10 @@ internal static partial class CharacterSnapshotContractChecks
                 }
             }
         };
-        var invalidSeal = CaptureFailure(
-            () => CharacterSnapshotContract.Validate(invalidLevelSeal));
-        Check.Equal(
-            (int)CharacterSnapshotFailureReason.InvalidData,
-            (int)invalidSeal.Reason,
-            "level sealing outside level 89 has a finite invalid-data reason");
+        CharacterSnapshotContract.Validate(sealedAtCurrentLevel);
+        Check.True(
+            sealedAtCurrentLevel.Character!.Progression.Level == 80,
+            "a valid current fighter level can be explicitly sealed");
 
         var aboveMaximumLevel = valid with
         {

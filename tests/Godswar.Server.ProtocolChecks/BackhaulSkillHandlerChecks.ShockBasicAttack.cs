@@ -87,7 +87,8 @@ internal static partial class BackhaulSkillHandlerChecks
             CreateInterruptionAttackPacket(fixture.Character));
         await AssertInterruptedAsync(
             fixture,
-            $"{runtimeMode} expired-Shock basic attack recovery");
+            $"{runtimeMode} expired-Shock basic attack recovery",
+            expectedClaimObjectId: InterruptionMonsterObjectId);
         Check.True(
             fixture.Registry.TryGetLatestAdmittedCombatRevision(
                 fixture.Character.AccountId,

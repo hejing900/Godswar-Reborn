@@ -35,6 +35,9 @@ internal sealed partial class PostgresGameStore
             currency = offer.Currency.ToString(),
             totalCost
         });
+        var silverAfter = offer.Currency == CapitalNpcShopCurrency.Silver
+            ? balanceAfter
+            : before.Silver;
         var goldAfter = offer.Currency == CapitalNpcShopCurrency.Gold
             ? balanceAfter
             : before.Gold;
@@ -50,6 +53,8 @@ internal sealed partial class PostgresGameStore
             quantity,
             totalCost,
             currency = offer.Currency.ToString(),
+            silverBefore = before.Silver,
+            silverAfter,
             goldBefore = before.Gold,
             goldAfter,
             bindingGoldBefore = before.BindingGold,
@@ -59,7 +64,8 @@ internal sealed partial class PostgresGameStore
             items = mutations.Select(static mutation => new
             {
                 mutation.ItemInstanceId,
-                mutation.Slot
+                mutation.Slot,
+                mutation.Kind
             })
         });
         var requestHash = SHA256.HashData(
@@ -145,6 +151,9 @@ internal sealed partial class PostgresGameStore
         long inventoryRevision,
         CancellationToken cancellationToken)
     {
+        var silverAfter = currency == CapitalNpcShopCurrency.Silver
+            ? balanceAfter
+            : before.Silver;
         var goldAfter = currency == CapitalNpcShopCurrency.Gold
             ? balanceAfter
             : before.Gold;
@@ -155,12 +164,14 @@ internal sealed partial class PostgresGameStore
         await using var command = new NpgsqlCommand(
             """
             UPDATE public.character_base
-            SET "Stone" = @goldAfter,
+            SET "Money" = @silverAfter,
+                "Stone" = @goldAfter,
                 "BindingGold" = @bindingGoldAfter,
                 wallet_revision = @walletRevision,
                 inventory_revision = @inventoryRevision
             WHERE id = @characterId AND account_id = @accountId
               AND lifecycle_state = 'active'
+              AND "Money" = @silverBefore
               AND "Stone" = @goldBefore
               AND "BindingGold" = @bindingGoldBefore
               AND wallet_revision = @walletRevisionBefore
@@ -168,6 +179,7 @@ internal sealed partial class PostgresGameStore
             """,
             connection,
             transaction);
+        command.Parameters.AddWithValue("silverAfter", silverAfter);
         command.Parameters.AddWithValue("goldAfter", goldAfter);
         command.Parameters.AddWithValue(
             "bindingGoldAfter",
@@ -178,6 +190,9 @@ internal sealed partial class PostgresGameStore
             inventoryRevision);
         command.Parameters.AddWithValue("characterId", characterId);
         command.Parameters.AddWithValue("accountId", accountId);
+        command.Parameters.AddWithValue(
+            "silverBefore",
+            before.Silver);
         command.Parameters.AddWithValue(
             "goldBefore",
             before.Gold);
@@ -234,9 +249,16 @@ internal sealed partial class PostgresGameStore
                 walletRevision);
             currency.Parameters.AddWithValue(
                 "currencyCode",
-                currencyCode == CapitalNpcShopCurrency.Gold
-                    ? "gold"
-                    : "binding_gold");
+                currencyCode switch
+                {
+                    CapitalNpcShopCurrency.Silver => "silver",
+                    CapitalNpcShopCurrency.Gold => "gold",
+                    CapitalNpcShopCurrency.BindingGold => "binding_gold",
+                    _ => throw new ArgumentOutOfRangeException(
+                        nameof(currencyCode),
+                        currencyCode,
+                        "Unsupported capital shop currency.")
+                });
             currency.Parameters.AddWithValue("delta", -(long)totalCost);
             currency.Parameters.AddWithValue(
                 "balanceBefore",
@@ -263,7 +285,7 @@ internal sealed partial class PostgresGameStore
                     before_state, after_state, reason_code)
                 VALUES (@inboxId, @accountId, @characterId,
                         @inventoryRevision, @ordinal,
-                        @itemInstanceId, 'add', NULL,
+                        @itemInstanceId, @mutationKind, @beforeState,
                         @afterState, 'capital_shop_purchase');
                 """,
                 connection,
@@ -280,6 +302,13 @@ internal sealed partial class PostgresGameStore
             inventory.Parameters.AddWithValue(
                 "itemInstanceId",
                 mutation.ItemInstanceId);
+            inventory.Parameters.AddWithValue(
+                "mutationKind",
+                mutation.Kind);
+            inventory.Parameters.Add("beforeState", NpgsqlDbType.Jsonb).Value =
+                mutation.BeforeState is null
+                    ? DBNull.Value
+                    : mutation.BeforeState;
             inventory.Parameters.Add("afterState", NpgsqlDbType.Jsonb).Value =
                 mutation.AfterState;
             if (await inventory.ExecuteNonQueryAsync(cancellationToken) != 1)

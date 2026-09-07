@@ -15,6 +15,8 @@ internal static class MonsterRuntimeCutoverChecks
             "source-default monster runtime is ECS");
         CheckRuntimeSelection(MonsterRuntimeMode.Legacy);
         CheckRuntimeSelection(MonsterRuntimeMode.Ecs);
+        CheckRespawnPolicyBinding(MonsterRuntimeMode.Legacy);
+        CheckRespawnPolicyBinding(MonsterRuntimeMode.Ecs);
         CheckConfigurationBinding();
         Check.Throws<ArgumentOutOfRangeException>(
             () => MonsterMapRuntimeFactory.Create(
@@ -24,6 +26,28 @@ internal static class MonsterRuntimeCutoverChecks
                 initializedAt: DateTimeOffset.UnixEpoch),
             "runtime factory rejects an unsupported mode");
         return Task.CompletedTask;
+    }
+
+    private static void CheckRespawnPolicyBinding(MonsterRuntimeMode mode)
+    {
+        var map = new MapInstance(0, mode);
+        var runtime = map.InitializeMonsters(
+            [],
+            DateTimeOffset.UnixEpoch,
+            respawnPolicy: MonsterRespawnPolicy.Never);
+        Check.True(
+            ReferenceEquals(
+                runtime,
+                map.InitializeMonsters(
+                    [],
+                    DateTimeOffset.UnixEpoch.AddMinutes(1),
+                    respawnPolicy: MonsterRespawnPolicy.Never)),
+            $"{mode} map preserves its Never respawn policy");
+        Check.Throws<InvalidOperationException>(
+            () => map.InitializeMonsters(
+                [],
+                DateTimeOffset.UnixEpoch.AddMinutes(2)),
+            $"{mode} map rejects a respawn-policy rebind");
     }
 
     private static void CheckRuntimeSelection(MonsterRuntimeMode mode)

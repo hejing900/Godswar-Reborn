@@ -15,6 +15,9 @@
     <ClCompile Include="..\src\SecureGameControl.cpp" />
     <ClCompile Include="..\src\SecureGameGrantRegistry.cpp" />
     <ClCompile Include="..\src\SecureEquipmentBagTransferIdentity.cpp" />
+    <ClCompile Include="..\src\SecureFactionCrierCommandIdentity.cpp" />
+    <ClCompile Include="..\src\SecureFighterLevelSealCommandIdentity.cpp" />
+    <ClCompile Include="..\src\SecureOnlineAwardCommandIdentity.cpp" />
     <ClCompile Include="..\src\SecureWarehouseCommandIdentity.cpp" />
     <ClCompile Include="..\src\SecureForgeCommandIdentity.cpp" />
     <ClCompile Include="..\src\SecureHolyStoneCommandIdentity.cpp" />
@@ -31,6 +34,10 @@
     <ClCompile Include="..\src\SecurePendingOperationRegistry.ClassSuit.cpp" />
     <ClCompile Include="..\src\SecurePendingOperationRegistry.Pets.cpp" />
     <ClCompile Include="..\src\SecurePendingOperationRegistry.EquipmentBagTransfer.cpp" />
+    <ClCompile Include="..\src\SecurePendingOperationRegistry.FactionCrier.cpp" />
+    <ClCompile Include="..\src\SecurePendingOperationRegistry.FighterExperience.cpp" />
+    <ClCompile Include="..\src\SecurePendingOperationRegistry.FighterLevelSeal.cpp" />
+    <ClCompile Include="..\src\SecurePendingOperationRegistry.OnlineAward.cpp" />
     <ClCompile Include="..\src\SecurePendingOperationRegistry.Warehouse.cpp" />
     <ClCompile Include="..\src\SecurePendingOperationRegistry.Forge.cpp" />
     <ClCompile Include="..\src\SecurePendingOperationRegistry.HolyEquipment.cpp" />

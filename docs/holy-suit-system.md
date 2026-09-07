@@ -30,10 +30,13 @@ Storing EXP requires player level 70. One request may fill the selected Holy
 Box up to its remaining capacity; the largest current box therefore accepts
 400,000,000 EXP at once. The alpha daily allowance is a fixed 2,000,000,000
 EXP, independent of character level and measured per account, realm, and
-Singapore calendar day (`Asia/Singapore`, UTC+8). It resets at 00:00 Singapore
-time. An active `battle_pass` entitlement bypasses only that daily allowance;
+the realm's global calendar day. Tempest and Dwargon currently use
+`Asia/Manila` (UTC+8), so the quota resets at 00:00 Philippine time. An active
+`battle_pass` entitlement bypasses only that daily allowance;
 it does not bypass available player EXP, box capacity, or level checks. Daily
-usage is recorded even while the bypass is active.
+usage is recorded even while the bypass is active. The same Premium Battle Pass
+also grants five-percent Fighter, Talent, and pet EXP outside this Holy Suit
+workflow; it grants no HP or attack bonus.
 
 The stock client's blank Store field sends `-1`. The server reserves only
 that wire sentinel as a mouse-only Store Maximum request; a typed zero remains
@@ -43,7 +46,7 @@ capacity, available character EXP, and remaining daily allowance. Battle Pass
 removes only the daily constraint. Audit evidence keeps the automatic request
 (`0`) separate from the resolved applied EXP.
 
-Opening the Storing EXP page reads the current account/realm/Singapore-day
+Opening the Storing EXP page reads the current account/realm/calendar-day
 usage and fixed credit from PostgreSQL; it does not reuse session memory. The
 stock client encodes each displayed counter as `value * 10 + suffix` in a
 signed 32-bit integer. Its largest safe visible value is therefore

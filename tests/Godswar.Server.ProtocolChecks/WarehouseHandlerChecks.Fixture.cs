@@ -59,7 +59,7 @@ internal static partial class WarehouseHandlerChecks
             [],
             [],
             new DateTimeOffset(2026, 8, 22, 0, 0, 0, TimeSpan.Zero));
-        var transport = new WarehouseCaptureTransport();
+        var transport = new FactionCrierCaptureTransport();
         var session = new ClientSession(transport);
         var registry = GameHandlerOwnershipTestFences.CreateRegistry(
             session,
@@ -413,7 +413,7 @@ internal static partial class WarehouseHandlerChecks
 
     private sealed record WarehouseFixture(
         ClientSession Session,
-        WarehouseCaptureTransport Transport,
+        FactionCrierCaptureTransport Transport,
         GameClientHandler Handler,
         WarehouseTransferExecutor Executor,
         WarehouseCharacterSnapshotReader Characters,

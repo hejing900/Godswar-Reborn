@@ -1,5 +1,6 @@
 using Godswar.Server.Application.World;
 using Godswar.Server.Domain.World.Content;
+using Godswar.Server.Infrastructure.WorldContent;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -75,13 +76,15 @@ internal static partial class
             reader.GetString(2),
             "official NPC release source");
         Check.Equal(
-            1L,
+            3L,
             reader.GetInt64(3),
-            "idempotent publisher leaves one NPC release");
+            "V2-to-V6 publication preserves all immutable NPC releases");
         Check.Equal(
-            (long)ExpectedEntryCount,
+            (long)NpcContentBaselineV1.ExpectedEntryCount +
+            NpcContentBaselineV2.ExpectedEntryCount +
+            ExpectedEntryCount,
             reader.GetInt64(4),
-            "idempotent publisher leaves exactly the reviewed definitions");
+            "V2-to-V6 publication preserves all immutable definition sets");
         Check.Equal(
             1L,
             reader.GetInt64(5),

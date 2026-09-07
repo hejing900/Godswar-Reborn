@@ -15,7 +15,7 @@ internal static class PostgresNpcContentBaselinePublisher
 {
     private const int PublicationLockNamespace = 1_193_657_936;
     private const int PublicationLockKey = 1_448_298_801;
-    private const string Publisher = "server-baseline-v1";
+    private const string Publisher = "server-baseline-v7";
 
     public static async Task<NpcContentPublicationResult>
         EnsurePublishedAsync(
@@ -50,27 +50,60 @@ internal static class PostgresNpcContentBaselinePublisher
             connection,
             transaction,
             cancellationToken);
-        if (current is not null)
+        if (current is not null && string.Equals(
+                current.Revision,
+                NpcContentBaselineV7.ExpectedRevision,
+                StringComparison.Ordinal))
         {
             await transaction.CommitAsync(cancellationToken);
             return current with { Created = false };
+        }
+        if (current is not null &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV1.ExpectedRevision,
+                StringComparison.Ordinal) &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV2.ExpectedRevision,
+                StringComparison.Ordinal) &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV3.ExpectedRevision,
+                StringComparison.Ordinal) &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV4.ExpectedRevision,
+                StringComparison.Ordinal) &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV5.ExpectedRevision,
+                StringComparison.Ordinal) &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV6.ExpectedRevision,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                "The published NPC revision is neither a reviewed V1-V6 " +
+                "predecessor nor the reviewed V7 release.");
         }
 
         var mapIds = await ReadMapIdsAsync(
             connection,
             transaction,
             cancellationToken);
-        var definitions = NpcContentBaselineV1.LoadDefinitions();
+        var definitions = NpcContentBaselineV7.LoadDefinitions();
         var canonical = await ValidateAndCanonicalizeAsync(
             mapIds,
             definitions,
             cancellationToken);
         var revision = WorldContentRevisionHasher.HashNpcs(canonical);
         if (revision.EntryCount !=
-                NpcContentBaselineV1.ExpectedEntryCount ||
+                NpcContentBaselineV7.ExpectedEntryCount ||
             !string.Equals(
                 revision.Sha256,
-                NpcContentBaselineV1.ExpectedRevision,
+                NpcContentBaselineV7.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
@@ -110,7 +143,11 @@ internal static class PostgresNpcContentBaselinePublisher
                              @revision,
                              now(),
                              @publisher
-                         );
+                         )
+                         ON CONFLICT (family) DO UPDATE
+                         SET revision = EXCLUDED.revision,
+                             published_at = EXCLUDED.published_at,
+                             publisher = EXCLUDED.publisher;
                          """,
                          connection,
                          transaction))
@@ -134,7 +171,7 @@ internal static class PostgresNpcContentBaselinePublisher
         return new NpcContentPublicationResult(
             revision.Sha256,
             revision.EntryCount,
-            NpcContentBaselineV1.Source,
+            NpcContentBaselineV7.Source,
             Created: true);
     }
 
@@ -268,7 +305,7 @@ internal static class PostgresNpcContentBaselinePublisher
         command.Parameters.AddWithValue(
             "source",
             NpgsqlDbType.Varchar,
-            NpcContentBaselineV1.Source);
+            NpcContentBaselineV7.Source);
         return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
     }
 
@@ -407,7 +444,7 @@ internal static class PostgresNpcContentBaselinePublisher
             reader.GetInt32(0) != expected.EntryCount ||
             !string.Equals(
                 reader.GetString(1),
-                NpcContentBaselineV1.Source,
+                NpcContentBaselineV7.Source,
                 StringComparison.Ordinal) ||
             reader.GetInt32(2) != expected.EntryCount)
         {

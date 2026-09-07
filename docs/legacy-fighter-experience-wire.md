@@ -39,16 +39,59 @@ an untested UI/NPC path. No stock-client binary patch is included.
 | `PlayerLevelUp` | current fighter EXP at offset 16 |
 
 For an ordinary fighter below the level cap, `EnterMain` offset 88 remains the
-next-level threshold. For either a durably sealed level-89 fighter or a
-level-200 fighter, it is the unsigned storage ceiling `4,294,967,295`. The
-sealed behavior matches working-original capture
+next-level threshold. For either a durably sealed fighter at any supported
+level or a level-200 fighter, it is the unsigned storage ceiling
+`4,294,967,295`. The original level-89 example matches working capture
 `capture-proxy-20260514-173331.log` (`F5D0BF67 FFFFFFFF` at offsets 84 and 88).
 The client therefore renders stored sealed EXP against the real accumulation
-cap instead of clipping the bar against level 89's `2,616,333` level-up
-threshold. Level 199 still uses its ordinary table threshold. Talent,
+cap instead of clipping the bar against the chosen level's normal threshold.
+An unsealed level 199 still uses its ordinary table threshold. Talent,
 equipment, pet, Holy Box, and Zodiac experience are distinct protocol fields
 and are not changed by this experiment.
 
 Boundary golden vectors are covered by
 `LegacyFighterExperienceWireChecks`: `2,147,483,647`, `2,147,483,648`,
 `4,000,000,000`, and `4,294,967,295`.
+
+## Authenticated live seal refresh
+
+The stock NPC response does not carry EXP, and a same-level `PlayerLevelUp`
+packet is unsafe because the original client also runs its level-up UI and
+effects. The secure game channel therefore uses only successful Fighter Level
+Seal `LegacyCommandResult` version 2 frames for the live refresh. The first 32
+bytes retain the authenticated operation outcome; network-order unsigned
+current and maximum fighter EXP are appended at offsets 32 and 36. The secure
+shim updates only the existing EXP component after the native NPC result.
+
+Applied seal projects `4,294,967,295` as the maximum. Applied unseal projects
+the current level-table threshold (or the UInt32 ceiling at level 200) without
+truncating stored current EXP. A replay projects the current durable seal state
+and revision, not its historical receipt. Rejections and no-ops have no EXP
+extension, remain version 1, and cannot trigger the narrow refresh.
+
+## Raw compatibility refresh
+
+When client activation mode is disabled, the connection remains a raw legacy
+session and cannot carry `LegacyCommandResult` frames. A supported network shim
+therefore opts in per Level Sealer mutation without changing the captured
+92-byte request length or its eighteen `-1` arguments. It writes a version-one
+capability token to the otherwise ignored duplicate-dialog dword at request
+offset 12. The token has high byte `A1` and a nonzero random low 24 bits. An
+older Reborn server ignores that dword and still performs the stock request.
+
+Only an exact raw Level Sealer mutation carrying that token receives an
+extended NPC result. The ordinary result fields stay unchanged through offset
+12. `RXP1` and the echoed token occupy offsets 16 and 20. A successful seal or
+unseal additionally carries authoritative unsigned current and maximum Fighter
+EXP at offsets 24 and 28, for a total of 32 bytes. A rejection or no-op is 24
+bytes and carries no EXP. Requests from stock clients continue to receive the
+captured 16-byte response.
+
+Before Origin sees an opted-in response, the shim validates the NPC, dialogue,
+outcome, marker, and pending token, queues any EXP projection, then restores the
+reported packet length to 16. Origin therefore consumes its stock dialogue
+result. The main-thread updater changes only Fighter EXP and its maximum; it
+does not send a synthetic level-up or rewrite level, HP, MP, or attributes.
+This token provides bounded response correlation, not cryptographic
+authentication; secure activation continues to use the authenticated result
+path above.

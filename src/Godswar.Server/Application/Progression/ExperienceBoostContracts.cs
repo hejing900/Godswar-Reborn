@@ -27,7 +27,7 @@ internal sealed record ExperienceBoostEntry(
     public uint RemainingSeconds(DateTimeOffset nowUtc)
     {
         ExperienceBoostContract.RequireUtc(nowUtc, nameof(nowUtc));
-        if (Kind == ExperienceBoostKinds.Vip ||
+        if (Kind == ExperienceBoostKinds.Donator ||
             ExpiresAtUtc is null)
         {
             return uint.MaxValue;
@@ -48,10 +48,13 @@ internal sealed record ExperienceBoostSnapshot(
         new(ImmutableArray<ExperienceBoostEntry>.Empty);
 
     public int TotalBonusBasisPoints => TotalFor(
-        static boost => boost.Kind != ExperienceBoostKinds.Talent);
+        static boost => ExperienceBoostKinds.AffectsFighter(boost.Kind));
 
     public int TotalTalentBonusBasisPoints => TotalFor(
-        static boost => boost.Kind == ExperienceBoostKinds.Talent);
+        static boost => ExperienceBoostKinds.AffectsTalent(boost.Kind));
+
+    public int TotalPetBonusBasisPoints => TotalFor(
+        static boost => ExperienceBoostKinds.AffectsPet(boost.Kind));
 
     public int ApplyTo(int baseExperience) =>
         ApplyBonus(baseExperience, TotalBonusBasisPoints);
@@ -60,6 +63,9 @@ internal sealed record ExperienceBoostSnapshot(
         ApplyBonus(
             baseTalentExperience,
             TotalTalentBonusBasisPoints);
+
+    public int ApplyToPet(int basePetExperience) =>
+        ApplyBonus(basePetExperience, TotalPetBonusBasisPoints);
 
     private int TotalFor(Func<ExperienceBoostEntry, bool> predicate)
     {
@@ -89,13 +95,14 @@ internal sealed record ExperienceBoostSnapshot(
     }
 }
 
-internal enum VipTier : short
+internal enum DonatorTier : short
 {
     None = 0,
-    Bronze = 1,
-    Silver = 2,
-    Gold = 3,
-    Platinum = 4
+    KijinPatron = 1,
+    OniPatron = 2,
+    DemonLordSeed = 3,
+    TrueDemonLord = 4,
+    OctagramPatron = 5
 }
 
 internal static class ExperienceStatusIds
@@ -114,11 +121,13 @@ internal static class ExperienceStatusIds
     public const int TalentExperience400Percent = 584;
     public const int MaxTalentPotion400Percent = 590;
     public const int GuildDoubleExperience16Hours = 1007;
-    public const int VipBronze = 1500;
-    public const int VipSilver = 1501;
-    public const int VipGold = 1502;
-    public const int VipPlatinum = 1503;
+    public const int KijinPatron = 1500;
+    public const int OniPatron = 1501;
+    public const int DemonLordSeed = 1502;
+    public const int TrueDemonLord = 1503;
     public const int FactionAreaExperience = 1504;
+    public const int OctagramPatron = 1506;
+    public const int PremiumBattlePass = 1507;
 }
 
 internal static class ExperienceBoostKinds
@@ -127,30 +136,83 @@ internal static class ExperienceBoostKinds
     public const int Talent = 20;
     public const int Weekend = 22;
     public const int TrickOrTreat = 23;
+    public const int Pet = 24;
     public const int Guild = 100;
-    public const int Vip = 1008;
+    public const int GuildTalent = 101;
+    public const int Donator = 1008;
     public const int FactionArea = 1009;
+    public const int BattlePass = 1010;
+
+    public static bool AffectsFighter(int kind) => kind switch
+    {
+        Talent or GuildTalent or Pet => false,
+        _ => true
+    };
+
+    public static bool AffectsTalent(int kind) =>
+        kind is Talent or GuildTalent or FactionArea or BattlePass;
+
+    public static bool AffectsPet(int kind) => kind is
+        Consumable or Weekend or Pet or Guild or FactionArea or BattlePass;
 }
 
-internal static class VipExperienceBoosts
+internal static class DonatorBenefits
 {
-    public static int BonusBasisPoints(VipTier tier) => tier switch
+    public static int ExperienceBonusBasisPoints(DonatorTier tier) => tier switch
     {
-        VipTier.Bronze => 500,
-        VipTier.Silver => 1_000,
-        VipTier.Gold => 1_500,
-        VipTier.Platinum => 2_000,
+        DonatorTier.KijinPatron => 500,
+        DonatorTier.OniPatron => 1_000,
+        DonatorTier.DemonLordSeed => 1_500,
+        DonatorTier.TrueDemonLord => 2_000,
+        DonatorTier.OctagramPatron => 2_500,
         _ => 0
     };
 
-    public static int StatusId(VipTier tier) => tier switch
+    public static int MaximumHitPointsBonusBasisPoints(DonatorTier tier) =>
+        tier switch
+        {
+            DonatorTier.KijinPatron => 200,
+            DonatorTier.OniPatron => 400,
+            DonatorTier.DemonLordSeed => 600,
+            DonatorTier.TrueDemonLord => 800,
+            DonatorTier.OctagramPatron => 1_000,
+            _ => 0
+        };
+
+    public static int AttackBonusBasisPoints(DonatorTier tier) => tier switch
     {
-        VipTier.Bronze => ExperienceStatusIds.VipBronze,
-        VipTier.Silver => ExperienceStatusIds.VipSilver,
-        VipTier.Gold => ExperienceStatusIds.VipGold,
-        VipTier.Platinum => ExperienceStatusIds.VipPlatinum,
+        DonatorTier.KijinPatron => 100,
+        DonatorTier.OniPatron => 200,
+        DonatorTier.DemonLordSeed => 300,
+        DonatorTier.TrueDemonLord => 400,
+        DonatorTier.OctagramPatron => 500,
         _ => 0
     };
+
+    public static int StatusId(DonatorTier tier) => tier switch
+    {
+        DonatorTier.KijinPatron => ExperienceStatusIds.KijinPatron,
+        DonatorTier.OniPatron => ExperienceStatusIds.OniPatron,
+        DonatorTier.DemonLordSeed => ExperienceStatusIds.DemonLordSeed,
+        DonatorTier.TrueDemonLord => ExperienceStatusIds.TrueDemonLord,
+        DonatorTier.OctagramPatron => ExperienceStatusIds.OctagramPatron,
+        _ => 0
+    };
+
+    public static string DisplayName(DonatorTier tier) => tier switch
+    {
+        DonatorTier.KijinPatron => "Kijin Patron",
+        DonatorTier.OniPatron => "Oni Patron",
+        DonatorTier.DemonLordSeed => "Demon Lord Seed",
+        DonatorTier.TrueDemonLord => "True Demon Lord",
+        DonatorTier.OctagramPatron => "Octagram Patron",
+        _ => string.Empty
+    };
+}
+
+internal static class BattlePassBenefits
+{
+    public const int ExperienceBonusBasisPoints = 500;
 }
 
 internal static class ExperienceBoostContract

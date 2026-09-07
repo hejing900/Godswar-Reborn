@@ -163,7 +163,13 @@ internal static partial class Program
     {
         Check.Equal((ushort)108, ReadUInt16(stream, offset), $"NPC {definition.NpcKey} declared length");
         Check.Equal((ushort)0x2724, ReadUInt16(stream, offset + 2), $"NPC {definition.NpcKey} opcode");
-        Check.Equal(definition.AppearanceType, ReadUInt32(stream, offset + 4), $"NPC {definition.NpcKey} appearance type");
+        var expectedObjectType =
+            ((uint)(ushort)definition.MapId << 16) |
+            (definition.AppearanceType & ushort.MaxValue);
+        Check.Equal(
+            expectedObjectType,
+            ReadUInt32(stream, offset + 4),
+            $"NPC {definition.NpcKey} map and appearance type");
         Check.Equal(definition.ObjectId, ReadUInt32(stream, offset + 8), $"NPC {definition.NpcKey} object id");
         Check.Equal(1u, ReadUInt32(stream, offset + 12), $"NPC {definition.NpcKey} active marker");
         Check.Equal(0u, ReadUInt32(stream, offset + 20), $"NPC {definition.NpcKey} neutral field");

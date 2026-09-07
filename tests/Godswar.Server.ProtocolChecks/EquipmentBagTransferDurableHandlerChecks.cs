@@ -26,6 +26,8 @@ internal static partial class EquipmentBagTransferDurableHandlerChecks
         await CheckSecureTokenlessTransferFailsClosedAsync();
         await CheckLocalRawTokenlessUnequipRetainsCompatibilityAsync();
         await CheckLocalRawTokenlessRightClickEquipRetainsCompatibilityAsync();
+        await CheckPlayerSkillBookBagSlotPacketOnlyAcknowledgesAsync();
+        await CheckLocalRawPlayerSkillBookBindsConstraintAsync();
         await CheckRawTokenlessRightClickEquipWithoutLocalAccessFailsClosedAsync();
         await CheckRawTokenlessUnequipWithoutLocalAccessFailsClosedAsync();
         await CheckOpcode10051CompatibilityAndAmbiguityAsync();

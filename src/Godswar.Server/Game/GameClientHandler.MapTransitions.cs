@@ -1,4 +1,5 @@
 using Godswar.Server.Application.Characters;
+using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Packets;
 using Godswar.Server.Protocol;
 
@@ -74,7 +75,7 @@ internal sealed partial class GameClientHandler
             _character is null ||
             !_registered ||
             !_worldPresenceAnnounced ||
-            targetMapId is 200 or 204 ||
+            DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(targetMapId) ||
             _character.CurrentMap == targetMapId ||
             !_gameplayCatalogs.MapTraversal.TryGetMap(
                 _character.CurrentMap,

@@ -26,8 +26,8 @@ internal static partial class LegacyRealmLoginProtocolChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginAccountStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 legacyAuthenticationAccess:
                     LegacyAuthenticationAccess.Create(
                         ServerRuntimeProfilePolicy.Validate(options)),
@@ -61,8 +61,8 @@ internal static partial class LegacyRealmLoginProtocolChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginAccountStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 legacyAuthenticationAccess:
                     LegacyAuthenticationAccess.Create(
                         ServerRuntimeProfilePolicy.Validate(options)),
@@ -87,8 +87,8 @@ internal static partial class LegacyRealmLoginProtocolChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginAccountStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 legacyAuthenticationAccess:
                     LegacyAuthenticationAccess.Create(
                         ServerRuntimeProfilePolicy.Validate(options)),
@@ -144,8 +144,8 @@ internal static partial class LegacyRealmLoginProtocolChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginAccountStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 legacyAuthenticationAccess:
                     LegacyAuthenticationAccess.Create(
                         ServerRuntimeProfilePolicy.Validate(options)),
@@ -182,8 +182,8 @@ internal static partial class LegacyRealmLoginProtocolChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginAccountStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 legacyAuthenticationAccess:
                     LegacyAuthenticationAccess.Create(
                         ServerRuntimeProfilePolicy.Validate(options)),
@@ -229,8 +229,8 @@ internal static partial class LegacyRealmLoginProtocolChecks
         {
             var handler = new LoginClientHandler(
                 session,
-                new LoginAccountStore(),
                 options,
+                new FixedPasswordAccountAuthenticator(),
                 realmCatalog: new FixedRealmCatalogReader(catalog));
             SetField(
                 handler,

@@ -16,10 +16,10 @@ internal static partial class
     private const string ConnectionStringVariable =
         "GODSWAR_TEST_POSTGRES_CONNECTION_STRING";
     private const string ExpectedRevision =
-        "06BCC3DD4665BB5F3F3AE0843B1AA2A1B6C211DDA07DB0381B5EA663068040C7";
-    private const string ExpectedSource =
-        "reviewed-legacy-projection-v1";
-    private const int ExpectedEntryCount = 383;
+        NpcContentBaselineV7.ExpectedRevision;
+    private const string ExpectedSource = NpcContentBaselineV7.Source;
+    private const int ExpectedEntryCount =
+        NpcContentBaselineV7.ExpectedEntryCount;
     private const string LegacySource = "b05b_legacy_decoy";
     private const short LegacyMapId = 0;
     private const int LegacyQuestId = -90505006;
@@ -40,6 +40,7 @@ internal static partial class
             return;
         }
 
+        await PostgresSchemaStartup.InitializeAsync(connectionString);
         await using (var store = new PostgresGameStore(connectionString))
         {
             await store.EnsureSeedDataAsync();
@@ -53,6 +54,12 @@ internal static partial class
             connectionString);
         await AssertUnpublishedDatabaseAsync(dataSource);
         await AssertLoaderFailsClosedAsync(connectionString);
+
+        await SeedAndPublishCanonicalV2FixtureAsync(dataSource);
+        var v1Snapshot =
+            await ReadCanonicalV1SnapshotAsync(dataSource);
+        var v2Snapshot =
+            await ReadCanonicalV2SnapshotAsync(dataSource);
 
         var coldRace = await Task.WhenAll(
             Enumerable.Range(0, 6)
@@ -69,6 +76,14 @@ internal static partial class
                 result,
                 created: result.Created);
         }
+        Check.Equal(
+            v1Snapshot,
+            await ReadCanonicalV1SnapshotAsync(dataSource),
+            "V6 publication leaves every sealed V1 NPC row unchanged");
+        Check.Equal(
+            v2Snapshot,
+            await ReadCanonicalV2SnapshotAsync(dataSource),
+            "V6 publication leaves every sealed V2 NPC row unchanged");
 
         // The production reader is intentionally all-or-nothing across its
         // published content families. Supply the independently tested
@@ -86,7 +101,7 @@ internal static partial class
         var databaseDefinitions =
             await ReadPublishedDefinitionsAsync(dataSource);
         var reviewedDefinitions =
-            NpcContentBaselineV1.LoadDefinitions();
+            NpcContentBaselineV7.LoadDefinitions();
         AssertNpcSequence(
             reviewedDefinitions,
             databaseDefinitions,

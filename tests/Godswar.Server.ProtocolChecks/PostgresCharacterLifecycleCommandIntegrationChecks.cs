@@ -123,6 +123,13 @@ internal static partial class
         await AssertStarterFashionSlotAsync(
             dataSource,
             first.CharacterId);
+        await AssertFactionPortalCreationAsync(
+            connectionString,
+            dataSource,
+            executor,
+            correlation,
+            token,
+            first.CharacterId);
 
         var createConflict = await executor.ExecuteAsync(
             CreateEnvelope(
@@ -396,7 +403,8 @@ internal static partial class
         int accountId,
         CommandConnectionCorrelation correlation,
         Guid operationId,
-        string name) =>
+        string name,
+        byte camp = GameDefaults.SpartaCamp) =>
         CharacterCreateCommandEnvelope.Create(
             accountId,
             correlation,
@@ -406,7 +414,7 @@ internal static partial class
                 0,
                 name,
                 1,
-                GameDefaults.SpartaCamp,
+                camp,
                 0,
                 1,
                 0,

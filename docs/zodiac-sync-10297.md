@@ -266,7 +266,9 @@ The numeric retail awards have not been recovered. The server consequently expos
 - `emulatorNormalEnergyPerTickX100`: `1000` (`10` energy), inferred and unverified;
 - compensation: twelve boosted ticks (one hour, currently `240` energy);
 - persistence flush: every 30 seconds plus the disconnect tail;
-- day boundary: the original fixed UTC-8 server clock advertised by the server-time packet.
+- day boundary: the persisted IANA calendar of the selected realm; Tempest
+  and Dwargon currently use `Asia/Manila` (UTC+8). The server-time packet
+  carries its inverse as the native client's subtractive clock bias.
 
 Only completed five-minute online intervals award energy and emit SID `5`. Sub-tick duration persists across disconnect/reconnect, so a 299-second session followed by one second online completes exactly one tick. Daily online duration, centi-energy remainder, last-online timestamp, and the compensation-day marker are persisted for both JSON and PostgreSQL providers. Compensation never counts as online duration, and storage-cap clipping is reflected in SID `5`'s applied-gain field.
 
@@ -289,7 +291,7 @@ nothing while the balance remains at or above the normal cap. This narrowly
 preserves a manually granted test balance without allowing regular play to
 generate over-cap energy or silently destroying the balance on the next tick.
 
-To replace the emulator rates with retail values, capture a below-cap character through at least one tick in the first three daily online hours and one tick after three hours, recording SID `5` `v1/v2`. A capture spanning the UTC-8 day boundary plus the next login after an offline day is also needed to validate compensation delivery timing.
+To replace the emulator rates with retail values, capture a below-cap character through at least one tick in the first three daily online hours and one tick after three hours, recording SID `5` `v1/v2`. A capture spanning the configured realm-day boundary plus the next login after an offline day is also needed to validate compensation delivery timing.
 
 ## Reborn character-stat extension (SID `200`)
 

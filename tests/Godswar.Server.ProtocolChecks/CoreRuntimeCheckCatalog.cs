@@ -11,6 +11,9 @@ internal static class CoreRuntimeCheckCatalog
         ("Per-map player and NPC ECS runtime cutover", MapEcsShadowChecks.RunAsync),
         ("Atomic map ECS publication and rollback", MapEcsRuntimeCutoverChecks.RunAsync),
         ("Online NPC revision and object-ID collision rollback", NpcCatalogRevisionChecks.RunAsync),
-        ("Cross-map ECS transfer rollback state", MapEcsTransferRollbackChecks.RunAsync)
+        ("Cross-map ECS transfer rollback state", MapEcsTransferRollbackChecks.RunAsync),
+        (
+            DynamicDungeonContentMapPolicyChecks.CheckName,
+            DynamicDungeonContentMapPolicyChecks.RunAsync)
     ];
 }

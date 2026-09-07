@@ -17,8 +17,10 @@ internal readonly record struct BackhaulSkillDefinition(
 
 internal static class BackhaulSkillCatalog
 {
-    public const uint CitySkillId = 3062;
-    public const uint SuburbSkillId = 3063;
+    public const uint CitySkillId =
+        FactionPortalSkillPolicy.SpartaCapitalPortalSkillId;
+    public const uint SuburbSkillId =
+        FactionPortalSkillPolicy.SpartaSuburbPortalSkillId;
 
     private static readonly FrozenDictionary<uint, BackhaulSkillDefinition>
         Definitions = CreateDefinitions();
@@ -38,6 +40,28 @@ internal static class BackhaulSkillCatalog
     {
         var definitions = new[]
         {
+            new BackhaulSkillDefinition(
+                FactionPortalSkillPolicy.AthensCapitalPortalSkillId,
+                "Athens City",
+                "FlyToAthens1",
+                GameDefaults.AthensCamp,
+                GameDefaults.AthensCapitalMap,
+                GameDefaults.StartingPositionX,
+                GameDefaults.StartingPositionZ,
+                ManaCost: 50,
+                CastTime: TimeSpan.FromSeconds(6),
+                Cooldown: TimeSpan.FromSeconds(300)),
+            new BackhaulSkillDefinition(
+                FactionPortalSkillPolicy.AthensSuburbPortalSkillId,
+                "Athens Suburb",
+                "FlyToAthens2",
+                GameDefaults.AthensCamp,
+                TargetMapId: 2,
+                TargetX: 102f,
+                TargetZ: -217f,
+                ManaCost: 50,
+                CastTime: TimeSpan.FromSeconds(6),
+                Cooldown: TimeSpan.FromSeconds(600)),
             new BackhaulSkillDefinition(
                 CitySkillId,
                 "Sparta City",

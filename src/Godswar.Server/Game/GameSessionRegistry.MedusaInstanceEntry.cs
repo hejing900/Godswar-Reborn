@@ -12,6 +12,11 @@ internal sealed partial class GameSessionRegistry
         CancellationToken,
         Task<bool>>> _instanceTransitionSinks = [];
 
+    private readonly ConcurrentDictionary<ClientSession, Func<
+        AuthoritativeInstanceTransitionCommand,
+        CancellationToken,
+        Task<bool>>> _authoritativeInstanceTransitionSinks = [];
+
     private readonly Dictionary<(int RealmId, DateOnly Day, int CharacterId),
         Guid> _localMedusaDailyEntries = [];
 
@@ -33,6 +38,41 @@ internal sealed partial class GameSessionRegistry
     {
         ArgumentNullException.ThrowIfNull(session);
         _instanceTransitionSinks.TryRemove(session, out _);
+    }
+
+    internal void RegisterAuthoritativeInstanceTransitionSink(
+        ClientSession session,
+        Func<AuthoritativeInstanceTransitionCommand, CancellationToken,
+            Task<bool>> sink)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(sink);
+        if (!_authoritativeInstanceTransitionSinks.TryAdd(session, sink))
+        {
+            throw new InvalidOperationException(
+                "The session already has an authoritative " +
+                "instance-transition sink.");
+        }
+    }
+
+    internal void UnregisterAuthoritativeInstanceTransitionSink(
+        ClientSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        _authoritativeInstanceTransitionSinks.TryRemove(session, out _);
+    }
+
+    internal async Task<bool>
+        TransitionPartyMemberToAuthoritativeInstanceAsync(
+            ClientSession session,
+            AuthoritativeInstanceTransitionCommand command,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        return _authoritativeInstanceTransitionSinks.TryGetValue(
+                session,
+                out var sink) &&
+            await sink(command, cancellationToken);
     }
 
     internal async Task<bool> TransitionPartyMemberToInstanceAsync(

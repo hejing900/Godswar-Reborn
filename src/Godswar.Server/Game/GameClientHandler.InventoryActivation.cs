@@ -66,6 +66,9 @@ internal sealed partial class GameClientHandler
             PetExperienceItemPolicy.IsMorningDew(itemId);
         var isReviewedPetSkillBook =
             PetSkillBookActivationPolicy.IsReviewedItem(itemId);
+        var isReviewedPlayerSkillBook =
+            _gameplayCatalogs.Content.SkillBooks.Any(
+                book => book.ItemId == itemId);
         var isEquipment =
             EquipmentSlots.TryGetAuthoritativeSlot(
                 RequireItemContent().Templates,
@@ -104,6 +107,7 @@ internal sealed partial class GameClientHandler
         var isPackedSealJade = itemId == PetItemCatalog.PackedSealJade;
         if (isPetEgg || isPetShedExpansion || isPetSkillCellItem ||
             isPetExperienceItem || isReviewedPetSkillBook ||
+            isReviewedPlayerSkillBook ||
             isPackedSealJade)
         {
                 if (!AllowLegacyPlayerMutationFallback(
@@ -117,6 +121,8 @@ internal sealed partial class GameClientHandler
                                 ? "pet_skill_cell_advance"
                                 : isPetExperienceItem
                                     ? "pet_experience_item"
+                                    : isReviewedPlayerSkillBook
+                                        ? "player_skill_book_learn"
                                     : "pet_skill_book_learn"))
             {
                 return;
@@ -138,7 +144,11 @@ internal sealed partial class GameClientHandler
                 await HandleDurableBagItemActivationAsync(
                     identity,
                     sourceSlot,
-                    cancellationToken);
+                    cancellationToken,
+                    executionConstraint: isReviewedPlayerSkillBook
+                        ? BagItemActivationExecutionConstraint
+                            .PlayerSkillBookOnly
+                        : BagItemActivationExecutionConstraint.None);
             }
             return;
         }
