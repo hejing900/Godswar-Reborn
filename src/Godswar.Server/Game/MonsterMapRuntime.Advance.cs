@@ -84,8 +84,8 @@ internal sealed partial class MonsterMapRuntime
                     if (targetsByCharacterId.TryGetValue(aggroCharacterId, out var combatTarget) &&
                         combatTarget.IsAlive &&
                         DistanceSquared(monster.HomeX, monster.HomeZ, combatTarget.X, combatTarget.Z) <=
-                        (CombatLeashRadius + monster.AttackRange) *
-                        (CombatLeashRadius + monster.AttackRange))
+                        (_behaviorPolicy.CombatLeashRadius + monster.AttackRange) *
+                        (_behaviorPolicy.CombatLeashRadius + monster.AttackRange))
                     {
                         positionsChanged |= AdvanceCombat(monster, combatTarget, now, updates);
                         continue;
@@ -125,7 +125,8 @@ internal sealed partial class MonsterMapRuntime
                         targetsByCharacterId,
                         monster.CurrentX,
                         monster.CurrentZ,
-                        out var nearbyTarget))
+                        out var nearbyTarget,
+                        _behaviorPolicy.AggroDetectionRadius))
                 {
                     var stoppedPatrol = SetAggroTarget(
                         monster,

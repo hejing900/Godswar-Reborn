@@ -62,5 +62,5 @@ FROM fixture_skills;
 UPDATE character_base c SET
   fighter_job_lv=160,fighter_job_exp=0,scholar_job_lv=0,scholar_job_exp=0,
   "Money"=2147483647,"Stone"=2147483647,
-  "SkillPoint"=2147483647,"SkillExp"=2147483647
+  "SkillPoint"=2147483647,"SkillExp"=99
 FROM fixture_context f WHERE c.id=f.character_id;

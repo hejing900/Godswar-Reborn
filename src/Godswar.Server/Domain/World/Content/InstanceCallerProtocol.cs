@@ -215,8 +215,8 @@ internal static class InstanceCallerProtocol
             TargetX: 171f,
             TargetZ: 24f,
             MinimumLevel: 90,
-            MaximumLevel: 140,
-            RequiredPartySize: 3);
+            MaximumLevel: int.MaxValue,
+            RequiredPartySize: null);
 
     public static bool TryResolveDifficulty(
         int dialogIndex,

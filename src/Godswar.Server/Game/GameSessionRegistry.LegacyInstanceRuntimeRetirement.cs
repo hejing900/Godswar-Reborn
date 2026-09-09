@@ -31,6 +31,7 @@ internal sealed partial class GameSessionRegistry
         if (drain.Status ==
             WorldInstanceRuntimeDirectoryStatus.InstanceNotFound)
         {
+            ForgetAtlantisRun(createdDescriptor.InstanceId);
             return true;
         }
         if (drain.Status != WorldInstanceRuntimeDirectoryStatus.Draining ||
@@ -51,6 +52,7 @@ internal sealed partial class GameSessionRegistry
         if (close.Status ==
             WorldInstanceRuntimeDirectoryStatus.InstanceNotFound)
         {
+            ForgetAtlantisRun(createdDescriptor.InstanceId);
             return true;
         }
         if (close.Status != WorldInstanceRuntimeDirectoryStatus.Closed)
@@ -61,9 +63,14 @@ internal sealed partial class GameSessionRegistry
         var removal = await WorldInstances.RemoveClosedAsync(
             createdDescriptor.InstanceId,
             CancellationToken.None);
-        return removal.Status is
+        var removed = removal.Status is
             WorldInstanceRuntimeDirectoryStatus.Removed or
             WorldInstanceRuntimeDirectoryStatus.InstanceNotFound;
+        if (removed)
+        {
+            ForgetAtlantisRun(createdDescriptor.InstanceId);
+        }
+        return removed;
     }
 
     private static DateTimeOffset Maximum(

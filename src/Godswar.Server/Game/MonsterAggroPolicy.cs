@@ -89,11 +89,12 @@ internal static class MonsterAggroPolicy
         IReadOnlyDictionary<int, MonsterCombatTarget> targets,
         float monsterX,
         float monsterZ,
-        out MonsterCombatTarget selected)
+        out MonsterCombatTarget selected,
+        float detectionRadius = DetectionRadius)
     {
         ArgumentNullException.ThrowIfNull(targets);
         selected = default;
-        var maximumDistanceSquared = DetectionRadius * DetectionRadius;
+        var maximumDistanceSquared = detectionRadius * detectionRadius;
         var selectedDistanceSquared = double.MaxValue;
         var found = false;
         foreach (var target in targets.Values)

@@ -14,6 +14,8 @@ internal static class LegacyInstanceDailyEntryChecks
     public static async Task RunAsync()
     {
         CheckRequestValidation();
+        CheckPartySizeClaims();
+        CheckOpalPayerValidation();
         CheckLocalAtomicClaims();
         await CheckFailedLaunchRuntimeRetirementAsync();
     }
@@ -29,13 +31,92 @@ internal static class LegacyInstanceDailyEntryChecks
             DateTimeOffset.UnixEpoch);
         valid.Validate();
 
-        Check.Throws<ArgumentException>(
-            () => (valid with { CharacterIds = [101, 102] }).Validate(),
-            "Atlantis requires exactly three unique characters");
+        foreach (var kind in Enum.GetValues<InstanceCallerEntryKind>())
+        {
+            foreach (var partySize in Enumerable.Range(1, 5))
+            {
+                (valid with
+                {
+                    InstanceKind = kind,
+                    CharacterIds = Enumerable.Range(101, partySize).ToArray()
+                }).Validate();
+            }
+
+            foreach (var partySize in new[] { 0, 6 })
+            {
+                Check.Throws<ArgumentException>(
+                    () => (valid with
+                    {
+                        InstanceKind = kind,
+                        CharacterIds = Enumerable.Range(101, partySize)
+                            .ToArray()
+                    }).Validate(),
+                    $"{kind} rejects a daily claim for {partySize} characters");
+            }
+        }
         Check.Throws<ArgumentException>(
             () => (valid with { CharacterIds = [101, 101, 103] })
                 .Validate(),
             "a daily claim rejects duplicate characters");
+    }
+
+    private static void CheckPartySizeClaims()
+    {
+        var registry = new GameSessionRegistry();
+        var day = new DateOnly(2026, 9, 1);
+        foreach (var kind in Enum.GetValues<InstanceCallerEntryKind>())
+        {
+            foreach (var partySize in Enumerable.Range(1, 5))
+            {
+                var characters = Enumerable.Range(200 + partySize * 10,
+                    partySize).ToArray();
+                var reservation = registry.TryReserveLocalLegacyInstanceDailyEntry(
+                    Guid.NewGuid(), RealmId.Tempest, day, kind, characters);
+                Check.True(
+                    reservation.Status == LegacyInstanceDailyEntryClaimStatus.Claimed &&
+                    reservation.FreeEntryLimit == 3 &&
+                    reservation.PaymentRequiredCharacterIds.Count == 0,
+                    $"{kind} claims {partySize} members with unchanged free allowance");
+            }
+
+            foreach (var partySize in new[] { 0, 6 })
+            {
+                Check.Throws<ArgumentException>(
+                    () => registry.TryReserveLocalLegacyInstanceDailyEntry(
+                        Guid.NewGuid(), RealmId.Tempest, day, kind,
+                        Enumerable.Range(300, partySize).ToArray()),
+                    $"{kind} rejects a local claim for {partySize} characters");
+            }
+        }
+    }
+
+    private static void CheckOpalPayerValidation()
+    {
+        var payers = Enumerable.Range(101, 6)
+            .Select(characterId => new LegacyInstanceOpalPayer(
+                characterId,
+                characterId,
+                PlayerOwnershipTestFences.ForCharacter(characterId)))
+            .ToArray();
+        var request = new LegacyInstanceOpalChargeRequest(
+            Guid.NewGuid(), RealmId.Tempest, payers,
+            DateTimeOffset.UnixEpoch);
+        foreach (var payerCount in Enumerable.Range(1, 5))
+        {
+            (request with { Payers = payers.Take(payerCount).ToArray() })
+                .Validate();
+        }
+        Check.Throws<ArgumentException>(request.Validate,
+            "Atlantis rejects six Opal payers");
+        Check.Throws<ArgumentException>(
+            () => (request with { Payers = [] }).Validate(),
+            "Atlantis rejects an empty Opal charge");
+        Check.Throws<ArgumentException>(
+            () => (request with { Payers = [payers[0], payers[0]] }).Validate(),
+            "Atlantis rejects duplicate Opal payers");
+        Check.Equal((short)1,
+            LegacyInstanceOpalPaymentPolicy.OpalsPerRetryingCharacter,
+            "Atlantis still charges one Opal per returning member");
     }
 
     private static void CheckLocalAtomicClaims()

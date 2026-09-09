@@ -119,27 +119,27 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
             result.Revision,
             "dialogue release revision");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedSpawnRevision,
+            NpcDialogueBaselineV23.ExpectedSpawnRevision,
             result.SpawnRevision,
             "dialogue release spawn dependency");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedTextCount,
+            NpcDialogueBaselineV23.ExpectedTextCount,
             result.TextCount,
             "dialogue release text count");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedProfileCount,
+            NpcDialogueBaselineV23.ExpectedProfileCount,
             result.ProfileCount,
             "dialogue release profile count");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedRouteCount,
+            NpcDialogueBaselineV23.ExpectedRouteCount,
             result.RouteCount,
             "dialogue release route count");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedMenuEntryCount,
+            NpcDialogueBaselineV23.ExpectedMenuEntryCount,
             result.MenuEntryCount,
             "dialogue release menu count");
         Check.Equal(
-            NpcDialogueBaselineV21.Source,
+            NpcDialogueBaselineV23.Source,
             result.Source,
             "dialogue release source");
     }
@@ -151,11 +151,11 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
             manifest.NpcDialogues.Family,
             "dialogue manifest family");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedRevision,
+            NpcDialogueBaselineV23.ExpectedRevision,
             manifest.NpcDialogues.Sha256,
             "dialogue manifest revision");
         Check.Equal(
-            NpcDialogueBaselineV21.ExpectedHashedEntryCount,
+            NpcDialogueBaselineV23.ExpectedHashedEntryCount,
             manifest.NpcDialogues.EntryCount,
             "dialogue manifest hashed entry count");
     }
@@ -163,7 +163,7 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
     private static async Task AssertRoutesAsync(
         IWorldContentReader reader)
     {
-        var expected = NpcDialogueBaselineV21.CreateRoutes()
+        var expected = NpcDialogueBaselineV23.CreateRoutes()
             .GroupBy(static route => route.NpcKey, StringComparer.Ordinal)
             .ToDictionary(
                 static group => group.Key,
@@ -242,7 +242,7 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
         {
             var content = await reader.ReadNpcDialogueAsync(npcKey);
             Check.Equal(
-                NpcDialogueBaselineV14.InstanceCallerDescription,
+                NpcDialogueBaselineV23.InstanceCallerDescription,
                 content.Text.Description,
                 $"{npcKey} publishes three free daily entries and one " +
                 "Opal-funded additional-entry guidance");
@@ -289,10 +289,10 @@ internal static partial class PostgresNpcDialoguePublicationIntegrationChecks
             "dialogue publication exists");
         var expected = new[]
         {
-            NpcDialogueBaselineV21.ExpectedTextCount,
-            NpcDialogueBaselineV21.ExpectedProfileCount,
-            NpcDialogueBaselineV21.ExpectedRouteCount,
-            NpcDialogueBaselineV21.ExpectedMenuEntryCount
+            NpcDialogueBaselineV23.ExpectedTextCount,
+            NpcDialogueBaselineV23.ExpectedProfileCount,
+            NpcDialogueBaselineV23.ExpectedRouteCount,
+            NpcDialogueBaselineV23.ExpectedMenuEntryCount
         };
         for (var index = 0; index < expected.Length; index++)
         {

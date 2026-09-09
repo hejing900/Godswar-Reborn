@@ -14,7 +14,7 @@ internal static partial class MedusaInstanceOwnershipChecks
         MonsterRuntimeSnapshot target)
     {
         var before = RequiredMonster(sourceRuntime.Map, target.ObjectId);
-        var (rebound, reflection) = InvokeSecondaries(
+        var reflection = InvokeReflection(
             registry,
             sourceRuntime,
             source,
@@ -22,17 +22,12 @@ internal static partial class MedusaInstanceOwnershipChecks
             eventId: 0x5EC0_DA11);
         var after = RequiredMonster(sourceRuntime.Map, target.ObjectId);
         Check.True(
-            !rebound.Claimed &&
-            !rebound.Applied &&
             reflection == PveElementalCommitResult.Empty &&
             SameMonsterHealth(before, after) &&
             PrivateLedgerClaimCount(
                 registry,
-                "_pveMonsterReboundLedger") == 0 &&
-            PrivateLedgerClaimCount(
-                registry,
                 "_monsterIncomingAttackReplay") == 0,
-            "bound Medusa rebound and Gaia reflection reach the raw Map fence without HP or replay divergence");
+            "bound Medusa Gaia reflection reaches the raw Map fence without HP or replay divergence");
     }
 
     private static void CheckStaleSecondaryDamageFences(
@@ -49,7 +44,7 @@ internal static partial class MedusaInstanceOwnershipChecks
         var destinationBefore = RequiredMonster(
             destinationRuntime.Map,
             destinationTarget.ObjectId);
-        var (rebound, reflection) = InvokeSecondaries(
+        var reflection = InvokeReflection(
             registry,
             sourceRuntime,
             staleSource,
@@ -63,38 +58,22 @@ internal static partial class MedusaInstanceOwnershipChecks
             destinationTarget.ObjectId);
 
         Check.True(
-            !rebound.Claimed &&
-            !rebound.Applied &&
             reflection == PveElementalCommitResult.Empty &&
             SameMonsterHealth(sourceBefore, sourceAfter) &&
             SameMonsterHealth(destinationBefore, destinationAfter) &&
             PrivateLedgerClaimCount(
                 registry,
-                "_pveMonsterReboundLedger") == 0 &&
-            PrivateLedgerClaimCount(
-                registry,
                 "_monsterIncomingAttackReplay") == 0,
-            "stale rebound and Gaia reflection neither reroute to a colliding map-200 target nor consume replay claims");
+            "stale Gaia reflection neither reroutes to a colliding map-200 target nor consumes replay claims");
     }
 
-    private static (
-        PveMonsterReboundCommit Rebound,
-        PveElementalCommitResult Reflection) InvokeSecondaries(
+    private static PveElementalCommitResult InvokeReflection(
         GameSessionRegistry registry,
         WorldInstanceRuntime sourceRuntime,
         GameSessionContext source,
         MonsterRuntimeSnapshot target,
         ulong eventId)
     {
-        var rebound = InvokePrivate<PveMonsterReboundCommit>(
-            registry,
-            "CommitMonsterRebound",
-            sourceRuntime,
-            source,
-            target,
-            eventId,
-            10u,
-            5u);
         var reflection = InvokePrivate<PveElementalCommitResult>(
             registry,
             "CommitMonsterIncomingElementalReflection",
@@ -108,7 +87,7 @@ internal static partial class MedusaInstanceOwnershipChecks
                 eventId,
                 Damage: 5,
                 CombatEventProvenance.Reflection));
-        return (rebound, reflection);
+        return reflection;
     }
 
     private static TResult InvokePrivate<TResult>(

@@ -25,7 +25,6 @@ internal sealed partial class GameSessionRegistry
         PlayerMonsterDamageEcsDecision decision = default;
         CombatResolution resolution = default;
         uint damage = 0;
-        uint reboundDamage = 0;
         var replayRejected = false;
         var authorityRejected = false;
         var elementalAttempt = default(MonsterIncomingElementalAttempt);
@@ -34,7 +33,6 @@ internal sealed partial class GameSessionRegistry
         var petHealingReceivedBasisPoints =
             ElementalBasisPointMath.Denominator;
         var deathInterruptionTask = Task.CompletedTask;
-        var targetCombat = default(CombatTargetStats);
         var canApplyElemental = false;
         var damageRequest = default(PlayerMonsterDamageEcsRequest);
         var medusaCapture = default(MedusaMonsterPlayerHitCapture);
@@ -98,10 +96,6 @@ internal sealed partial class GameSessionRegistry
 
             lock (targetContext.Character.VitalsSync)
             {
-                targetCombat =
-                    MonsterIncomingCombatPolicy.ResolveTargetStats(
-                        targetContext.Character,
-                        runtimeMitigation);
                 var effectiveMonsterProfile =
                     AdjustPveMonsterAttackerProfile(
                         targetContext.Session,
@@ -287,16 +281,6 @@ internal sealed partial class GameSessionRegistry
                 {
                     lock (targetContext.Character.VitalsSync)
                     {
-                        if (decision.Applied)
-                        {
-                            reboundDamage =
-                                CombatSecondaryEffectPolicy.Resolve(
-                                        decision.AppliedDamage,
-                                        default,
-                                        targetCombat)
-                                    .ReboundDamage;
-                        }
-
                         if (canApplyElemental)
                         {
                             elementalPostCommit =
@@ -381,7 +365,6 @@ internal sealed partial class GameSessionRegistry
             decision,
             resolution,
             damage,
-            reboundDamage,
             replayRejected,
             authorityRejected,
             elementalPostCommit,

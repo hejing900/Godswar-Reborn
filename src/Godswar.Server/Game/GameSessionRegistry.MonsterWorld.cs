@@ -17,7 +17,10 @@ internal sealed partial class GameSessionRegistry
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        CancelAbandonedAtlantisRuns(now);
+        await RetryPendingAtlantisRetirementsAsync(cancellationToken);
         var ticks = new List<WorldInstanceMonsterTick>();
+        var atlantisDeliveries = new List<AtlantisRunDelivery>();
         var medusaLeaderUiDeliveries =
             new List<MedusaLeaderUiDelivery>();
         var medusaInstanceRosterDeliveries =
@@ -29,9 +32,16 @@ internal sealed partial class GameSessionRegistry
         foreach (var runtime in WorldInstances.Snapshot())
         {
             if (runtime.Descriptor.LifecycleState ==
-                WorldInstanceLifecycleState.Closed)
+                WorldInstanceLifecycleState.Closed ||
+                runtime.Descriptor.LifecycleState == WorldInstanceLifecycleState.Draining &&
+                _pendingAtlantisRetirements.ContainsKey(runtime.InstanceId))
             {
                 continue;
+            }
+
+            if (CaptureAtlantisRunDelivery(runtime, now) is { } atlantis)
+            {
+                atlantisDeliveries.Add(atlantis);
             }
 
             if (!await DrainMedusaPeriodicDamageAsync(
@@ -195,6 +205,10 @@ internal sealed partial class GameSessionRegistry
             await PublishMedusaTerminationEgressAsync(
                 egress,
                 cancellationToken);
+        }
+        foreach (var delivery in atlantisDeliveries)
+        {
+            await PublishAtlantisRunDeliveryAsync(delivery, cancellationToken);
         }
     }
 

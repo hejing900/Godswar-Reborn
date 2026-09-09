@@ -268,6 +268,8 @@ internal sealed class PostgresApplicationDataRuntime :
                 outboxOptions);
         MedusaCompletionRewards =
             new PostgresMedusaCompletionRewardStore(_dataSource);
+        AtlantisCompletionRewards = new PostgresAtlantisCompletionRewardStore(_dataSource);
+        TitleSelections = new PostgresCharacterTitleSelectionStore(_dataSource);
         var outboxConsumers =
             PostgresOutboxConsumerCatalog.Create();
         _outboxDispatcher = new PostgresOutboxDispatcher(
@@ -423,6 +425,10 @@ internal sealed class PostgresApplicationDataRuntime :
     { get; }
 
     public IMedusaCompletionRewardStore MedusaCompletionRewards { get; }
+
+    public IAtlantisCompletionRewardStore AtlantisCompletionRewards { get; }
+
+    public ICharacterTitleSelectionStore TitleSelections { get; }
 
     public bool OutboxEnabled { get; }
 

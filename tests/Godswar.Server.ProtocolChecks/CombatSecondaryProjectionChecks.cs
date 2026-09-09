@@ -180,17 +180,6 @@ internal static partial class CombatSecondaryProjectionChecks
             ledger.TryClaim(first),
             "secondary-effect commit fence deduplicates and evicts within a bounded ledger");
 
-        var packet = GameSessionRegistry.BuildMonsterReboundPacket(
-            attackerObjectId: 0x1448,
-            attackerX: 1f,
-            attackerZ: 2f,
-            monsterObjectId: 99,
-            reboundDamage: 123,
-            attackSelector: 3);
-        Check.Equal(
-            (byte)CombatHitOutcome.Normal,
-            packet[29],
-            "monster rebound packet is pinned to a terminal normal outcome");
     }
 
     private static void CheckCommittedLifeAbsorption()

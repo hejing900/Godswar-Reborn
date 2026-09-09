@@ -9,7 +9,8 @@ namespace Godswar.Server.World.Systems.Monsters;
 /// ordering intentionally matches the legacy runtime during shadow rollout.
 /// </summary>
 internal sealed class MonsterEcsSimulationSystem(
-    MonsterEcsSimulationFrame frame) : IEcsSystem
+    MonsterEcsSimulationFrame frame,
+    MonsterBehaviorPolicy behaviorPolicy) : IEcsSystem
 {
     public int Order => 100;
 
@@ -81,7 +82,8 @@ internal sealed class MonsterEcsSimulationSystem(
                             entity,
                             target,
                             frame.Now,
-                            context.Events);
+                            context.Events,
+                            behaviorPolicy.CombatLeashRadius);
                     continue;
                 }
 
@@ -139,7 +141,8 @@ internal sealed class MonsterEcsSimulationSystem(
                     frame.Targets,
                     transform.X,
                     transform.Z,
-                    out var nearbyTarget))
+                    out var nearbyTarget,
+                    behaviorPolicy.AggroDetectionRadius))
             {
                 var stoppedPatrol = MonsterEcsState.SetAggroTarget(
                     ref movement,
@@ -163,7 +166,8 @@ internal sealed class MonsterEcsSimulationSystem(
                         entity,
                         nearbyTarget,
                         frame.Now,
-                        context.Events);
+                        context.Events,
+                        behaviorPolicy.CombatLeashRadius);
                 continue;
             }
 
@@ -171,7 +175,8 @@ internal sealed class MonsterEcsSimulationSystem(
                 context.World,
                 entity,
                 frame.Now,
-                context.Events);
+                context.Events,
+                behaviorPolicy.MaximumRoamRadius);
         }
     }
 
@@ -292,7 +297,7 @@ internal sealed class MonsterEcsSimulationSystem(
         lifecycle.RespawnAt = null;
     }
 
-    private static bool IsTargetInsideCombatBoundary(
+    private bool IsTargetInsideCombatBoundary(
         EcsWorld world,
         EntityId entity,
         MonsterCombatTarget target)
@@ -302,7 +307,7 @@ internal sealed class MonsterEcsSimulationSystem(
         ref var identity =
             ref world.Get<MonsterIdentityComponent>(entity);
         var radius =
-            MonsterEcsRules.CombatLeashRadius +
+            behaviorPolicy.CombatLeashRadius +
             identity.AttackRange;
         return MonsterEcsState.DistanceSquared(
             transform.HomeX,

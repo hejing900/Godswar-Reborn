@@ -22,13 +22,14 @@ internal static partial class PvpBasicAttackRuntimeChecks
             "hostile PvP skills remain capture-gated while PvP basic attacks are live");
         await CheckCommittedHitAsync();
         await CheckFixedLifeAbsorptionAsync();
-        await CheckStatReboundPacketAsync();
+        await CheckStatReboundPacketAsync(1_000, 0);
+        await CheckStatReboundPacketAsync(0, 60_879);
         await CheckMissAndAdmissionDenialAsync();
         await CheckRuntimeStatusRatingsAsync();
         await CheckPostCommitCancellationDurabilityAsync();
     }
 
-    private static async Task CheckStatReboundPacketAsync()
+    private static async Task CheckStatReboundPacketAsync(int damageRebound, int damageReboundFlat)
     {
         await using var attackerSocket =
             await RuntimePolicySessionSocket.CreateAsync();
@@ -44,7 +45,8 @@ internal static partial class PvpBasicAttackRuntimeChecks
             GameDefaults.AthensCamp,
             physicalDefense: 100,
             dodge: 0,
-            damageRebound: 1_000);
+            damageRebound: damageRebound,
+            damageReboundFlat: damageReboundFlat);
         var registry = Registry();
         Join(registry, attackerSocket, attacker);
         Join(registry, targetSocket, target);
@@ -64,6 +66,11 @@ internal static partial class PvpBasicAttackRuntimeChecks
         Check.True(
             decision.Accepted && decision.ReboundDamage > 0,
             "PvP stat Rebound commits terminal attacker damage");
+        if (damageReboundFlat == 60_879)
+        {
+            Check.True(decision.ReboundDamage == 10_000 && attacker.CurrentHp == 0,
+                "max Cupid fixed rebound still damages an attacking player up to their remaining health");
+        }
         _ = await attackerSocket.ReadPacketAsync(30);
         _ = await targetSocket.ReadPacketAsync(30);
         var attackerRebound = await attackerSocket.ReadPacketAsync(30);
@@ -306,7 +313,8 @@ internal static partial class PvpBasicAttackRuntimeChecks
         int criticalResistance = 0,
         int damageRebound = 0,
         int lifeAbsorption = 0,
-        int lifeAbsorptionFlat = 0)
+        int lifeAbsorptionFlat = 0,
+        int damageReboundFlat = 0)
     {
         var character = new GameCharacter
         {
@@ -342,6 +350,7 @@ internal static partial class PvpBasicAttackRuntimeChecks
             Critical = critical,
             CriticalResistance = criticalResistance,
             DamageRebound = damageRebound,
+            DamageReboundFlat = damageReboundFlat,
             LifeAbsorption = lifeAbsorption,
             LifeAbsorptionFlat = lifeAbsorptionFlat,
             BasicAttackIntervalMilliseconds = 1_500,

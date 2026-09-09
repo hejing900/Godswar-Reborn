@@ -55,7 +55,7 @@ internal static partial class InstanceCallerHandlerChecks
                 InstanceCallerProtocol.InitialMenuSubIds));
         var worldContent = PinnedWorldContentReader.Create(
             "instance-caller-handler-v1",
-            [npc.MapId, 200, 204],
+            [npc.MapId, 200, 204, 205],
             [npc],
             [],
             [],
@@ -71,10 +71,8 @@ internal static partial class InstanceCallerHandlerChecks
             npcDialogueRoutes: [route]);
         var transport = new FactionCrierCaptureTransport();
         var session = new ClientSession(transport);
-        var registry = GameHandlerOwnershipTestFences.CreateRegistry(
-            session,
-            snapshot.AccountId,
-            character);
+        var registry = new GameSessionRegistry(gameplayCatalogs: GameplayContentTestFixtures.Runtime);
+        GameHandlerOwnershipTestFences.Bind(registry, session, snapshot.AccountId, character);
         registry.JoinMap(
             session,
             snapshot.AccountId,

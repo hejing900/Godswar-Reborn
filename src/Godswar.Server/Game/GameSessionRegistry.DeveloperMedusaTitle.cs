@@ -63,11 +63,7 @@ internal sealed partial class GameSessionRegistry
                     candidate.Session,
                     candidate.Ownership))
             {
-                candidate.Character.MedusaHonorPoints = reward.HonorAfter;
-                candidate.Character.MedusaRewardRevision =
-                    reward.RewardRevision;
-                candidate.Character.AddOwnedTitle(reward.AwardedTitleId);
-                candidate.Character.SelectedTitleId = reward.AwardedTitleId;
+                ApplyMedusaRewardProjection(candidate.Character, reward);
                 current = candidate;
             }
         }

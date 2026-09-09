@@ -97,7 +97,6 @@ internal sealed partial class GameSessionRegistry
         CombatResolution resolution = default;
         uint damage;
         uint appliedPlayerDamage = 0;
-        uint reboundDamage = 0;
         var replayRejected = false;
         var elementalAttempt = default(MonsterIncomingElementalAttempt);
         var elementalPostCommit =
@@ -140,10 +139,6 @@ internal sealed partial class GameSessionRegistry
                     }
                     else
                     {
-                        var targetCombat =
-                            MonsterIncomingCombatPolicy.ResolveTargetStats(
-                                targetContext.Character,
-                                runtimeMitigation);
                         var effectiveMonsterProfile =
                             AdjustPveMonsterAttackerProfile(
                                 targetContext.Session,
@@ -201,12 +196,6 @@ internal sealed partial class GameSessionRegistry
                                 appliedPlayerDamage = checked((uint)(
                                     beforeHealth -
                                     targetContext.Character.CurrentHp));
-                                reboundDamage =
-                                    CombatSecondaryEffectPolicy.Resolve(
-                                            appliedPlayerDamage,
-                                            default,
-                                            targetCombat)
-                                        .ReboundDamage;
                             }
 
                             elementalPostCommit =
@@ -256,23 +245,12 @@ internal sealed partial class GameSessionRegistry
             return;
         }
 
-        var reboundCommit = CommitMonsterRebound(
-            runtime,
-            targetContext,
-            attack.Monster,
-            combatEventId,
-            appliedPlayerDamage,
-            reboundDamage);
         var elementalReflection =
             CommitMonsterIncomingElementalReflection(
                 runtime,
                 targetContext,
-                reboundCommit.DamageResult?.Monster ?? attack.Monster,
+                attack.Monster,
                 elementalPostCommit.Reflection);
-        var preparedReboundReward =
-            await PrepareMonsterReboundRewardAsync(
-                targetContext,
-                reboundCommit);
         var preparedElementalRewards =
             await PreparePveElementalKillRewardsAsync(
                 targetContext,
@@ -416,12 +394,6 @@ internal sealed partial class GameSessionRegistry
             }
         }
 
-        await PublishMonsterReboundAsync(
-            runtime,
-            targetContext,
-            reboundCommit,
-            preparedReboundReward,
-            cancellationToken);
         await PublishPveElementalCommitAsync(
             targetContext.Session,
             elementalReflection,

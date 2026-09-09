@@ -21,6 +21,11 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+        if (await TryHandleAtlantisTerminationAsync(null, 0, cancellationToken))
+        {
+            return;
+        }
+
         if (!_registry.TryTerminateMedusaRunFromLeader(
                 _session,
                 DateTimeOffset.UtcNow))
@@ -52,6 +57,10 @@ internal sealed partial class GameClientHandler
             packet.Payload);
         var repetitionIndex = BinaryPrimitives.ReadInt32LittleEndian(
             packet.Payload.Slice(sizeof(int)));
+        if (await TryHandleAtlantisTerminationAsync(repetitionId, repetitionIndex, cancellationToken))
+        {
+            return;
+        }
         if (!_registry.TryEndMedusaRunFromLeader(
                 _session,
                 repetitionId,

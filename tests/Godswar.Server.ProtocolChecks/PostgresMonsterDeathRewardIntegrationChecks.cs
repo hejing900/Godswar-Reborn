@@ -61,6 +61,8 @@ internal static partial class PostgresMonsterDeathRewardIntegrationChecks
         await AssertGlobalDeathContentionAsync(connectionString);
         await AssertZeroRewardClaimAndConflictAsync(connectionString);
         await AssertLevelSealingAsync(connectionString);
+        await AssertCommitObserverOwnershipBoundaryAsync(connectionString);
+        await AssertTalentSaturationAsync(connectionString);
     }
 
     private static async Task AssertGlobalDeathContentionAsync(

@@ -11,7 +11,8 @@ internal static class MonsterEcsCombatSimulation
         EntityId entity,
         MonsterCombatTarget target,
         DateTimeOffset now,
-        EcsEventBuffer events)
+        EcsEventBuffer events,
+        float combatLeashRadius)
     {
         ref var transform = ref world.Get<MonsterTransformComponent>(entity);
         ref var movement = ref world.Get<MonsterMovementComponent>(entity);
@@ -25,7 +26,7 @@ internal static class MonsterEcsCombatSimulation
             target.X,
             target.Z));
 
-        if (distance <= attackRange)
+        if (MonsterAttackRangePolicy.Contains(distance, attackRange))
         {
             if (combat.Phase == MonsterCombatPhase.Chasing ||
                 movement.IsMoving)
@@ -149,8 +150,7 @@ internal static class MonsterEcsCombatSimulation
                     transform.HomeZ,
                     nextX,
                     nextZ) >
-                MonsterEcsRules.CombatLeashRadius *
-                MonsterEcsRules.CombatLeashRadius)
+                combatLeashRadius * combatLeashRadius)
             {
                 AddReturnStart(world, entity, stepAt, events);
                 break;
@@ -167,7 +167,7 @@ internal static class MonsterEcsCombatSimulation
                 transform.Z,
                 target.X,
                 target.Z));
-            if (distance <= attackRange + 0.0001d)
+            if (MonsterAttackRangePolicy.Contains(distance, attackRange))
             {
                 MonsterEcsState.StopCombatMovement(ref movement);
                 combat.Phase = MonsterCombatPhase.Attacking;

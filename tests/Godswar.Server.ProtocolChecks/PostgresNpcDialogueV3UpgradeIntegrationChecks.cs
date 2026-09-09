@@ -80,28 +80,28 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         Check.Equal(
             PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision,
             publication.Revision,
-            "V21 dialogue revision is published");
+            "V23 dialogue revision is published");
         Check.True(
             publication.Created,
-            "published live V15 predecessor is promoted to V21");
+            "published live V15 predecessor is promoted to V23");
         Check.True(
             string.Equals(
                 PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision,
                 await ReadPublishedRevisionAsync(dataSource),
                 StringComparison.Ordinal),
-            "V21 becomes the current dialogue publication");
+            "V23 becomes the current dialogue publication");
         Check.Equal(
             v14Predecessor,
             await ReadCanonicalV14SnapshotAsync(dataSource),
-            "V21 publication leaves every sealed V14 row unchanged");
+            "V23 publication leaves every sealed V14 row unchanged");
         Check.Equal(
             v15Predecessor,
             await ReadCanonicalV15SnapshotAsync(dataSource),
-            "V21 publication leaves every sealed V15 row unchanged");
+            "V23 publication leaves every sealed V15 row unchanged");
         await AssertV14DeltaAsync(dataSource);
         await AssertV15DeltaAsync(dataSource);
-        await AssertV21DeltaAsync(dataSource);
-        await AssertV15ToV21DeltaAsync(dataSource);
+        await AssertV23DeltaAsync(dataSource);
+        await AssertV15ToV23DeltaAsync(dataSource);
         await AssertTransporterRoutesAsync(dataSource);
         await AssertV14BattlefieldRoutesAsync(dataSource);
         await AssertCurrentProfileSchemaAsync(dataSource);
@@ -233,8 +233,9 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
             .AssertDuelArenaServiceRoutesAsync(pinned);
         var repeat = await PostgresNpcDialogueBaselinePublisher
             .EnsurePublishedAsync(connectionString);
-        Check.True(!repeat.Created, "V21 repeat publication is a no-op");
+        Check.True(!repeat.Created, "V23 repeat publication is a no-op");
         await CheckLegacyV21ReleaseUpgradeAsync(dataSource, connectionString);
+        await CheckSealedV22ReleaseUpgradeAsync(dataSource, connectionString);
     }
 
     private static async Task<string?> ReadPublishedRevisionAsync(

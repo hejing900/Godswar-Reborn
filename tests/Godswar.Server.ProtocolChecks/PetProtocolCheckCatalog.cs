@@ -259,6 +259,9 @@ internal static class PetProtocolCheckCatalog
             PetCaptureContractChecks.CheckName,
             PetCaptureContractChecks.RunAsync),
         (
+            PostgresPetDurableCommandIntegrationChecks.AtlantisCaptureCheckName,
+            PostgresPetDurableCommandIntegrationChecks.RunAtlantisCaptureAsync),
+        (
             PostgresPetDurableCommandIntegrationChecks
                 .CaptureRarityCheckName,
             PostgresPetDurableCommandIntegrationChecks

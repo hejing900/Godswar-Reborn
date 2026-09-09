@@ -6,6 +6,13 @@ internal static class MonsterAttackRangePolicy
 {
     public const float MeleeRange = 3f;
     public const float RangedRange = 9f;
+    // Arrival and subsequent attack eligibility must agree. Float movement
+    // can stop a fraction beyond the exact radius; inconsistent comparisons
+    // restart chasing every other tick and continually reset the attack clock.
+    public const double DistanceTolerance = 0.0001d;
+
+    public static bool Contains(double distance, float attackRange) =>
+        distance <= attackRange + DistanceTolerance;
 
     public static float Resolve(
         in MonsterCombatProfile profile,

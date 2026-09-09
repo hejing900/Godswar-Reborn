@@ -2,8 +2,7 @@ namespace Godswar.Server.World.Systems.Combat;
 
 internal enum CombatSecondaryEffectCommitKind : byte
 {
-    LifeAbsorption = 1,
-    MonsterRebound = 2
+    LifeAbsorption = 1
 }
 
 internal readonly record struct CombatSecondaryEffectCommitKey(

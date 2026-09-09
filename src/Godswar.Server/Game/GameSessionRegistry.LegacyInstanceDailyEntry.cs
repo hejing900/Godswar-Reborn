@@ -31,14 +31,7 @@ internal sealed partial class GameSessionRegistry
         }
         ArgumentNullException.ThrowIfNull(characterIds);
 
-        var minimum = instanceKind == InstanceCallerEntryKind.Atlantis
-            ? 3
-            : 1;
-        var maximum = instanceKind == InstanceCallerEntryKind.Atlantis
-            ? 3
-            : 5;
-        if (characterIds.Count < minimum ||
-            characterIds.Count > maximum ||
+        if (characterIds.Count is < 1 or > 5 ||
             characterIds.Any(static id => id <= 0))
         {
             throw new ArgumentException(

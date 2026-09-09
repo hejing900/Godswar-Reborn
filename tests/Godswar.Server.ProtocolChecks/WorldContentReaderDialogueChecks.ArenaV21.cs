@@ -63,8 +63,8 @@ internal static partial class WorldContentReaderDialogueChecks
         var release = WorldContentRevisionHasher.HashNpcDialogueRelease(payload, spawn);
         Check.Equal("0413340B6531086E307459E5931557A05392424857A26AF368F271BA01205D24",
             release.Sha256, "dependency-bound V21 release canonical golden vector");
-        Check.Equal(PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision,
-            release.Sha256, "publisher uses the reviewed dependency-bound release");
+        Check.True(PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision !=
+            release.Sha256, "current publication has advanced beyond the frozen V21 release");
         Check.True(release.Sha256 != payload.Sha256 &&
             release.Sha256 != WorldContentRevisionHasher.HashNpcDialogueRelease(
                 payload, new string('A', 64)).Sha256 &&

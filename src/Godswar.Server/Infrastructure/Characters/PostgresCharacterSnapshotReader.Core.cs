@@ -261,7 +261,11 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 SELECT ownership.title_id
                 FROM character_title_ownership ownership
                 WHERE ownership.character_id = cb.id
-                ORDER BY ownership.title_id
+                UNION
+                SELECT ownership.title_id
+                FROM atlantis_character_title_ownership ownership
+                WHERE ownership.character_id = cb.id
+                ORDER BY title_id
             )
         FROM character_base cb
         {PostgresCharacterItemProjectionSql.FullJoinForCharacterAlias}

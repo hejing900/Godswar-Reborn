@@ -105,10 +105,8 @@ internal sealed partial class PostgresGameStore
             previousExperience,
             experience,
             fighterLevelSealed);
-        var accumulatedTalentExperience = checked(previousTalentExperience + talentExperience);
-        var talentPointsGained = accumulatedTalentExperience / 100;
-        var currentTalentExperience = accumulatedTalentExperience % 100;
-        var currentTalentPoints = checked(previousTalentPoints + talentPointsGained);
+        var talentProgression = TalentExperienceCatalog.Apply(
+            previousTalentExperience, previousTalentPoints, talentExperience);
 
         await using (var command = new NpgsqlCommand("""
             UPDATE character_base
@@ -124,8 +122,8 @@ internal sealed partial class PostgresGameStore
             command.Parameters.AddWithValue("characterId", characterId);
             command.Parameters.AddWithValue("level", fighterProgression.Level);
             command.Parameters.AddWithValue("experience", fighterProgression.Experience);
-            command.Parameters.AddWithValue("talentPoints", currentTalentPoints);
-            command.Parameters.AddWithValue("talentExperience", currentTalentExperience);
+            command.Parameters.AddWithValue("talentPoints", talentProgression.Points);
+            command.Parameters.AddWithValue("talentExperience", talentProgression.Experience);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -138,10 +136,10 @@ internal sealed partial class PostgresGameStore
             fighterProgression.Experience,
             PlayerExperienceCatalog.GetNextLevelExperience(fighterProgression.Level),
             fighterProgression.LevelUps,
-            talentExperience,
-            currentTalentExperience,
-            talentPointsGained,
-            currentTalentPoints);
+            talentProgression.ExperienceGained,
+            talentProgression.Experience,
+            talentProgression.PointsGained,
+            talentProgression.Points);
     }
 
     public async Task<ZodiacLevelUpgradeResult?> UpgradeZodiacLevelAsync(

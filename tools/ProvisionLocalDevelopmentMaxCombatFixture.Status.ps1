@@ -33,7 +33,7 @@ WITH desired(
         (c."Pos_X" IS DISTINCT FROM i.pos_x
          OR c."Pos_Z" IS DISTINCT FROM i.pos_z))
     OR c."Money" IS DISTINCT FROM 2147483647 OR c."Stone" IS DISTINCT FROM 2147483647
-    OR c."SkillPoint" IS DISTINCT FROM 2147483647 OR c."SkillExp" IS DISTINCT FROM 2147483647
+    OR c."SkillPoint" IS DISTINCT FROM 2147483647 OR c."SkillExp" IS DISTINCT FROM 99
     OR c."MaxHP" IS DISTINCT FROM 1500 OR c."MaxMP" IS DISTINCT FROM 177
     OR c.holy_suit_points IS DISTINCT FROM i.holy_points OR c.character_slot IS DISTINCT FROM 0
     OR c.lifecycle_state IS DISTINCT FROM 'active' OR c.deleted_at IS NOT NULL
@@ -316,7 +316,7 @@ SELECT 'MAX_COMBAT_FIXTURE_STATUS|' || json_build_object(
         '__ARES_MIRAGE_HASH__' = 'gws$pbkdf2-sha256$v1$600000$P88aW0u5fjI/FtRnLS7osg==$/FT0LhRB4RwmLq5gIDvyMtCnxKsQR1lp4HglLNdsEkU='
         '__ATHENA_BULWARK_HASH__' = 'gws$pbkdf2-sha256$v1$600000$T110O7doZ1mRNNFo18aXaA==$yT7Tlq9Qh9FpL+uUWTD+mLs96wKHe2mhhXFj4/R3Wq8='
         '__ATHENA_MIRAGE_HASH__' = 'gws$pbkdf2-sha256$v1$600000$mEhv48pAxaEwP8Qxko4g7w==$dwe1oEPL49+xZ2k4M5ZbJc+2zEOPsKn0M31yofGVOSk='
-        '__TEST25_HASH__' = 'gws$pbkdf2-sha256$v1$600000$3EIgjUktl5sFyy2YYK3ynQ==$6WxhR6jeTEkdPBelif9J9Gze55MimrguFawh6gSezuw='
+        '__TEST25_HASH__' = Get-MaxFixtureTest25StockClientVerifier
     }
     foreach ($entry in $replacements.GetEnumerator()) {
         $sql = $sql.Replace($entry.Key, $entry.Value)

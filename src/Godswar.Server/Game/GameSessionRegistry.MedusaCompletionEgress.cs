@@ -320,18 +320,27 @@ internal sealed partial class GameSessionRegistry
                     continue;
                 }
 
-                current.Character.MedusaHonorPoints = reward.HonorAfter;
-                current.Character.MedusaRewardRevision =
-                    reward.RewardRevision;
-                if (reward.AwardedTitleId != 0)
-                {
-                    current.Character.AddOwnedTitle(
-                        reward.AwardedTitleId);
-                    current.Character.SelectedTitleId =
-                        reward.AwardedTitleId;
-                }
+                ApplyMedusaRewardProjection(current.Character, reward);
             }
         }
+    }
+
+    internal static void ApplyMedusaRewardProjection(
+        GameCharacter character,
+        MedusaCompletionRewardMember reward)
+    {
+        if (reward.AwardedTitleId != 0)
+            character.AddOwnedTitle(reward.AwardedTitleId);
+
+        // Manual title selection shares this revision with reward writes.
+        // A delayed receipt still grants ownership, but cannot undo a later
+        // selected title or replace its newer wallet projection.
+        if (character.MedusaRewardRevision > reward.RewardRevision) return;
+
+        character.MedusaHonorPoints = reward.HonorAfter;
+        character.MedusaRewardRevision = reward.RewardRevision;
+        if (reward.AwardedTitleId != 0)
+            character.SelectedTitleId = reward.AwardedTitleId;
     }
 
     private async Task PublishMedusaRewardPacketsAsync(

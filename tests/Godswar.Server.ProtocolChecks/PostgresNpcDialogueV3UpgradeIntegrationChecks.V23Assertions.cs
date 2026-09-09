@@ -7,7 +7,7 @@ namespace Godswar.Server.ProtocolChecks;
 
 internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
 {
-    private static async Task AssertV21DeltaAsync(
+    private static async Task AssertV23DeltaAsync(
         NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
@@ -38,36 +38,36 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
             NpgsqlDbType.Varchar,
             PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision);
         await using var reader = await command.ExecuteReaderAsync();
-        Check.True(await reader.ReadAsync(), "canonical V21 release exists");
+        Check.True(await reader.ReadAsync(), "canonical V23 release exists");
         var expectedCounts = new[]
         {
-            NpcDialogueBaselineV21.ExpectedTextCount,
-            NpcDialogueBaselineV21.ExpectedProfileCount,
-            NpcDialogueBaselineV21.ExpectedRouteCount,
-            NpcDialogueBaselineV21.ExpectedMenuEntryCount
+            NpcDialogueBaselineV23.ExpectedTextCount,
+            NpcDialogueBaselineV23.ExpectedProfileCount,
+            NpcDialogueBaselineV23.ExpectedRouteCount,
+            NpcDialogueBaselineV23.ExpectedMenuEntryCount
         };
         Check.True(
             reader.GetString(0) ==
-                NpcDialogueBaselineV21.ExpectedSpawnRevision &&
-            reader.GetString(5) == NpcDialogueBaselineV21.Source,
-            "V21 declares its canonical V7 spawn dependency and source");
+                NpcDialogueBaselineV23.ExpectedSpawnRevision &&
+            reader.GetString(5) == NpcDialogueBaselineV23.Source,
+            "V23 declares its canonical V7 spawn dependency and source");
         for (var index = 0; index < expectedCounts.Length; index++)
         {
             Check.Equal(
                 expectedCounts[index],
                 reader.GetInt32(index + 1),
-                $"V21 declared count {index}");
+                $"V23 declared count {index}");
             Check.Equal(
                 expectedCounts[index],
                 reader.GetInt32(index + 6),
-                $"V21 stored count {index}");
+                $"V23 stored count {index}");
         }
 
         await reader.CloseAsync();
-        await AssertV21ArenaRosterAsync(dataSource);
+        await AssertV23ArenaRosterAsync(dataSource);
     }
 
-    private static async Task AssertV15ToV21DeltaAsync(
+    private static async Task AssertV15ToV23DeltaAsync(
         NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
@@ -81,7 +81,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
                 AND current_text.display_name = predecessor.display_name
                 AND current_text.description = predecessor.description
                WHERE predecessor.revision = @v15
-                 AND current_text.revision = @v21),
+                 AND current_text.revision = @v23),
               (SELECT COUNT(*)::integer
                FROM npc_dialogue_profiles predecessor
                JOIN npc_dialogue_profiles current_profile
@@ -91,7 +91,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
                 AND current_profile.initial_request_sub_id =
                     predecessor.initial_request_sub_id
                WHERE predecessor.revision = @v15
-                 AND current_profile.revision = @v21),
+                 AND current_profile.revision = @v23),
               (SELECT COUNT(*)::integer
                FROM npc_dialogue_profile_entries predecessor
                JOIN npc_dialogue_profile_entries current_entry
@@ -99,7 +99,7 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
                 AND current_entry.menu_order = predecessor.menu_order
                 AND current_entry.sub_id = predecessor.sub_id
                WHERE predecessor.revision = @v15
-                 AND current_entry.revision = @v21),
+                 AND current_entry.revision = @v23),
               (SELECT COUNT(*)::integer
                FROM npc_dialogue_bindings predecessor
                JOIN npc_dialogue_bindings current_binding
@@ -109,21 +109,21 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
                     predecessor.client_script_key
                 AND current_binding.profile_key = predecessor.profile_key
                WHERE predecessor.revision = @v15
-                 AND current_binding.revision = @v21),
+                 AND current_binding.revision = @v23),
               (SELECT COUNT(*)::integer
                FROM npc_dialogue_texts current_text
                LEFT JOIN npc_dialogue_texts predecessor
                  ON predecessor.revision = @v15
                 AND predecessor.npc_key = current_text.npc_key
-               WHERE current_text.revision = @v21
+               WHERE current_text.revision = @v23
                  AND predecessor.npc_key IS NULL);
             """);
-        AddV15AndV21Revisions(command);
+        AddV15AndV23Revisions(command);
         await using var reader = await command.ExecuteReaderAsync();
         Check.True(
             await reader.ReadAsync() &&
             reader.GetInt32(0) ==
-                NpcDialogueBaselineV15.ExpectedTextCount &&
+                NpcDialogueBaselineV15.ExpectedTextCount - 2 &&
             reader.GetInt32(1) ==
                 NpcDialogueBaselineV15.ExpectedProfileCount - 1 &&
             reader.GetInt32(2) ==
@@ -131,11 +131,11 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
             reader.GetInt32(3) ==
                 NpcDialogueBaselineV15.ExpectedRouteCount - 2 &&
             reader.GetInt32(4) == 5,
-            "V21 preserves V15 stock texts, replaces the legacy Arena " +
+            "V23 preserves V15 texts except both Instance Callers, replaces the legacy Arena " +
             "profile and two bindings, and adds five captured actor texts");
     }
 
-    private static async Task AssertV21ArenaRosterAsync(
+    private static async Task AssertV23ArenaRosterAsync(
         NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
@@ -176,9 +176,9 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
         var index = 0;
         while (await reader.ReadAsync())
         {
-            Check.True(index < expected.Length, "V21 has no extra Arena NPC");
+            Check.True(index < expected.Length, "V23 has no extra Arena NPC");
             var actor = expected[index++];
-            var routeCount = NpcDialogueBaselineV21.CreateRoutes()
+            var routeCount = NpcDialogueBaselineV23.CreateRoutes()
                 .Count(route => route.NpcKey == actor.NpcKey);
             Check.True(
                 reader.GetString(0) == actor.NpcKey &&
@@ -189,20 +189,20 @@ internal static partial class PostgresNpcDialogueV3UpgradeIntegrationChecks
                 !string.IsNullOrWhiteSpace(reader.GetString(5)) &&
                 reader.GetBoolean(6) &&
                 reader.GetInt32(7) == routeCount,
-                $"V21 persists exact Arena actor {actor.NpcKey}");
+                $"V23 persists exact Arena actor {actor.NpcKey}");
         }
 
-        Check.Equal(7, index, "V21 persists all seven captured Arena actors");
+        Check.Equal(7, index, "V23 persists all seven captured Arena actors");
     }
 
-    private static void AddV15AndV21Revisions(NpgsqlCommand command)
+    private static void AddV15AndV23Revisions(NpgsqlCommand command)
     {
         command.Parameters.AddWithValue(
             "v15",
             NpgsqlDbType.Varchar,
             NpcDialogueBaselineV15.ExpectedRevision);
         command.Parameters.AddWithValue(
-            "v21",
+            "v23",
             NpgsqlDbType.Varchar,
             PostgresNpcDialogueBaselinePublisher.CurrentReleaseRevision);
     }

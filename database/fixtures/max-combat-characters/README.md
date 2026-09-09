@@ -6,6 +6,16 @@ fragment directly. The four dummy accounts use non-user credentials and are
 reserved for the development combat-dummy host. The playable account is
 `test25` with password `test25`.
 
+Enter those credentials in the stock client. Its 140-byte login packet sends
+the username as `sdrs36` and the password as 32 lowercase ASCII hexadecimal
+characters containing MD5 of the typed password. The shared
+`ProvisionLocalDevelopmentMaxCombatFixture.Credentials.ps1` helper pins a
+PBKDF2-SHA256 v1 verifier of that wire credential with 600,000 iterations for
+both provisioning and Status. A protocol probe must use the same encoded
+username and password field; sending plaintext `test25` in the password field
+does not represent the stock client. The four combat-dummy credentials retain
+their existing format.
+
 | ID | Account | Character | Map | Camp | Build |
 |---:|---|---|---|---|---|
 | 7001 | `dummy_ares_bulwark` | AresBulwark | Sparta | Athens | Warrior, no Dodge gear |
@@ -27,6 +37,11 @@ curve is disabled. The four dummy pets are pinned in perpetual owner Merge.
 AresTempest's pet uses the normal player-controlled Merge lifecycle, so
 login/logout and manual toggles remain safe. Zodiac data is deliberately
 absent.
+
+Talent Points start at `2147483647` and Talent EXP at `99`, the highest valid
+remainder before the next point. EXP is a 0–99 bar, not an unrestricted balance.
+At this cap, monster rewards still commit and advance instance scoring while
+crediting no additional Talent EXP or points.
 
 Read-only status:
 

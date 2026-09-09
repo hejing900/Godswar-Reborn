@@ -39,9 +39,10 @@ internal sealed partial class
         _probe = probe;
     }
 
-    public async Task<MonsterDeathRewardExecutionResult> ExecuteAsync(
+    private async Task<MonsterDeathRewardExecutionResult> ExecuteCoreAsync(
         CommandEnvelope<MonsterDeathRewardCommand> envelope,
-        CancellationToken cancellationToken = default)
+        Action<MonsterDeathRewardExecutionReceipt>? onCommitted,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         var started = Stopwatch.GetTimestamp();
@@ -69,6 +70,9 @@ internal sealed partial class
                 cancellationToken);
             if (result.Receipt is not null)
             {
+                // This receipt belongs to the committed death and original
+                // team even if the claimant loses ownership immediately next.
+                onCommitted?.Invoke(result.Receipt);
                 (await _ownershipGuard.ValidateCurrentAsync(
                     envelope.Subject,
                     envelope.Ownership,
@@ -349,23 +353,18 @@ internal sealed partial class
                 character.Experience,
                 command.AwardedExperience,
                 character.LevelSealed);
-            var accumulatedTalentExperience = checked(
-                (long)character.TalentExperience +
+            var talent = TalentExperienceCatalog.Apply(
+                character.TalentExperience,
+                character.TalentPoints,
                 command.AwardedTalentExperience);
-            var pointsGained = accumulatedTalentExperience / 100;
-            var currentPoints = checked(
-                (long)character.TalentPoints + pointsGained);
             var revision = checked(character.Revision + 1);
-            if (currentPoints > int.MaxValue)
-            {
-                return false;
-            }
 
             reward = new DerivedReward(
                 fighter,
-                checked((int)(accumulatedTalentExperience % 100)),
-                checked((int)pointsGained),
-                checked((int)currentPoints),
+                talent.Experience,
+                talent.ExperienceGained,
+                talent.PointsGained,
+                talent.Points,
                 revision);
             return true;
         }
@@ -405,7 +404,7 @@ internal sealed partial class
                         levelUp.CurrentExperience,
                         levelUp.NextLevelExperience))
                 .ToArray(),
-            envelope.Command.AwardedTalentExperience,
+            reward.TalentExperienceGained,
             before.TalentExperience,
             reward.TalentExperience,
             reward.TalentPointsGained,
@@ -524,6 +523,7 @@ internal sealed partial class
     private readonly record struct DerivedReward(
         PlayerExperienceProgression Fighter,
         int TalentExperience,
+        int TalentExperienceGained,
         int TalentPointsGained,
         int TalentPoints,
         long Revision);

@@ -314,9 +314,14 @@ internal sealed partial class GameClientHandler
         bool leaderMoved;
         try
         {
-            leaderMoved = await TryBeginAuthoritativeInstanceTransitionAsync(
-                leaderCommand,
-                cancellationToken);
+            leaderMoved = (destination.Kind != InstanceCallerEntryKind.Atlantis ||
+                _registry.TryStartAtlantisEncounter(target.InstanceId,
+                    claimResult.DailyEntryLimit ?? 1,
+                    party.Members.Select(static member => (member.CharacterId, member.Level)).ToArray(),
+                    DateTimeOffset.UtcNow, reservationId, party.Members)) &&
+                await TryBeginAuthoritativeInstanceTransitionAsync(
+                    leaderCommand,
+                    cancellationToken);
         }
         catch (OperationCanceledException)
             when (cancellationToken.IsCancellationRequested)

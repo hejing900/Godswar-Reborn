@@ -21,18 +21,25 @@ internal sealed partial class PostgresPetDurableCommandExecutor
     {
         if (net.PropId != MysteriousTuckNetItemId ||
             net.Stack <= 0 ||
-            capture.EggItemId != RockElfEggItemId ||
+            !capture.IsValid ||
             !_petContent.TryGetSpeciesByEggItemId(
                 capture.EggItemId,
                 out var species) ||
-            species.SpeciesId != 1)
+            !(capture.Context switch
+            {
+                PetCaptureContext.Medusa => capture.EggItemId == RockElfEggItemId && species.SpeciesId == 1,
+                PetCaptureContext.AtlantisMerman => capture.EggItemId == 10158 && species.SpeciesId == 9,
+                _ => false
+            }))
         {
             return new(
                 PetDurableReceiptStatus.UnsupportedItem,
                 KitBagSlot: netSlot);
         }
 
-        var capturedEggQuality = await RollCapturedEggQualityAsync(
+        var capturedEggQuality = capture.Context == PetCaptureContext.AtlantisMerman
+            ? ResolveAtlantisCapturedEggQuality(species.SpeciesId)
+            : await RollCapturedEggQualityAsync(
             connection,
             transaction,
             species,
@@ -125,6 +132,17 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                     "pet_capture_egg",
                     inventoryRevision)
             ]);
+    }
+
+    private short ResolveAtlantisCapturedEggQuality(int speciesId)
+    {
+        const short quality = 1;
+        if (!_petContent.TryGetAptitude(quality, out _) ||
+            !_petContent.TryGetNativeProfile(speciesId, quality, out _))
+        {
+            throw new InvalidDataException("The published Merman capture aptitude is unavailable.");
+        }
+        return quality;
     }
 
     private async Task<int?> FindEmptyKitBagSlotAsync(

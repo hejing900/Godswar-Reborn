@@ -12,6 +12,10 @@ internal sealed partial class GameSessionRegistry
     {
         ArgumentNullException.ThrowIfNull(routingSession);
         ArgumentNullException.ThrowIfNull(expected);
+        if (expected.Definition.MapId == 205)
+        {
+            return TryCaptureAtlantisPet(routingSession, expected, now, out result);
+        }
         if (expected.Definition.MapId is < byte.MinValue or > byte.MaxValue ||
             !TryResolveWorldInstance(
                 checked((byte)expected.Definition.MapId),

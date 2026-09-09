@@ -112,6 +112,8 @@ internal sealed partial class GameClientHandler
             return true;
         }
 
+        _registry.RecordAtlantisRewardAdmissions(reservationId, admittedCharacterIds);
+
         if (_legacyInstanceDailyEntries is not null)
         {
             var recorded = false;

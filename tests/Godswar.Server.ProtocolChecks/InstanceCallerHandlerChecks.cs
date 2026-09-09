@@ -74,6 +74,7 @@ internal static partial class InstanceCallerHandlerChecks
         await CheckDecliningMemberLeavesLeaderInsideAsync();
         await CheckTimedOutMemberLeavesLeaderInsideAsync();
         await CheckDailyEntryEligibilityAsync();
+        await CheckAtlantisPartyAdmissionAsync();
         await CheckAtlantisOpalRetryAsync();
     }
 
@@ -221,11 +222,14 @@ internal static partial class InstanceCallerHandlerChecks
             "Atlantis root emits 208/209/210 and binds Atlantis page proof");
 
         var beforeAtlantisEntry = fixture.ReadPackets().Count;
+        var originalLevel = fixture.Character.Level;
+        fixture.Character.Level = 89;
         await InvokeAsync(
             fixture.Handler,
             CreateActionPacket(
                 InstanceCallerProtocol.AtlantisRootSubId,
                 InstanceCallerProtocol.AtlantisEnterSubId));
+        fixture.Character.Level = originalLevel;
         Check.True(
             fixture.ReadPackets()
                 .Skip(beforeAtlantisEntry)
@@ -233,9 +237,9 @@ internal static partial class InstanceCallerHandlerChecks
                 .SequenceEqual(PacketBuilder.NpcFunctionActionResponse(
                     InstanceCallerProtocol.AthensNpcId,
                     InstanceCallerProtocol.DialogIndex,
-                    InstanceCallerProtocol.AtlantisPartyTooSmallResultSubId)) &&
+                    InstanceCallerProtocol.AtlantisLevelResultSubId)) &&
             GetPageContext(fixture.Handler) is null,
-            "proved Atlantis entry reaches the exact three-player admission " +
+            "proved solo Atlantis entry reaches the unchanged level admission " +
             "gate and consumes its page proof");
 
         var beforeForgedWonderland = fixture.ReadPackets().Count;

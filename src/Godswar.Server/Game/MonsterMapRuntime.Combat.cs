@@ -2,7 +2,7 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class MonsterMapRuntime
 {
-    private static bool AdvanceCombat(
+    private bool AdvanceCombat(
         MonsterRuntimeState monster,
         MonsterCombatTarget target,
         DateTimeOffset now,
@@ -10,7 +10,7 @@ internal sealed partial class MonsterMapRuntime
     {
         var positionsChanged = false;
         var distance = Math.Sqrt(DistanceSquared(monster.CurrentX, monster.CurrentZ, target.X, target.Z));
-        if (distance <= monster.AttackRange)
+        if (MonsterAttackRangePolicy.Contains(distance, monster.AttackRange))
         {
             if (monster.CombatPhase == MonsterCombatPhase.Chasing || monster.IsMoving)
             {
@@ -103,7 +103,7 @@ internal sealed partial class MonsterMapRuntime
             var nextX = monster.CurrentX + monster.VelocityX;
             var nextZ = monster.CurrentZ + monster.VelocityZ;
             if (DistanceSquared(monster.HomeX, monster.HomeZ, nextX, nextZ) >
-                CombatLeashRadius * CombatLeashRadius)
+                _behaviorPolicy.CombatLeashRadius * _behaviorPolicy.CombatLeashRadius)
             {
                 AddReturnStart(monster, stepAt, updates);
                 break;
@@ -116,7 +116,7 @@ internal sealed partial class MonsterMapRuntime
             positionsChanged = true;
 
             distance = Math.Sqrt(DistanceSquared(monster.CurrentX, monster.CurrentZ, target.X, target.Z));
-            if (distance <= monster.AttackRange + 0.0001d)
+            if (MonsterAttackRangePolicy.Contains(distance, monster.AttackRange))
             {
                 StopCombatMovement(monster);
                 monster.CombatPhase = MonsterCombatPhase.Attacking;

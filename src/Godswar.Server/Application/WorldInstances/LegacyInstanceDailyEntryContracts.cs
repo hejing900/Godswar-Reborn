@@ -60,12 +60,7 @@ internal sealed record LegacyInstanceDailyEntryClaimRequest(
                 "Invalid legacy-instance daily-entry claim identity.");
         }
 
-        var minimumPartySize = InstanceKind ==
-            InstanceCallerEntryKind.Atlantis ? 3 : 1;
-        var maximumPartySize = InstanceKind ==
-            InstanceCallerEntryKind.Atlantis ? 3 : 5;
-        if (CharacterIds.Count < minimumPartySize ||
-            CharacterIds.Count > maximumPartySize ||
+        if (CharacterIds.Count is < 1 or > 5 ||
             CharacterIds.Any(static id => id <= 0) ||
             CharacterIds.Distinct().Count() != CharacterIds.Count)
         {

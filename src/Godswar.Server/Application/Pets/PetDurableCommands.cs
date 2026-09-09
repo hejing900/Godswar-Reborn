@@ -33,15 +33,28 @@ internal readonly record struct PetCaptureIntent(
     uint TargetSpawnGeneration,
     ulong TargetHealthRevision,
     uint EggItemId,
-    MedusaEncounterDifficulty Difficulty)
+    MedusaEncounterDifficulty Difficulty,
+    PetCaptureContext Context = PetCaptureContext.Medusa)
 {
     public bool IsValid =>
         TargetObjectId != 0 &&
         TargetRuntimeInstanceId != Guid.Empty &&
         TargetSpawnGeneration != 0 &&
         EggItemId != 0 &&
-        Difficulty is MedusaEncounterDifficulty.Enhanced or
-            MedusaEncounterDifficulty.Mythic;
+        (Context switch
+        {
+            PetCaptureContext.Medusa => Difficulty is MedusaEncounterDifficulty.Enhanced or
+                MedusaEncounterDifficulty.Mythic,
+            PetCaptureContext.AtlantisMerman => EggItemId == 10158 &&
+                Difficulty == MedusaEncounterDifficulty.Normal,
+            _ => false
+        });
+}
+
+internal enum PetCaptureContext : byte
+{
+    Medusa = 0,
+    AtlantisMerman = 1
 }
 
 /// <summary>
@@ -189,7 +202,14 @@ internal static class PetDurableCommandContract
             BinaryPrimitives.WriteUInt16BigEndian(
                 captureBytes.AsSpan(sizeof(ushort)),
                 checked((ushort)kitBagSlot));
-            captureBytes[sizeof(ushort) * 2] = 1;
+            // Preserve every existing Medusa byte; new contexts receive an
+            // explicit domain marker rather than overloading its difficulty.
+            captureBytes[sizeof(ushort) * 2] = captured.Context switch
+            {
+                PetCaptureContext.Medusa => 1,
+                PetCaptureContext.AtlantisMerman => 2,
+                _ => throw new ArgumentOutOfRangeException(nameof(capture))
+            };
             captureBytes[(sizeof(ushort) * 2) + 1] =
                 checked((byte)captured.Difficulty);
             var offset = (sizeof(ushort) * 2) + 2;

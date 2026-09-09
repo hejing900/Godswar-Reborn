@@ -36,11 +36,11 @@ internal sealed partial class GameClientHandler
         if (!PetCaptureRequest.TryRead(packet, out var request) ||
             _account is null ||
             character is null ||
-            character.CurrentMap != 200 ||
+            character.CurrentMap is not (200 or 205) ||
             !TryResolvePetCaptureTarget(
                 request,
                 out var target,
-                out var difficulty) ||
+                out var captureKind) ||
             !HasPetCaptureInventoryCapacity(character, request.KitBagSlot))
         {
             Console.WriteLine(
@@ -113,13 +113,13 @@ internal sealed partial class GameClientHandler
             token => CompletePetCaptureAsync(
                 request,
                 target,
-                difficulty,
+                captureKind,
                 token),
             cancellationToken,
             () => IsPetCaptureCompletionValid(
                 request,
                 target,
-                difficulty));
+                captureKind));
         if (!started)
         {
             await SendPetCaptureCastEndAsync(
@@ -131,7 +131,7 @@ internal sealed partial class GameClientHandler
     private async Task CompletePetCaptureAsync(
         PetCaptureRequest request,
         MonsterRuntimeSnapshot expectedTarget,
-        MedusaEncounterDifficulty difficulty,
+        PetCaptureKind captureKind,
         CancellationToken cancellationToken)
     {
         var captured = _registry.TryCaptureMonster(
@@ -156,8 +156,9 @@ internal sealed partial class GameClientHandler
                 expectedTarget.RuntimeInstanceId,
                 expectedTarget.SpawnGeneration,
                 expectedTarget.HealthRevision,
-                RockElfEggItemId,
-                difficulty);
+                captureKind.EggItemId,
+                captureKind.Difficulty,
+                captureKind.Context);
             var bagBefore = _character?.KitBag;
             receipt = await HandleDurableBagItemActivationAsync(
                 PetCommandOperationIdentity.ServerSessionLifecycle(
@@ -173,7 +174,8 @@ internal sealed partial class GameClientHandler
                 await SendPetCaptureAcquisitionAsync(
                     bagBefore,
                     character.KitBag,
-                    cancellationToken);
+                    cancellationToken,
+                    captureKind.EggItemId);
             }
             Console.WriteLine(
                 $"[pet-capture] completed " +
@@ -197,61 +199,6 @@ internal sealed partial class GameClientHandler
                 broadcastToWorld: true,
                 CancellationToken.None);
         }
-    }
-
-    private bool TryResolvePetCaptureTarget(
-        PetCaptureRequest request,
-        out MonsterRuntimeSnapshot target,
-        out MedusaEncounterDifficulty difficulty)
-    {
-        var character = _character;
-        if (character is null ||
-            !_registry.TryGetActiveMedusaCaptureDifficulty(
-                _session,
-                out difficulty) ||
-            !WorldObjectIds.IsMedusaBabyRockElf(
-                request.TargetObjectId) ||
-            !_registry.TryGetMonsterSnapshot(
-                _session,
-                character.CurrentMap,
-                request.TargetObjectId,
-                out target) ||
-            target.Definition.TemplateKey !=
-                MedusaIslandAmbientSpawnPolicy.BabyRockElfTemplateKey ||
-            !target.IsAlive ||
-            !target.IsSpawned ||
-            !_registry.IsMonsterVisibleTo(
-                _session,
-                target.ObjectId,
-                target.SpawnGeneration) ||
-            !IsWithinPetCaptureRange(character, target))
-        {
-            target = default!;
-            difficulty = default;
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool IsPetCaptureCompletionValid(
-        PetCaptureRequest request,
-        MonsterRuntimeSnapshot expected,
-        MedusaEncounterDifficulty expectedDifficulty)
-    {
-        var character = _character;
-        return character is not null &&
-            HasPetCaptureInventoryCapacity(
-                character,
-                request.KitBagSlot) &&
-            TryResolvePetCaptureTarget(
-                request,
-                out var current,
-                out var currentDifficulty) &&
-            currentDifficulty == expectedDifficulty &&
-            current.RuntimeInstanceId == expected.RuntimeInstanceId &&
-            current.SpawnGeneration == expected.SpawnGeneration &&
-            current.HealthRevision == expected.HealthRevision;
     }
 
     private static bool HasPetCaptureInventoryCapacity(

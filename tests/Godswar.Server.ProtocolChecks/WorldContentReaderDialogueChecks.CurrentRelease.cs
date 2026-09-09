@@ -13,6 +13,8 @@ internal static partial class WorldContentReaderDialogueChecks
         CheckArenaV19CurrentRelease();
         CheckArenaV20CurrentRelease();
         CheckArenaV21CurrentRelease();
+        CheckAtlantisV22CurrentRelease();
+        CheckAtlantisV23CurrentRelease();
 
         var frozenNpcKeys = NpcContentBaselineV1.LoadDefinitions()
             .Select(static npc => npc.NpcKey)

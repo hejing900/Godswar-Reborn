@@ -31,7 +31,8 @@ internal sealed class EcsMonsterMapRuntime : IMonsterMapRuntime
         Guid? runtimeInstanceId = null,
         WorldBossCatalog? worldBossCatalog = null,
         MonsterRespawnPolicy respawnPolicy = MonsterRespawnPolicy.Timed,
-        MonsterCombatProfileCatalog? monsterCombatProfiles = null)
+        MonsterCombatProfileCatalog? monsterCombatProfiles = null,
+        MonsterBehaviorPolicy? behaviorPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         var capturedDefinitions = definitions.ToArray();
@@ -82,7 +83,8 @@ internal sealed class EcsMonsterMapRuntime : IMonsterMapRuntime
         }
 
         _scheduler = new EcsSystemScheduler(_world);
-        _scheduler.AddSystem(new MonsterEcsSimulationSystem(_frame));
+        _scheduler.AddSystem(new MonsterEcsSimulationSystem(
+            _frame, behaviorPolicy ?? MonsterBehaviorPolicy.Default));
         _lastAdvanceAt = initializedAt;
     }
 

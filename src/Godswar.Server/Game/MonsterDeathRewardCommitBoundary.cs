@@ -7,12 +7,14 @@ internal static class MonsterDeathRewardCommitBoundary
     public static async Task<T> ExecuteAsync<T>(
         Func<CancellationToken, Task<T>> commit,
         bool allowImmediateReplay,
-        Action<Exception>? onImmediateReplay = null)
+        Action<Exception>? onImmediateReplay = null,
+        Action<T>? onSettled = null)
     {
         ArgumentNullException.ThrowIfNull(commit);
+        T settlement;
         try
         {
-            return await commit(CancellationToken.None);
+            settlement = await commit(CancellationToken.None);
         }
         catch (Exception firstFailure)
             when (allowImmediateReplay &&
@@ -20,7 +22,12 @@ internal static class MonsterDeathRewardCommitBoundary
                       PlayerOwnershipValidationException)
         {
             onImmediateReplay?.Invoke(firstFailure);
-            return await commit(CancellationToken.None);
+            settlement = await commit(CancellationToken.None);
         }
+
+        // Committed in-memory encounter effects follow a successful receipt.
+        // Their failures must never replay the durable reward transaction.
+        onSettled?.Invoke(settlement);
+        return settlement;
     }
 }

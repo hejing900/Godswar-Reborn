@@ -27,6 +27,12 @@ internal sealed partial class MapInstance
             {
                 if (_monsterRuntime is not null)
                 {
+                    // Readiness may request the ordinary map seed after this
+                    // instance has attached its owner-managed Atlantis waves.
+                    if (ReferenceEquals(_monsterRuntime, _atlantisMonsters))
+                    {
+                        return _monsterRuntime;
+                    }
                     if (_monsterRespawnPolicy != respawnPolicy)
                     {
                         throw new InvalidOperationException(

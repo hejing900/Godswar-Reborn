@@ -10,7 +10,8 @@ internal static class MonsterEcsPatrolSimulation
         EcsWorld world,
         EntityId entity,
         DateTimeOffset now,
-        EcsEventBuffer events)
+        EcsEventBuffer events,
+        float maximumRoamRadius)
     {
         ref var transform = ref world.Get<MonsterTransformComponent>(entity);
         ref var movement = ref world.Get<MonsterMovementComponent>(entity);
@@ -59,7 +60,8 @@ internal static class MonsterEcsPatrolSimulation
             ref transform,
             ref movement,
             ref random,
-            now);
+            now,
+            maximumRoamRadius);
         events.Publish(
             new MonsterEcsUpdateEvent(
                 new MonsterRuntimeUpdate(
@@ -72,7 +74,8 @@ internal static class MonsterEcsPatrolSimulation
         ref MonsterTransformComponent transform,
         ref MonsterMovementComponent movement,
         ref MonsterRandomComponent random,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        float maximumRoamRadius)
     {
         for (var attempt = 0; attempt < 64; attempt++)
         {
@@ -92,8 +95,7 @@ internal static class MonsterEcsPatrolSimulation
                     transform.HomeZ,
                     targetX,
                     targetZ) >
-                MonsterEcsRules.MaximumRoamRadius *
-                MonsterEcsRules.MaximumRoamRadius)
+                maximumRoamRadius * maximumRoamRadius)
             {
                 continue;
             }

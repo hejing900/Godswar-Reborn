@@ -26,7 +26,7 @@ internal sealed record LegacyInstanceOpalChargeRequest(
             !RealmId.IsValid ||
             ChargedAtUtc == default ||
             ChargedAtUtc.Offset != TimeSpan.Zero ||
-            Payers.Count is < 1 or > 3 ||
+            Payers.Count is < 1 or > 5 ||
             Payers.Any(static payer =>
                 payer.AccountId <= 0 ||
                 payer.CharacterId <= 0 ||

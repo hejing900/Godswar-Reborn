@@ -9,6 +9,8 @@ internal static class MonsterDeathRewardCommitBoundaryChecks
         await CheckCommitPrecedesCancelledDeliveryAsync();
         CheckAllCombatPathsPrepareBeforeDelivery();
         CheckAreaPreparationAdvancesProjection();
+        CheckAtlantisSharesSuccessfulSettlementBoundary();
+        CheckReceiptObserverPrecedesClaimantProjection();
     }
 
     private static async Task
@@ -134,5 +136,31 @@ internal static class MonsterDeathRewardCommitBoundaryChecks
 
         throw new DirectoryNotFoundException(
             "Could not locate the Godswar repository root.");
+    }
+
+    private static void CheckAtlantisSharesSuccessfulSettlementBoundary()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(),
+            "src", "Godswar.Server", "Game", "GameClientHandler.DurableMonsterRewards.cs"));
+        var callback = source.IndexOf("onSettled: settlement =>", StringComparison.Ordinal);
+        var guard = source.IndexOf("if (settlement is not null)", StringComparison.Ordinal);
+        var score = source.IndexOf("recordAtlantisKill?.Invoke();", StringComparison.Ordinal);
+        var capture = source.IndexOf("_registry.CaptureAtlantisMonsterKill(", StringComparison.Ordinal);
+        var commit = source.IndexOf("MonsterDeathRewardCommitBoundary.ExecuteAsync(", StringComparison.Ordinal);
+        Check.True(callback >= 0 && guard > callback && score > guard &&
+            capture >= 0 && commit > capture &&
+            !source[callback..score].Contains("IsFirstCommit", StringComparison.Ordinal),
+            "Atlantis scores successful and replayed settlements through the shared combat reward boundary");
+    }
+
+    private static void CheckReceiptObserverPrecedesClaimantProjection()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(),
+            "src", "Godswar.Server", "Game", "GameClientHandler.DurableMonsterRewards.cs"));
+        var observer = source.IndexOf("ExecuteWithCommitObserverAsync(", StringComparison.Ordinal);
+        var claimant = source.IndexOf("RevalidateCurrentPlayerOwnership(ownership)", StringComparison.Ordinal);
+        var pet = source.IndexOf("return await AttachPetMonsterExperienceAsync(", StringComparison.Ordinal);
+        Check.True(observer >= 0 && claimant > observer && pet > claimant,
+            "team commit acknowledgement precedes claimant ownership revalidation and pet extras");
     }
 }

@@ -12,7 +12,6 @@ internal sealed partial class GameSessionRegistry
         PlayerMonsterDamageEcsDecision Decision,
         CombatResolution Resolution,
         uint Damage,
-        uint ReboundDamage,
         bool ReplayRejected,
         bool AuthorityRejected,
         MonsterIncomingElementalPostCommit ElementalPostCommit,

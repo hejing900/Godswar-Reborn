@@ -41,6 +41,9 @@ internal sealed class GameClientHandlerFactory(
     {
         registry.ConfigureMedusaCompletionRewards(
             postgresRuntime?.MedusaCompletionRewards);
+        registry.ConfigureAtlantisCompletionRewards(postgresRuntime?.AtlantisCompletionRewards,
+            postgresRuntime?.LegacyInstanceDailyEntries);
+        registry.ConfigureCharacterTitleSelections(postgresRuntime?.TitleSelections);
         return new(
             session,
             store,

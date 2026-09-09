@@ -78,6 +78,7 @@ internal static class Opcodes
     public const ushort PartyDestroy = 10134;
     public const ushort ServerNote = 10169;
     public const ushort DesignationInfo = 10196;
+    public const ushort DesignationSelection = 10198;
     // Cast interruption is bidirectional in the native protocol. Both the
     // client report and the authoritative server notification use the same
     // eight-byte frame: length, opcode, and caster ID in the receiver's
@@ -215,6 +216,7 @@ internal static class Opcodes
             PartyDestroy => nameof(PartyDestroy),
             ServerNote => nameof(ServerNote),
             DesignationInfo => nameof(DesignationInfo),
+            DesignationSelection => nameof(DesignationSelection),
             SkillCastInterrupt => nameof(SkillCastInterrupt),
             PlayerInspectRequest => nameof(PlayerInspectRequest),
             GearEnhancerItemSelection => nameof(GearEnhancerItemSelection),

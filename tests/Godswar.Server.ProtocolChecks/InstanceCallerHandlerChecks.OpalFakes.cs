@@ -25,6 +25,8 @@ internal static partial class InstanceCallerHandlerChecks
 
         public List<RecordedLegacyInstanceAdmissions> Admissions { get; } =
             [];
+        public List<RecordedLegacyInstanceAdmissions> AdmissionAttempts { get; } = [];
+        public int AdmissionFailuresRemaining { get; set; }
 
         public Task<LegacyInstanceDailyEntryClaimResult> TryClaimAsync(
             LegacyInstanceDailyEntryClaimRequest request,
@@ -75,6 +77,12 @@ internal static partial class InstanceCallerHandlerChecks
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            AdmissionAttempts.Add(new(reservationId, admittedCharacterIds.ToHashSet()));
+            if (AdmissionFailuresRemaining > 0)
+            {
+                AdmissionFailuresRemaining--;
+                return Task.FromException(new IOException("admission marker temporarily unavailable"));
+            }
             Admissions.Add(new(
                 reservationId,
                 admittedCharacterIds.ToHashSet()));

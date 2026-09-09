@@ -241,8 +241,8 @@ internal static partial class InstanceCallerProtocolChecks
             atlantis.TargetX == 171f &&
             atlantis.TargetZ == 24f &&
             atlantis.MinimumLevel == 90 &&
-            atlantis.MaximumLevel == 140 &&
-            atlantis.RequiredPartySize == 3 &&
+            atlantis.MaximumLevel == int.MaxValue &&
+            atlantis.RequiredPartySize is null &&
             atlantis.PaymentMode ==
                 InstanceCallerEntryPaymentMode.FreeOnly &&
             InstanceCallerProtocol.TryResolveEntry(
@@ -251,10 +251,14 @@ internal static partial class InstanceCallerProtocolChecks
                 Arguments(InstanceCallerProtocol.AtlantisOpalSubId),
                 out var paidAtlantis) &&
             paidAtlantis.Kind == InstanceCallerEntryKind.Atlantis &&
+            paidAtlantis.MinimumLevel == 90 &&
+            paidAtlantis.MaximumLevel == int.MaxValue &&
+            paidAtlantis.RequiredPartySize is null &&
             paidAtlantis.PaymentMode ==
                 InstanceCallerEntryPaymentMode.OpalRetry,
             "Atlantis enter path resolves the reviewed map, arrival, and " +
-            "three-player level window, while 209 is explicit paid retry");
+            "level 90 minimum without an upper cap for solo or parties up to five, while 209 is " +
+            "explicit paid retry");
         Check.True(
             InstanceCallerProtocol.TryResolveEntry(
                 InstanceCallerProtocol.DialogIndex,

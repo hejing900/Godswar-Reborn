@@ -10,8 +10,10 @@ internal sealed partial class GameSessionRegistry
     {
         var admission = InvokeWorldOwner(
             runtime,
-            map => map.CheckMedusaCharacterAdmission(characterId));
-        return admission.MayEnter;
+            map => (!map.TryGetAtlantisRunSnapshot(out var atlantis) ||
+                    atlantis.State == AtlantisRunState.Active) &&
+                map.CheckMedusaCharacterAdmission(characterId).MayEnter);
+        return admission;
     }
 
     private void RequireWorldInstanceAdmission(

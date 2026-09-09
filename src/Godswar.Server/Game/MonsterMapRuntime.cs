@@ -32,6 +32,7 @@ internal sealed partial class MonsterMapRuntime : IMonsterMapRuntime
     private readonly TimeSpan? _respawnDelay;
     private readonly Guid _runtimeInstanceId;
     private readonly WorldBossCatalog _worldBossCatalog;
+    private readonly MonsterBehaviorPolicy _behaviorPolicy;
 
     public MonsterMapRuntime(
         byte mapId,
@@ -43,9 +44,11 @@ internal sealed partial class MonsterMapRuntime : IMonsterMapRuntime
         Guid? runtimeInstanceId = null,
         WorldBossCatalog? worldBossCatalog = null,
         MonsterRespawnPolicy respawnPolicy = MonsterRespawnPolicy.Timed,
-        MonsterCombatProfileCatalog? monsterCombatProfiles = null)
+        MonsterCombatProfileCatalog? monsterCombatProfiles = null,
+        MonsterBehaviorPolicy? behaviorPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
+        _behaviorPolicy = behaviorPolicy ?? MonsterBehaviorPolicy.Default;
         var capturedDefinitions = definitions.ToArray();
         MapId = mapId;
         _runtimeInstanceId =

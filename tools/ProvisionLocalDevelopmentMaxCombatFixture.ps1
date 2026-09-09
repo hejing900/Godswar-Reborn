@@ -24,6 +24,8 @@ $fixtureDirectory = Join-Path $PSScriptRoot `
 . (Join-Path $PSScriptRoot `
     'ProvisionLocalDevelopmentMaxCombatFixture.Sql.ps1')
 . (Join-Path $PSScriptRoot `
+    'ProvisionLocalDevelopmentMaxCombatFixture.Credentials.ps1')
+. (Join-Path $PSScriptRoot `
     'ProvisionLocalDevelopmentMaxCombatFixture.Status.ps1')
 
 function Invoke-MaxFixturePsql(
@@ -138,9 +140,7 @@ Assert-MaxFixtureOffline $environment $redisContainer $identities
 $variables = $null
 try {
     $variables = @{
-        test25_verifier = 'gws$pbkdf2-sha256$v1$600000$' +
-          '3EIgjUktl5sFyy2YYK3ynQ==$' +
-          '6WxhR6jeTEkdPBelif9J9Gze55MimrguFawh6gSezuw='
+        test25_verifier = Get-MaxFixtureTest25StockClientVerifier
         ares_bulwark_verifier = 'gws$pbkdf2-sha256$v1$600000$' +
           'X3ai97nBWQlEwekDRlx6XQ==$' +
           'C7pivBvf5jYBDIu6XDEPM70wwyIwL38Krd7Y0D5VsSs='

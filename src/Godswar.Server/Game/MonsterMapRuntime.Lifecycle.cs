@@ -60,7 +60,7 @@ internal sealed partial class MonsterMapRuntime
         return monster;
     }
 
-    private static void StartMovement(MonsterRuntimeState monster, DateTimeOffset now)
+    private void StartMovement(MonsterRuntimeState monster, DateTimeOffset now)
     {
         var selected = false;
         for (var attempt = 0; attempt < 64; attempt++)
@@ -74,7 +74,7 @@ internal sealed partial class MonsterMapRuntime
             var targetX = monster.CurrentX + (velocityX * ticks);
             var targetZ = monster.CurrentZ + (velocityZ * ticks);
             if (DistanceSquared(monster.HomeX, monster.HomeZ, targetX, targetZ) >
-                (MaximumRoamRadius * MaximumRoamRadius))
+                (_behaviorPolicy.MaximumRoamRadius * _behaviorPolicy.MaximumRoamRadius))
             {
                 continue;
             }

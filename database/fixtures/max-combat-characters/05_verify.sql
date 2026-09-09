@@ -24,7 +24,7 @@ BEGIN
           OR c.holy_suit_points<>
              CASE WHEN f.profession=0 THEN 120 ELSE 110 END
           OR c."Money"<>2147483647 OR c."Stone"<>2147483647
-          OR c."SkillPoint"<>2147483647 OR c."SkillExp"<>2147483647
+          OR c."SkillPoint"<>2147483647 OR c."SkillExp"<>99
           OR c.zodiac_type<>0 OR c.zodiac_level<>1 OR c.zodiac_energy<>0
           OR c.zodiac_accumulated_exp_x100<>0
           OR c.zodiac_accumulated_talent_exp_x100<>0

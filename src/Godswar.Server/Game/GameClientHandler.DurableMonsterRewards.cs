@@ -17,14 +17,27 @@ internal sealed partial class GameClientHandler
             int awardedTalentExperience,
             int awardedPetExperience,
             DateTimeOffset receivedAt)
-        =>
-        await MonsterDeathRewardCommitBoundary.ExecuteAsync(
+    {
+        Action? recordAtlantisKill = null;
+        try
+        {
+            recordAtlantisKill = _registry.CaptureAtlantisMonsterKill(
+                _session, damageResult);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[atlantis] death capture failed monster={damageResult.ObjectId}: {ex.Message}");
+        }
+
+        return await MonsterDeathRewardCommitBoundary.ExecuteAsync(
             cancellationToken => SettleMonsterRewardAsync(
                 damageResult,
                 awardedExperience,
                 awardedTalentExperience,
                 awardedPetExperience,
                 receivedAt,
+                recordAtlantisKill,
                 cancellationToken),
             allowImmediateReplay:
                 _monsterDeathRewardCommands is not null,
@@ -32,7 +45,25 @@ internal sealed partial class GameClientHandler
                 // A database commit can succeed while its acknowledgement is
                 // lost. Replay the same server-derived death identity once.
                 Console.Error.WriteLine(
-                    $"[reward] immediate durable replay death={damageResult.ObjectId} reason={firstFailure.GetType().Name}"));
+                    $"[reward] immediate durable replay death={damageResult.ObjectId} reason={firstFailure.GetType().Name}"),
+            onSettled: settlement =>
+            {
+                if (settlement is not null)
+                {
+                    // Replayed receipts also enter this idempotent boundary:
+                    // a lost acknowledgement must not lose the encounter kill.
+                    try
+                    {
+                        recordAtlantisKill?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(
+                            $"[atlantis] committed kill projection failed monster={damageResult.ObjectId}: {ex.Message}");
+                    }
+                }
+            });
+    }
 
     private async Task<MonsterRewardSettlement?> SettleMonsterRewardAsync(
         MonsterDamageResult damageResult,
@@ -40,6 +71,7 @@ internal sealed partial class GameClientHandler
         int awardedTalentExperience,
         int awardedPetExperience,
         DateTimeOffset receivedAt,
+        Action? recordAtlantisKill,
         CancellationToken cancellationToken)
     {
         if (_account is null ||
@@ -89,9 +121,27 @@ internal sealed partial class GameClientHandler
                 return null;
             }
 
-            var execution =
-                await _monsterDeathRewardCommands.ExecuteAsync(
+            var execution = recordAtlantisKill is null
+                ? await _monsterDeathRewardCommands.ExecuteAsync(envelope, cancellationToken)
+                : await _monsterDeathRewardCommands.ExecuteWithCommitObserverAsync(
                     envelope,
+                    receipt =>
+                    {
+                        if (receipt.DeathEventId != command.DeathEventId ||
+                            receipt.CharacterId != envelope.Subject.CharacterId)
+                        {
+                            throw new InvalidDataException("Monster commit observer received unrelated death evidence.");
+                        }
+                        try
+                        {
+                            recordAtlantisKill();
+                        }
+                        catch (Exception error)
+                        {
+                            Console.Error.WriteLine(
+                                $"[atlantis] committed death observation failed monster={damageResult.ObjectId}: {error.Message}");
+                        }
+                    },
                     cancellationToken);
             if (!RevalidateCurrentPlayerOwnership(ownership))
             {

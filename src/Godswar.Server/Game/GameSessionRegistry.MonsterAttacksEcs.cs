@@ -87,7 +87,6 @@ internal sealed partial class GameSessionRegistry
             decision.AfterLifeRevision);
         var resolution = transaction.Resolution;
         var damage = transaction.Damage;
-        var reboundDamage = transaction.ReboundDamage;
         var elementalPostCommit = transaction.ElementalPostCommit;
         var deathInterruptionTask = transaction.DeathInterruptionTask;
         var rideStatusRemoved = transaction.RideStatusRemoved;
@@ -160,23 +159,14 @@ internal sealed partial class GameSessionRegistry
             publicationRecipients,
             targetContext,
             resolution);
-        var reboundCommit = default(PveMonsterReboundCommit);
         var elementalReflection = PveElementalCommitResult.Empty;
         try
         {
-            reboundCommit = CommitMonsterRebound(
-                runtime,
-                targetContext,
-                attack.Monster,
-                combatEventId,
-                decision.AppliedDamage,
-                reboundDamage);
             elementalReflection =
                 CommitMonsterIncomingElementalReflection(
                     runtime,
                     targetContext,
-                    reboundCommit.DamageResult?.Monster ??
-                        attack.Monster,
+                    attack.Monster,
                     elementalPostCommit.Reflection);
         }
         catch (Exception ex)
@@ -188,21 +178,8 @@ internal sealed partial class GameSessionRegistry
         // Settle terminal secondary rewards before ordinary attack transport.
         // Committed Bleed retains its synchronous prefix admission above;
         // reward packets still follow damage and Medusa status publication.
-        PreparedPveMonsterKillReward? preparedReboundReward = null;
         IReadOnlyList<PreparedPveMonsterKillReward>
             preparedElementalRewards = [];
-        try
-        {
-            preparedReboundReward =
-                await PrepareMonsterReboundRewardAsync(
-                    targetContext,
-                    reboundCommit);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(
-                $"[monster] rebound reward preparation deferred target={targetContext.DisplayName}: {ex.Message}");
-        }
         try
         {
             preparedElementalRewards =
@@ -302,20 +279,6 @@ internal sealed partial class GameSessionRegistry
             damageResolvedAt);
         medusaStatusCompleted = true;
 
-        try
-        {
-            await PublishMonsterReboundAsync(
-                runtime,
-                targetContext,
-                reboundCommit,
-                preparedReboundReward,
-                publicationCancellation);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(
-                $"[monster] rebound publication deferred target={targetContext.DisplayName}: {ex.Message}");
-        }
         try
         {
             await PublishPveElementalCommitAsync(

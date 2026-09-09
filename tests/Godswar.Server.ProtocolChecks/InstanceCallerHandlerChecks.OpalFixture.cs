@@ -25,17 +25,23 @@ internal static partial class InstanceCallerHandlerChecks
         CreateAtlantisOpalFixtureAsync(
             ScriptedLegacyInstanceDailyEntryStore? dailyEntries,
             ScriptedLegacyInstanceOpalPaymentStore? opalPayments,
-            IReadOnlySet<int>? failedFollowerIndexes = null)
+            IReadOnlySet<int>? failedFollowerIndexes = null,
+            int partySize = 3)
     {
+        if (partySize is < 1 or > 5)
+        {
+            throw new ArgumentOutOfRangeException(nameof(partySize));
+        }
+
         var leader = await CreateFixtureAsync(
             level: 90,
             transitionReady: true,
             legacyInstanceDailyEntries: dailyEntries,
             legacyInstanceOpalPayments: opalPayments);
-        var followers = new List<AtlantisOpalFollower>(2);
+        var followers = new List<AtlantisOpalFollower>(partySize - 1);
         try
         {
-            for (var index = 1; index <= 2; index++)
+            for (var index = 1; index < partySize; index++)
             {
                 var snapshot =
                     CharacterSnapshotContractChecks.CreateValidSnapshot();

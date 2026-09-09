@@ -34,7 +34,7 @@ internal sealed partial class GameSessionRegistry
             _sessions.TryGetValue(session, out var current);
             if (ReferenceEquals(current, expected))
             {
-                return new MembershipMutation(_gate, removal);
+                return new MembershipMutation(this, expected, removal);
             }
             Monitor.Exit(_gate);
             removal?.Dispose();
@@ -42,15 +42,28 @@ internal sealed partial class GameSessionRegistry
     }
 
     private sealed class MembershipMutation(
-        object registryGate,
+        GameSessionRegistry registry,
+        GameSessionContext? previous,
         MapInstance.PlayerRemovalLease? removal) : IDisposable
     {
         public MapInstance.PlayerRemovalLease? Removal { get; } = removal;
 
         public void Dispose()
         {
-            Monitor.Exit(registryGate);
-            Removal?.Dispose();
+            Task? departureWrite = null;
+            try
+            {
+                departureWrite = registry.RecordCommittedAtlantisDepartureLocked(previous);
+            }
+            finally
+            {
+                Monitor.Exit(registry._gate);
+                Removal?.Dispose();
+            }
+            if (departureWrite is not null)
+            {
+                _ = ObserveAtlantisDepartureWriteAsync(previous!.Session, departureWrite);
+            }
         }
     }
 }
