@@ -1,0 +1,583 @@
+using System.Buffers.Binary;
+using System.Diagnostics;
+using System.Text;
+using Godswar.Server.Application.WorldInstances;
+using Godswar.Server.Domain.World.Instances;
+using Godswar.Server.Networking;
+using Godswar.Server.Packets;
+using Godswar.Server.Protocol;
+using Godswar.Server.State;
+using Godswar.Server.World.Systems.Combat;
+
+namespace Godswar.Server.Game;
+
+internal sealed partial class GameClientHandler
+{
+    private bool RejectDeadLegacyMovement(GamePacket packet)
+    {
+        if (_character is not { CurrentHp: <= 0 })
+        {
+            return false;
+        }
+
+        Console.WriteLine(
+            $"[world] ignored legacy movement from dead character={_character.Name} opcode={packet.Opcode}");
+        return true;
+    }
+
+    private async Task<bool> HandleWalkAsync(GamePacket packet, CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            return false;
+        }
+        if (_session.IsRealtimeMovementActive)
+        {
+            await RejectLegacyWalkAfterRealtimeCutoverAsync(
+                cancellationToken);
+            return false;
+        }
+
+        var movementAcceptedAt = DateTimeOffset.UtcNow;
+        if (!IsElementalMovementAllowed(movementAcceptedAt))
+        {
+            return false;
+        }
+
+        var updated = _registry.PlayerRuntimeMode ==
+            PlayerRuntimeMode.Ecs
+            ? UpdateCharacterPositionFromWalkEcs(
+                packet,
+                out var movement)
+            : UpdateCharacterPositionFromWalk(
+                packet,
+                out movement);
+        if (!updated)
+        {
+            return false;
+        }
+
+        CommitAcceptedElementalMovement(
+            movement,
+            movementAcceptedAt);
+
+        await InterruptPendingSkillCastAsync(
+            SkillCastInterruptionReason.Movement,
+            cancellationToken);
+
+        if (await TryBeginMapTransitionAsync(
+                movement,
+                cancellationToken))
+        {
+            // The source map receives an explicit removal during the
+            // transition. Never broadcast the triggering walk into either
+            // the old or the still-hidden destination world.
+            return false;
+        }
+
+        await RefreshNearbyWorldObjectsAsync("walk", cancellationToken);
+        await PublishPartyPositionRefreshAsync(cancellationToken);
+        await PersistCharacterPositionAsync(force: false, cancellationToken);
+
+        return true;
+    }
+
+    private async Task HandleReviveAsync(GamePacket packet, CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            Console.WriteLine("[revive] ignored request before character enter");
+            return;
+        }
+
+        if (!ReviveRequest.TryParse(packet.Buffer, out var request))
+        {
+            Console.WriteLine($"[revive] ignored malformed request len={packet.Length} hex={packet.ToHexPreview()}");
+            return;
+        }
+
+        if (request.PlayerObjectId != LocalPlayerObjectId)
+        {
+            Console.WriteLine(
+                $"[revive] ignored spoofed player object character={_character.Name} request-object={request.PlayerObjectId} expected-object={LocalPlayerObjectId}");
+            return;
+        }
+
+        if (request.ReviveType != ReviveRequest.FreeReviveType)
+        {
+            Console.WriteLine(
+                $"[revive] ignored unsupported type character={_character.Name} requested-type={request.ReviveType}");
+            return;
+        }
+
+        if (_character.CurrentHp > 0)
+        {
+            Console.WriteLine($"[revive] ignored request for living character={_character.Name}");
+            return;
+        }
+
+        if (!_registry.TryGetPlayerLifeRevision(
+                _session,
+                out _))
+        {
+            Console.WriteLine(
+                $"[revive] rejected missing life authority " +
+                $"character={_character.Name}");
+            return;
+        }
+        var revivedLifeRevision = _registry.AdvancePlayerLifeRevision(_session);
+        if (revivedLifeRevision < 0)
+        {
+            return;
+        }
+        try
+        {
+            await _registry.SetPersistentRuntimeStatusAndPublishAsync(
+                _session,
+                MountCatalog.RuntimeStatusKind,
+                statusId: 0,
+                priority: 0,
+                beneficial: false,
+                movementSpeedBonus: 0f,
+                active: false,
+                DateTimeOffset.UtcNow,
+                "mount-revive",
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Console.WriteLine(
+                $"[mount] failed publishing revive dismount character={_character.Name} life={revivedLifeRevision}: {ex.Message}");
+        }
+
+        var previousMap = _character.CurrentMap;
+        if (_worldPresenceAnnounced)
+        {
+            await BroadcastPlayerLeaveAsync(cancellationToken);
+        }
+
+        if (_registered)
+        {
+            _registry.Remove(_session, preservePlayerStatus: true);
+            _registered = false;
+        }
+
+        _worldPresenceAnnounced = false;
+        _clientReadyReceived = false;
+        _playerDetailSent = false;
+        _enterUiReadyReceived = false;
+        _postEnterBootstrapSent = false;
+        ClearLocalNpcCatalog();
+        _nextBasicAttackAt = DateTimeOffset.MinValue;
+
+        // Type 2 is the only capture-proven free-revival path. Currency-backed
+        // in-place revival remains unsupported until its native contract and
+        // settlement rules are proven.
+        await RestoreEntryStateAsync(cancellationToken);
+        await HandleEnterGameAsync(cancellationToken);
+        Console.WriteLine(
+            $"[revive] free revival character={_character.Name} request-object={request.PlayerObjectId} requested-type={request.ReviveType} map={previousMap}->{_character.CurrentMap} hp={_character.CurrentHp}/{_character.MaxHp} mp={_character.CurrentMp}/{_character.MaxMp}");
+    }
+
+    private async Task RestoreFreeRevivalStateAsync(CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            return;
+        }
+
+        // 在副本(美杜莎群岛)内复活时,必须留在副本并把角色送回副本入口,
+        // 否则客户端会因服务端地图回退到主城而把玩家传送出去。
+        // Reviving inside the instance must keep the character in the instance
+        // and place them at the instance entrance; falling back to the capital
+        // is what makes the client teleport the player out.
+        var medusaRevival = TryRestoreMedusaRevivalState(_character);
+        if (!medusaRevival)
+        {
+            GameDefaults.InitializeStartingLocation(_character);
+        }
+
+        _character.MarkPositionChanged();
+        lock (_character.VitalsSync)
+        {
+            // 副本内复活给更高的血量,避免复活即被再次击杀。
+            // Instance revival restores a larger share of health so the player
+            // is not immediately killed again.
+            var restoredPercent = medusaRevival ? 30 : 10;
+            _character.CurrentHp = Math.Max(1, _character.MaxHp * restoredPercent / 100);
+            _character.CurrentMp = Math.Max(0, _character.MaxMp * restoredPercent / 100);
+            _character.MarkVitalsChanged();
+        }
+        _positionDirty = false;
+        _lastPositionPersistUtc = DateTime.UtcNow;
+
+        // 复活后清空怪物仇恨,让它们回到原始刷新点。
+        // Clear monster aggro after revival so monsters return to their
+        // original spawn points.
+        _registry.ClearMonsterAggroForCharacter(
+            _character.CurrentMap,
+            _session,
+            _character.Id,
+            DateTimeOffset.UtcNow);
+
+        if (!await PersistPositionCheckpointAsync(
+                _character,
+                force: true,
+                cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "The revival position checkpoint was not durable.");
+        }
+        if (!await PersistVitalsCheckpointAsync(
+                _character,
+                force: true,
+                cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "The revival vitals checkpoint was not durable.");
+        }
+    }
+
+    // 若角色当前位于美杜莎副本内,把位置设为副本入口落点并保持地图不变。
+    // Returns true when the character is inside the Medusa instance and has
+    // been repositioned to the instance entrance without changing maps.
+    private static bool TryRestoreMedusaRevivalState(GameCharacter character)
+    {
+        if (!DynamicDungeonContentMapPolicy.IsMedusaMap(
+                character.CurrentMap))
+        {
+            return false;
+        }
+
+        if (!MedusaIslandPlacementPolicy.TryGetTraversalAnchor(
+                "first-entry",
+                out var entrance))
+        {
+            return false;
+        }
+
+        character.PositionX = entrance.X;
+        character.PositionZ = entrance.Z;
+        return true;
+    }
+
+    private async Task HandleBasicAttackAsync(GamePacket packet, CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            Console.WriteLine("[attack] ignored basic attack before character enter");
+            return;
+        }
+
+        if (!IsHostileStatusBasicAttackAllowed(DateTimeOffset.UtcNow))
+        {
+            return;
+        }
+
+        if (await TryHandlePvpBasicAttackAsync(
+                packet,
+                cancellationToken))
+        {
+            return;
+        }
+
+        if (_registry.PlayerRuntimeMode == PlayerRuntimeMode.Ecs)
+        {
+            await HandleBasicAttackEcsAsync(
+                packet,
+                cancellationToken);
+            return;
+        }
+
+        if (_character.CurrentHp <= 0)
+        {
+            Console.WriteLine($"[attack] ignored basic attack from dead character={_character.Name}");
+            return;
+        }
+
+        if (!BasicAttackRequest.TryParse(packet.Buffer, out var attack))
+        {
+            Console.WriteLine($"[attack] ignored malformed basic attack len={packet.Length} hex={packet.ToHexPreview()}");
+            return;
+        }
+
+        if (attack.AttackerObjectId != LocalPlayerObjectId)
+        {
+            Console.WriteLine(
+                $"[attack] rejected spoofed attacker character={_character.Name} supplied={attack.AttackerObjectId} expected={LocalPlayerObjectId}");
+            return;
+        }
+
+        if (!_registry.TryCapturePlayerMonsterTarget(
+                _session,
+                _character.CurrentMap,
+                attack.TargetObjectId,
+                out var target,
+                out var combatAuthority) ||
+            !_registry.IsMonsterVisibleTo(
+                _session,
+                attack.TargetObjectId,
+                target.SpawnGeneration) ||
+            !target.IsSpawned ||
+            !target.IsAlive)
+        {
+            Console.WriteLine($"[attack] rejected unavailable monster character={_character.Name} target={attack.TargetObjectId}");
+            return;
+        }
+
+        if (!MonsterCombatResolver.TryResolvePlayerBasicAttackPosition(
+                _character.PositionX,
+                _character.PositionZ,
+                attack.AttackerX,
+                attack.AttackerZ,
+                out var attackX,
+                out var attackZ))
+        {
+            Console.WriteLine(
+                $"[attack] rejected mismatched position character={_character.Name} server={_character.PositionX:F2},{_character.PositionZ:F2} reported={attack.AttackerX:F2},{attack.AttackerZ:F2}");
+            return;
+        }
+
+        if (!MonsterCombatResolver.IsWithinBasicAttackRange(
+                attackX,
+                attackZ,
+                target.X,
+                target.Z,
+                MonsterCombatResolver.ResolvePlayerBasicAttackRange(
+                    target.Definition,
+                    _gameplayCatalogs.MonsterCombatRanges,
+                    CharacterStats.FromCharacter(_character)
+                    .BasicAttackRange)))
+        {
+            Console.WriteLine(
+                $"[attack] rejected out-of-range monster character={_character.Name} target={attack.TargetObjectId} player={attackX:F2},{attackZ:F2} monster={target.X:F2},{target.Z:F2}");
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (_registry.GetPlayerSkillCastControl(_session, now) ==
+            PlayerSkillCastControl.Stunned)
+        {
+            Console.WriteLine(
+                $"[attack] rejected stunned character={_character.Name} target={attack.TargetObjectId}");
+            return;
+        }
+
+        if (now < _nextBasicAttackAt)
+        {
+            Console.WriteLine($"[attack] rejected cooldown character={_character.Name} target={attack.TargetObjectId}");
+            return;
+        }
+
+        if (!RevalidateCurrentWorldEffectOwnership(
+                "basic_attack_resolution"))
+        {
+            Console.WriteLine(
+                $"[attack] rejected stale ownership character={_character.Name} target={attack.TargetObjectId}");
+            return;
+        }
+
+        using var elementalAuthority =
+            CapturePveElementalCommitAuthority(_character);
+        if (elementalAuthority is null)
+        {
+            Console.WriteLine(
+                $"[attack] rejected stale elemental authority character={_character.Name} target={attack.TargetObjectId}");
+            return;
+        }
+
+        var admittedCombatRevision =
+            NextAdmittedLegacyCombatRevision();
+        var eventId = CombatEventIdentity.ForPlayerMonsterBasicAttack(
+            _character.Id,
+            target.ObjectId,
+            target.SpawnGeneration,
+            target.HealthRevision,
+            (ulong)admittedCombatRevision);
+        var targetCombat = _gameplayCatalogs.MonsterCombatProfiles
+            .Resolve(target.Definition)
+            .ToTargetStats();
+        targetCombat = _registry.AdjustPveMonsterTargetStats(
+            _session,
+            target,
+            now,
+            targetCombat);
+        var runtimeCombatModifiers =
+            _registry.GetRuntimeStatusAggregate(_session, now);
+        var resolution = MonsterCombatResolver.ResolvePlayerBasicAttack(
+            _character,
+            targetCombat,
+            eventId,
+            runtimeModifiers: runtimeCombatModifiers);
+        resolution = _registry.AdjustPveOutgoingResolution(
+            _session,
+            _character,
+            target,
+            CombatEventProvenance.DirectBasicAttack,
+            now,
+            resolution,
+            checked((ulong)admittedCombatRevision));
+        var attackStats = CharacterStats.FromCharacter(_character);
+        var cooldown = PlayerCombatRules.ResolveBasicAttackCooldown(
+            attackStats.BasicAttackIntervalMilliseconds);
+        _nextBasicAttackAt = now + cooldown;
+        var attackSelector = _character.Profession is 2 or 3
+            ? (byte)5
+            : (byte)3;
+        if (!resolution.Hit)
+        {
+            await InterruptPendingSkillCastAsync(
+                SkillCastInterruptionReason.Replaced,
+                cancellationToken);
+            var selfMiss = PacketBuilder.PhysicalDamage(
+                LocalPlayerObjectId,
+                0f,
+                0f,
+                0f,
+                attack.TargetObjectId,
+                resolution.CapturedDamageValue,
+                result: attackSelector,
+                damageType: (byte)resolution.Outcome);
+            await _registry.DeliverMonsterPacketToViewerAsync(
+                _session,
+                _character.CurrentMap,
+                attack.TargetObjectId,
+                selfMiss,
+                target.SpawnGeneration,
+                cancellationToken,
+                "BasicAttackMissSelf");
+            var missViewers = await _registry.BroadcastToMonsterViewersAsync(
+                _character.CurrentMap,
+                attack.TargetObjectId,
+                PacketBuilder.PhysicalDamage(
+                    CurrentPlayerObjectId,
+                    0f,
+                    0f,
+                    0f,
+                    attack.TargetObjectId,
+                    resolution.CapturedDamageValue,
+                    result: attackSelector,
+                    damageType: (byte)resolution.Outcome),
+                cancellationToken,
+                _session,
+                "BasicAttackMissWorld",
+                expectedSpawnGeneration: target.SpawnGeneration);
+            Console.WriteLine(
+                $"[attack] miss character={_character.Name} target={attack.TargetObjectId} event={eventId} hit={resolution.Rolls.HitRollBasisPoints}/{resolution.Rolls.HitChanceBasisPoints} viewers={missViewers}");
+            return;
+        }
+
+        if (!_registry.TryCommitPlayerMonsterDamageGuarded(
+                _session,
+                _character.CurrentMap,
+                attack.TargetObjectId,
+                target.RuntimeInstanceId,
+                _character.Id,
+                target.SpawnGeneration,
+                target.HealthRevision,
+                combatAuthority,
+                now,
+                resolution,
+                out var damageCommit) ||
+            damageCommit.DamageResult is not { } damageResult ||
+            damageResult.BeforeHealth == damageResult.AfterHealth)
+        {
+            Console.WriteLine($"[attack] rejected stale monster character={_character.Name} target={attack.TargetObjectId}");
+            return;
+        }
+        resolution = damageCommit.Resolution;
+
+        var lifeAbsorption = CommitPveLifeAbsorption(
+            _character,
+            [new PveCommittedMonsterDamage(
+                resolution.EventId,
+                damageResult.ObjectId,
+                damageResult.Monster.SpawnGeneration,
+                damageResult.BeforeHealth - damageResult.AfterHealth)]);
+        var elementalCommit = CommitPveElementalHit(
+            elementalAuthority,
+            CombatEventProvenance.DirectBasicAttack,
+            resolution,
+            damageResult);
+        var pendingReward = damageResult.Killed
+            ? await PrepareClaimedMonsterKillRewardAsync(damageResult)
+            : null;
+        var elementalRewards =
+            await PreparePveElementalKillRewardsAsync(
+                elementalAuthority,
+                elementalCommit);
+        await _registry.PublishMonsterClaimStateAsync(
+            _session,
+            _character.CurrentMap,
+            damageResult,
+            cancellationToken);
+        await InterruptPendingSkillCastAsync(
+            SkillCastInterruptionReason.Replaced,
+            cancellationToken);
+        var selfPacket = PacketBuilder.PhysicalDamage(
+            LocalPlayerObjectId,
+            0f,
+            0f,
+            0f,
+            attack.TargetObjectId,
+            resolution.CapturedDamageValue,
+            result: damageResult.Killed ? (byte)5 : attackSelector,
+            damageType: (byte)resolution.Outcome);
+        var casterNotified = true;
+        try
+        {
+            await _registry.DeliverMonsterHealthPacketToViewerAsync(
+                _session,
+                _character.CurrentMap,
+                attack.TargetObjectId,
+                selfPacket,
+                damageResult.HealthMutation!.Value,
+                cancellationToken,
+                "BasicAttackSelf");
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            casterNotified = false;
+            Console.WriteLine(
+                $"[attack] caster notification failed character={_character.Name} target={attack.TargetObjectId}: {ex.Message}");
+        }
+
+        var worldObjectId = CurrentPlayerObjectId;
+        var viewers = await _registry.BroadcastToMonsterViewersAsync(
+            _character.CurrentMap,
+            attack.TargetObjectId,
+            PacketBuilder.PhysicalDamage(
+                worldObjectId,
+                0f,
+                0f,
+                0f,
+                attack.TargetObjectId,
+                resolution.CapturedDamageValue,
+                result: damageResult.Killed ? (byte)5 : attackSelector,
+                damageType: (byte)resolution.Outcome),
+            cancellationToken,
+            _session,
+            "BasicAttackWorld",
+            healthMutation: damageResult.HealthMutation);
+
+        await PublishPveLifeAbsorptionAsync(
+            _character,
+            lifeAbsorption,
+            cancellationToken);
+
+        await PublishPveElementalCommitAsync(
+            elementalAuthority,
+            elementalCommit,
+            elementalRewards,
+            cancellationToken);
+
+        if (pendingReward is not null)
+        {
+            await pendingReward.PublishAsync(cancellationToken);
+        }
+
+        Console.WriteLine(
+            $"[attack] damage character={_character.Name} target={attack.TargetObjectId} event={eventId} outcome={resolution.Outcome} resolved={resolution.Damage} applied={damageResult.BeforeHealth - damageResult.AfterHealth} hp={damageResult.AfterHealth}/{damageResult.Monster.MaximumHealth} killed={damageResult.Killed} first-hit={damageResult.FirstHitCharacterId} caster-notified={casterNotified} viewers={viewers}");
+    }
+
+}
