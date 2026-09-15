@@ -1,4 +1,0 @@
-== ?push_back@?$vector@UItemAlterBound@@V?$allocator@UItemAlterBound@@@std@@@std@@QAEXABUItemAlterBound@@@Z +0x30 ==
-  0x4E1C70  jmp      ptr [eax + 0x3c]
-  0x4E1C73  cmp      dword ptr [ebp - 0x5b727300], edx
-  0x4E1C79  idiv     edi
