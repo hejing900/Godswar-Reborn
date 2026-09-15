@@ -1,0 +1,109 @@
+# 17. Risks, decisions, and unresolved questions
+
+## Confirmed decisions
+
+These are repository-supported facts, not assumed approval of every target recommendation:
+
+1. Every server runtime profile is PostgreSQL-only and fails closed on an unknown or JSON provider. Historical JSON persistence is a protocol-test fixture only.
+2. Current PostgreSQL access uses Npgsql, explicit SQL/transactions, row locks, and the custom migration runner.
+3. The custom ECS has no automatic component serialization or durable whole-world snapshot.
+4. Runtime ECS IDs, sessions, AOI, monster state, tickets, replay windows, and keys currently exist only in process memory.
+5. TLS plus authenticated UDP movement is implemented/tested as an opt-in profile; raw TCP remains the checked-in default.
+6. The authoritative gameplay runtime remains a modular-monolith worker
+   plus PostgreSQL. B18C2 supplies the semantic edge, and B17 can opt into
+   Redis for disposable cross-process tickets/admissions, routes, presence,
+   and PG-fenced leases. MongoDB and production placement remain absent.
+7. Applied migration IDs/checksums are immutable under the documented policy, and the current runner enforces exact-prefix compatibility.
+8. Implemented valuable PG command families use transactions, durable inbox/outbox/audit identities, and ownership fences; future families must adopt those boundaries explicitly.
+9. World, gameplay, item, and pet content reads use immutable process-pinned PostgreSQL publications. Generated declarations and captures are publisher/research inputs only.
+10. ADR 0003 records the historical defer. ADR 0004 confirms the future
+    topology; ADR 0005 governs B17's implemented opt-in coordination.
+    Production Redis deployment, HA, capacity, and cross-realm Pindus remain
+    unproven.
+11. B18A/B provide process-local realm/instance placement, a live runtime
+    directory keyed by `WorldInstanceId`, instance-aware sessions and
+    transfers, and one bounded map-owner mailbox per local runtime. The
+    legacy byte-map bridge resolves only Tempest's default open world unless
+    a routed session supplies an exact instance.
+12. B18C1 provides a bounded local/raw-development login/game TCP relay to
+    one fixed private combined worker. It does not terminate TLS/authenticate,
+    interpret packets, route instances, share tickets/sessions, relay secure
+    UDP, preserve source IP, coordinate workers, or use Redis. Its managed
+    checks and real two-process smoke are complete.
+13. B18C2 provides a loopback-only unchanged-client semantic edge and a
+    TLS 1.3 mutually authenticated private worker backhaul. The gateway owns
+    bounded login generations and one lifetime game admission per generation,
+    routing by exact
+    `RealmId`/`MapId`/`WorldInstanceId`/`ServerNodeId`; the worker retains ECS,
+    gameplay, and persistence authority. Reconnect requires a full login.
+
+## Roadmap recommendations pending approval
+
+1. Use PostgreSQL only for the initial migration and as the sole durable player-value authority.
+2. Continue direct Npgsql for transactional paths; do not introduce EF Core now.
+3. Persist selected durable facets, never the entire ECS world.
+4. Commit valuable commands before success acknowledgement and use PG inbox/audit/outbox instead of cross-store dual writes.
+5. Do not introduce MongoDB during the initial migration.
+6. Preserve B14's fail-closed production rejection and explicit loopback-only raw-development profile; delete the compatibility path only when client and B20H rollback obligations permit.
+7. Keep modular-monolith code boundaries behind the completed B18C2
+   semantic gateway/backhaul. B17 Redis coordination remains opt-in and
+   disposable; stage-qualify it before deployment and never give it player
+   value authority.
+
+## Assumptions
+
+1. The immediate authoritative deployment remains local-first: gateway and
+   worker processes may be co-located with one PostgreSQL service for
+   measurement, without implying remote production placement, failure
+   isolation, or a capacity guarantee.
+2. Position/vitals may lose a small, documented checkpoint tail on crash; inventory/currency/progression value may not.
+3. PostgreSQL 17 remains the target database version.
+4. The original client can use the in-process networking shim for the secure profile.
+5. Stable numeric template IDs remain compatible with the original client.
+6. Captured packet data is research evidence, not indefinite runtime authority.
+7. The dirty pet working tree is intentional work in progress and will be reconciled into a coherent release, not discarded.
+8. Ordinary monster state resets after process crash; only explicitly permanent world outcomes persist.
+9. One region is sufficient until product/hosting inputs say otherwise.
+
+## Unresolved questions
+
+Priority 0:
+
+1. Which exact uncommitted migrations/code have already reached the connected local development database, and what commit/tag should own schema version `20260729_022`?
+2. Will raw TCP remain accessible outside controlled development, and when must secure TLS become mandatory?
+3. What are the required no-loss semantics when a monster death commits in ECS but its reward transaction is unavailable?
+4. What restore window and authorization apply to character deletion?
+5. How will the unchanged legacy client/shim supply a stable operation identity for cross-reconnect retries of valuable commands?
+6. How many characters/slots may one account own, given the database currently permits multiple rows while the client preview selects the first?
+
+Priority 1:
+
+7. What are target concurrent players per process/realm/map/instance, peak
+   login and instance-admission rates, regions, tick/snapshot rates, and
+   acceptable loss/latency?
+8. What exact capacity, failure-isolation, security, and provider gate
+   promotes the verified local-first B18C2 boundary to remote production
+   placement?
+9. Which connected open-world maps must be co-located on one worker, and
+   what protocol/state machine will later permit controlled cross-worker
+   portal transfer?
+10. Is B18C2's full-login reconnect contract acceptable, or is a bounded
+    authenticated resume window required later?
+11. What Redis latency, outage, staleness, eviction, provider, region, and
+    cost budgets must be approved before B17 is enabled?
+12. Which open-world maps are statically assigned, which are dynamically
+    placed, and how many instances may one worker own?
+13. What RPO, RTO, backup retention, privacy, security-audit, and economy-audit retention are required?
+14. Which hosting/upstream L3/L4 provider will protect arbitrary TCP and UDP ports?
+
+Priority 2:
+
+15. What future editor/review workflow should feed the implemented immutable PostgreSQL publications, and how are new revisions approved?
+16. Should packet captures remain in the gameplay database, move to a separate research database, or archive to object storage?
+17. Is durable chat/moderation history required?
+18. What exact schedules, admission rules, party sizes, reconnect windows,
+    and reward-settlement rules apply to Pindus, Ni Mini Valley, Lelantine,
+    Medusa Island, Atlantis, Wonderland, and Bay Under Attack?
+19. Which other future features are actually scheduled: guilds, trade,
+    auction, mail, quests, housing, achievements, player-generated content?
+20. What data residency, payment, child-safety, and account-deletion obligations apply?

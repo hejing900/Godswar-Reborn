@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="SecureFighterLevelSealIdentityTests.cpp" />
+    <ClInclude Include="SecureFighterLevelSealIdentityTests.h" />
+    <ClInclude Include="..\src\SecureFighterLevelSealCommandIdentity.h" />
+    <ClCompile Include="SecureFighterLevelSealParserTests.cpp" />
+    <ClCompile Include="SecureFighterLevelSealRegistryTests.cpp" />
+    <ClInclude Include="SecureFighterLevelSealTestSupport.h" />
+    <ClCompile Include="OriginFighterExperienceHostTests.cpp" />
+    <ClCompile Include="RawFighterLevelSealProjectionBridgeTests.cpp" />
+    <ClCompile Include="..\src\OriginFighterExperienceHost.cpp" />
+    <ClCompile Include="..\src\RawFighterLevelSealProjectionBridge.cpp" />
+    <ClInclude Include="OriginFighterExperienceHostTests.h" />
+    <ClInclude Include="RawFighterLevelSealProjectionBridgeTests.h" />
+    <ClInclude Include="..\src\OriginFighterExperienceHost.h" />
+    <ClInclude Include="..\src\RawFighterLevelSealProjectionBridge.h" />
+  </ItemGroup>
+</Project>

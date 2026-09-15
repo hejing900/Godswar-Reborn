@@ -1,0 +1,492 @@
+#pragma once
+
+#include "SecureCharacterLifecycleIdentity.h"
+#include "SecureClassSuitCommandIdentity.h"
+#include "SecureEquipmentBagTransferIdentity.h"
+#include "SecureFactionCrierCommandIdentity.h"
+#include "SecureFighterLevelSealCommandIdentity.h"
+#include "SecureOnlineAwardCommandIdentity.h"
+#include "SecureWarehouseCommandIdentity.h"
+#include "SecureForgeCommandIdentity.h"
+#include "SecureHolyStoneCommandIdentity.h"
+#include "SecureHolySuitCommandIdentity.h"
+#include "SecureKitBagItemDeleteIdentity.h"
+#include "SecureKitBagItemMoveIdentity.h"
+#include "SecureLegacyCommandIdentity.h"
+#include "SecurePetCommandIdentity.h"
+#include "SecureZodiacSkillGridUpgradeIdentity.h"
+#include "SecureZodiacSkillGridSelectionIdentity.h"
+
+#include <Windows.h>
+
+#include <cstddef>
+#include <cstdint>
+
+namespace godswar::network {
+
+inline constexpr std::size_t SecurePendingOperationCapacity = 16;
+inline constexpr std::size_t SecureResolvedOperationCapacity = 16;
+inline constexpr std::size_t SecureThreeSlotSelectionCount = 3;
+inline constexpr std::size_t SecureGearSelectionCapacity = 4;
+inline constexpr std::size_t SecureForgeOddsCapacity = 25;
+inline constexpr std::size_t
+    SecureFighterExperienceProjectionCapacity = 16;
+inline constexpr std::uint64_t
+    SecurePendingOperationLifetimeMilliseconds = 10 * 60 * 1000;
+inline constexpr std::uint64_t
+    SecureSelectionClearCorrelationLifetimeMilliseconds = 1000;
+
+using SecureOperationRandomGenerator =
+    bool (*)(
+        void* context,
+        void* destination,
+        std::size_t destinationBytes) noexcept;
+using SecureOperationClock =
+    bool (*)(
+        void* context,
+        std::uint64_t* unixMilliseconds) noexcept;
+
+enum class SecureOperationRegistryResult : std::uint8_t {
+    Success = 0,
+    InvalidPacket,
+    NoPrincipal,
+    NoSelection,
+    Capacity,
+    RandomFailure,
+    ClockFailure,
+    UnknownOperation,
+    FamilyConflict,
+    NoCharacter,
+};
+
+struct SecureForgeOddsSelection final {
+    int bagSlot = -1;
+    std::uint8_t quantity = 0;
+    bool descriptorLinked = false;
+};
+
+struct SecureFighterExperienceProjection final {
+    std::uint32_t currentExperience = 0;
+    std::uint32_t maximumExperience = 0;
+    std::uint64_t authoritativeRevision = 0;
+};
+
+struct SecurePendingOperationSnapshot final {
+    std::size_t pending = 0;
+    std::size_t resolved = 0;
+    bool hasPrincipal = false;
+    bool hasCharacter = false;
+    int characterId = -1;
+    bool hasSelection = false;
+    int selectedBagSlot = -1;
+    std::size_t selectionCount = 0;
+    int selectedBagSlots[SecureGearSelectionCapacity]{
+        -1,
+        -1,
+        -1,
+        -1};
+    bool combinePageArmed = false;
+    std::uint32_t combineNpcId = 0;
+    bool hasForgeEquipment = false;
+    int forgeEquipmentBagSlot = -1;
+    bool hasForgePrimaryMaterial = false;
+    int forgePrimaryMaterialBagSlot = -1;
+    std::size_t forgeOddsCount = 0;
+    std::uint32_t forgeOddsTotal = 0;
+    bool forgeOddsFullyLinked = true;
+    std::size_t fighterExperienceProjectionCount = 0;
+    SecureForgeOddsSelection
+        forgeOdds[SecureForgeOddsCapacity]{};
+};
+
+class SecurePendingOperationRegistry final {
+public:
+    SecurePendingOperationRegistry() noexcept;
+    SecurePendingOperationRegistry(
+        void* randomContext,
+        SecureOperationRandomGenerator randomGenerator,
+        void* clockContext,
+        SecureOperationClock clock) noexcept;
+    ~SecurePendingOperationRegistry() noexcept;
+
+    SecurePendingOperationRegistry(
+        const SecurePendingOperationRegistry&) = delete;
+    SecurePendingOperationRegistry& operator=(
+        const SecurePendingOperationRegistry&) = delete;
+
+    SecureOperationRegistryResult DescribePacket(
+        const void* packet,
+        std::size_t packetBytes,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult Resolve(
+        const SecureLegacyCommandResult& result) noexcept;
+    SecureOperationRegistryResult SetCharacter(
+        int characterId) noexcept;
+    bool TryTakeFighterExperienceProjection(
+        SecureFighterExperienceProjection* projection) noexcept;
+    SecurePendingOperationSnapshot Snapshot() noexcept;
+    void Clear() noexcept;
+
+private:
+    struct Entry final {
+        bool occupied = false;
+        std::uint8_t
+            principal[SecurePrincipalFingerprintBytes]{};
+        SecureLegacyCommandFamily family =
+            SecureLegacyCommandFamily::MakeAttributeStone;
+        int characterId = -1;
+        std::uint32_t npcId = 0;
+        std::size_t selectionCount = 0;
+        int bagSlots[SecureGearSelectionCapacity]{
+            -1,
+            -1,
+            -1,
+            -1};
+        bool capturesSelectionState = false;
+        std::size_t capturedSelectionCount = 0;
+        int capturedSelectionBagSlots[SecureGearSelectionCapacity]{
+            -1,
+            -1,
+            -1,
+            -1};
+        std::uint64_t selectionGeneration = 0;
+        std::uint64_t combinePageGeneration = 0;
+        std::uint64_t classSuitPageGeneration = 0;
+        std::uint64_t holyStoneUpgradePageGeneration = 0;
+        std::uint64_t holyStoneImplementPageGeneration = 0;
+        std::uint64_t holyStoneCombinePageGeneration = 0;
+        bool capturesForgeState = false;
+        bool capturesLifecycleIntent = false;
+        std::uint8_t lifecycleIntent[
+            SecureCharacterLifecycleIntentBytes]{};
+        bool capturesPetIntent = false;
+        LegacyPetCommandIntent petIntent{};
+        int forgeEquipmentBagSlot = -1;
+        int forgePrimaryMaterialBagSlot = -1;
+        std::size_t forgeOddsCount = 0;
+        SecureForgeOddsSelection
+            forgeOdds[SecureForgeOddsCapacity]{};
+        std::uint64_t expiresAt = 0;
+        std::uint8_t operationId[16]{};
+    };
+
+    struct Tombstone final {
+        bool occupied = false;
+        SecureLegacyCommandFamily family =
+            SecureLegacyCommandFamily::MakeAttributeStone;
+        std::uint64_t expiresAt = 0;
+        std::uint8_t operationId[16]{};
+    };
+
+    bool ReadNow(std::uint64_t* now) noexcept;
+    SecureOperationRegistryResult DescribeForgePacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint16_t opcode,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeInventoryPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult
+    DescribeCharacterLifecyclePacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult
+    DescribeCharacterLifecycle(
+        const LegacyCharacterLifecycleIntent& intent,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribePetPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribePetCommand(
+        const LegacyPetCommandIntent& intent,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeFactionCrierPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeFactionCrierCommand(
+        const LegacyFactionCrierCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeFighterLevelSealPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeFighterLevelSealCommand(
+        const LegacyFighterLevelSealCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeOnlineAwardPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeOnlineAwardCommand(
+        const LegacyOnlineAwardCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeWarehousePacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeWarehouseTransfer(
+        const LegacyWarehouseTransferCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeWarehouseExpansion(
+        const LegacyWarehouseExpansionCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeKitBagItemDelete(
+        int bagSlot,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeKitBagItemMove(
+        int sourceBagSlot,
+        int destinationBagSlot,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeEquipmentBagTransfer(
+        int equipmentSlot,
+        int bagSlot,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneCommand(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneUpgradeNavigation(
+        const LegacyHolyStoneCommand& navigation,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneUpgradeCommit(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult
+    DescribeHolyStoneUpgradeCommitLocked(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneImplementNavigation(
+        const LegacyHolyStoneCommand& navigation,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneImplementCommit(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult
+    DescribeHolyStoneImplementCommitLocked(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneCombineNavigation(
+        const LegacyHolyStoneCommand& navigation,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyStoneCombineCommit(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult
+    DescribeHolyStoneCombineCommitLocked(
+        const LegacyHolyStoneCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolySuitCommand(
+        const LegacyHolySuitCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeClassSuitPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult DescribeClassSuitCommand(
+        const LegacyClassSuitCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeClassSuitNavigation(
+        const LegacyClassSuitCommand& navigation,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeClassSuitCommandLocked(
+        const LegacyClassSuitCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeHolyEquipmentPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    SecureOperationRegistryResult
+    DescribeZodiacSkillGridUpgrade(
+        const LegacyZodiacSkillGridUpgradeCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult
+    DescribeZodiacSkillGridSelection(
+        const LegacyZodiacSkillGridSelectionCommand& command,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor) noexcept;
+    SecureOperationRegistryResult DescribeZodiacPacket(
+        const void* packet,
+        std::size_t packetBytes,
+        std::uint64_t now,
+        LegacyPacketDescriptor* descriptor,
+        bool* recognized) noexcept;
+    void Prune(std::uint64_t now) noexcept;
+    Entry* Find(
+        SecureLegacyCommandFamily family,
+        std::uint32_t npcId,
+        const int* bagSlots,
+        std::size_t selectionCount) noexcept;
+    Entry* FindByOperationId(
+        const std::uint8_t* operationId) noexcept;
+    Entry* FindCharacterLifecycle(
+        const LegacyCharacterLifecycleIntent& intent) noexcept;
+    Entry* FindPetCommand(
+        const LegacyPetCommandIntent& intent) noexcept;
+    Tombstone* FindTombstone(
+        const std::uint8_t* operationId) noexcept;
+    Entry* FindAvailable() noexcept;
+    Entry* FindForge() noexcept;
+    Tombstone* FindTombstoneSlot() noexcept;
+    bool RememberResolved(
+        const Entry& entry,
+        std::uint64_t now) noexcept;
+    bool CanPublishFighterExperienceProjection() const noexcept;
+    void PublishFighterExperienceProjection(
+        const SecureLegacyCommandResult& result) noexcept;
+    void ClearFighterExperienceProjections() noexcept;
+    bool CreateOperationId(std::uint8_t* operationId) noexcept;
+    bool StageForgeSelection(
+        const LegacyForgeSelection& selection) noexcept;
+    bool TryCaptureForgeIdentity(
+        SecureForgeOddsSelection* odds,
+        std::size_t* oddsCount) const noexcept;
+    bool ForgeStateMatches(const Entry& entry) const noexcept;
+    void ResetForgeState() noexcept;
+    void SetPrincipal(
+        const std::uint8_t* principal) noexcept;
+    bool AddSelection(int bagSlot) noexcept;
+    void RemoveSelection(
+        int bagSlot,
+        std::uint64_t now) noexcept;
+    void BeginSelectionEdit() noexcept;
+    void TrackSelectionClear(
+        int bagSlot,
+        std::uint64_t now) noexcept;
+    void ResetSelectionClearCandidate() noexcept;
+    void InvalidateSelectionClear() noexcept;
+    void ResetSelectionState() noexcept;
+    void ClearClassSuitPage() noexcept;
+    void ClearHolyStoneUpgradePage() noexcept;
+    void ClearHolyStoneImplementPage() noexcept;
+    void ClearHolyStoneCombinePage() noexcept;
+    bool TryGetIdentitySelection(
+        int* bagSlots,
+        std::size_t* selectionCount) const noexcept;
+    static bool EqualSelection(
+        const int* first,
+        std::size_t firstCount,
+        const int* second,
+        std::size_t secondCount) noexcept;
+    void ClearEntry(Entry* entry) noexcept;
+    void ClearTombstone(Tombstone* tombstone) noexcept;
+
+    SRWLOCK lock_{};
+    void* randomContext_ = nullptr;
+    SecureOperationRandomGenerator randomGenerator_ = nullptr;
+    void* clockContext_ = nullptr;
+    SecureOperationClock clock_ = nullptr;
+    bool hasPrincipal_ = false;
+    bool hasCharacter_ = false;
+    int characterId_ = -1;
+    int selectedBagSlots_[SecureGearSelectionCapacity]{
+        -1,
+        -1,
+        -1,
+        -1};
+    std::size_t selectionCount_ = 0;
+    std::uint64_t selectionGeneration_ = 0;
+    bool selectionOverflowed_ = false;
+    bool selectionClearCandidateActive_ = false;
+    int selectionClearCandidate_[SecureGearSelectionCapacity]{
+        -1,
+        -1,
+        -1,
+        -1};
+    std::size_t selectionClearCandidateCount_ = 0;
+    std::size_t selectionClearStep_ = 0;
+    std::uint64_t selectionClearCandidateExpiresAt_ = 0;
+    bool hasPendingClearedSelection_ = false;
+    int pendingClearedSelection_[SecureGearSelectionCapacity]{
+        -1,
+        -1,
+        -1,
+        -1};
+    std::size_t pendingClearedSelectionCount_ = 0;
+    std::uint64_t pendingClearedSelectionExpiresAt_ = 0;
+    bool selectionClearInvalidated_ = false;
+    bool combinePageArmed_ = false;
+    std::uint32_t combineNpcId_ = 0;
+    std::uint64_t combinePageGeneration_ = 0;
+    bool classSuitPageArmed_ = false;
+    LegacyClassSuitAction classSuitPageAction_ =
+        LegacyClassSuitAction::ExchangeTierI;
+    std::uint32_t classSuitPageNpcId_ = 0;
+    std::uint64_t classSuitPageGeneration_ = 0;
+    bool holyStoneUpgradePageArmed_ = false;
+    bool holyStoneUpgradePostResultRearmed_ = false;
+    std::uint32_t holyStoneUpgradePageNpcId_ = 0;
+    std::uint64_t holyStoneUpgradePageGeneration_ = 0;
+    std::uint64_t holyStoneUpgradePageExpiresAt_ = 0;
+    bool holyStoneImplementPageArmed_ = false;
+    bool holyStoneImplementPostResultRearmed_ = false;
+    std::uint32_t holyStoneImplementPageNpcId_ = 0;
+    std::uint64_t holyStoneImplementPageGeneration_ = 0;
+    std::uint64_t holyStoneImplementPageExpiresAt_ = 0;
+    bool holyStoneCombinePageArmed_ = false;
+    bool holyStoneCombinePostResultRearmed_ = false;
+    std::uint32_t holyStoneCombinePageNpcId_ = 0;
+    std::uint64_t holyStoneCombinePageGeneration_ = 0;
+    std::uint64_t holyStoneCombinePageExpiresAt_ = 0;
+    int forgeEquipmentBagSlot_ = -1;
+    int forgePrimaryMaterialBagSlot_ = -1;
+    std::size_t forgeOddsCount_ = 0;
+    SecureForgeOddsSelection
+        forgeOdds_[SecureForgeOddsCapacity]{};
+    SecureFighterExperienceProjection
+        fighterExperienceProjections_[
+            SecureFighterExperienceProjectionCapacity]{};
+    std::size_t fighterExperienceProjectionHead_ = 0;
+    std::size_t fighterExperienceProjectionCount_ = 0;
+    std::uint8_t
+        principal_[SecurePrincipalFingerprintBytes]{};
+    Entry entries_[SecurePendingOperationCapacity]{};
+    Tombstone tombstones_[SecureResolvedOperationCapacity]{};
+};
+
+} // namespace godswar::network

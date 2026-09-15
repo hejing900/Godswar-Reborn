@@ -1,0 +1,135 @@
+# Godswar Server Data Architecture Roadmap
+
+Status: implementation roadmap; backlog B01A through B19 and B20A-B20G are
+completed and verified as repository/local foundations as of 2026-08-01.
+B16's original
+Redis defer remains historical evidence. B18A/B and B18C1/C2 established
+bounded local world owners and an unchanged-client semantic edge with exact
+authenticated worker routing. B17 Redis coordination is completed behind an
+explicit opt-in provider. Its private dependency and the Redis-coordinated
+worker are active in the main `reborn` Compose project for the local B20H
+rehearsal. `Local` coordination remains the default outside that explicit
+profile. B19 adds bounded report-only PostgreSQL reconciliation and an
+isolated logical-restore drill. B20A freezes the exact legacy persistence
+inventory;
+B20B cuts account/auth/session and semantic-gateway persistence over to
+focused contracts and instruments every remaining legacy call. B20C moves
+live character/pet projections, boost reads, world-boss state, and Zodiac
+level writes behind feature-specific contracts. B20D removes the remaining
+pet/progression compatibility mutation fallbacks and the legacy checkpoint
+adapter. B20E makes runtime composition PostgreSQL-only and quarantines the
+retired JSON authority as test-only compatibility fixtures. B20F separates
+schema startup, removes the historical Docker init mount, replaces runtime
+loadout-view readers with authoritative item projections, and removes the
+SecureSmoke broad-store dependency. B20G publishes and process-pins immutable
+world, gameplay, item, and pet content. The B20H production zero-use
+observation window and final legacy removal remain open. No
+managed Redis deployment, production backup/PITR,
+declared RPO/RTO, production capacity, provider SLA, or cross-realm failover
+is claimed.
+
+Repository originally assessed: `C:\Reborn` at Git HEAD `54f2d4b`, including
+the preserved working tree on 2026-07-29.
+
+The roadmap is split into linked modules to comply with `AGENTS.md`'s 20 KB
+file limit. This file remains the stable entry point. Splitting changed only
+document organization; the assessment and recommendations remain intact.
+
+## Implementation evidence
+
+- [B01A schema/build/backup inventory](docs/data-architecture-b01a-schema-build-backup-inventory-20260729.md)
+- [B01B coherent schema release](docs/data-architecture-b01b-schema-release-20260729.md)
+- [B02 data-boundary architecture ratchet](docs/data-architecture-b02-boundary-ratchet-20260729.md)
+- [B03 mandatory disposable PostgreSQL CI](docs/data-architecture-b03-postgres-ci-20260729.md)
+- [B04 fail-closed storage and security profiles](docs/data-architecture-b04-fail-closed-profiles-20260729.md)
+- [B05 pinned world-content reader](docs/data-architecture-b05-world-content-reader-20260729.md)
+- [B05B database-authoritative NPC content](docs/data-architecture-b05b-database-npc-authority-20260729.md)
+- [B05C database-authoritative NPC dialogue](docs/data-architecture-b05c-database-npc-dialogue-authority-20260729.md)
+- [B06 consistent character snapshot reader](docs/data-architecture-b06-character-snapshot-reader-20260729.md)
+- [B07 legacy operation identity and command envelope](docs/data-architecture-b07-command-envelope-20260729.md)
+- [B08 PostgreSQL command inbox/outbox foundation](docs/data-architecture-b08-command-inbox-outbox-20260729.md)
+- [B09 economy ledger foundation and first durable inventory command](docs/data-architecture-b09-economy-ledger-increment-20260729.md)
+- [B09 secure native Make Attribute Stone increment](docs/data-architecture-b09-native-make-attribute-stone-20260729.md)
+- [B09 secure native Transform/Combine increment](docs/data-architecture-b09-native-material-conversions-20260729.md)
+- [B09 secure native Gear Mentor Decompose increment](docs/data-architecture-b09-native-decompose-20260729.md)
+- [B09 secure native Gear Enhancement increment](docs/data-architecture-b09-native-gear-enhancement-20260730.md)
+- [B09 secure native Equipment Forge increment](docs/data-architecture-b09-native-equipment-forge-20260730.md)
+- [B09 secure native kit-bag item-delete increment](docs/data-architecture-b09-native-kit-bag-delete-20260730.md)
+- [B09 secure native kit-bag move/swap increment](docs/data-architecture-b09-native-kit-bag-move-20260730.md)
+- [B09 secure native equipment/bag transfer increment](docs/data-architecture-b09-native-equipment-bag-transfer-20260730.md)
+- [B09 secure native Holy Stone increment](docs/data-architecture-b09-native-holy-stone-20260730.md)
+- [B09 durable Zodiac skill-grid activation increment](docs/data-architecture-b09-zodiac-grid-activation-20260730.md)
+- [B09 durable repeatable Zodiac skill-grid upgrade increment](docs/data-architecture-b09-zodiac-grid-upgrade-20260730.md)
+- [B09 durable Zodiac skill-grid selection increment](docs/data-architecture-b09-zodiac-grid-selection-20260730.md)
+- [B09 advanced Holy Stone evidence boundary](docs/data-architecture-b09-holy-stone-advanced-classification-20260730.md)
+- [B09 reachable mutation closure audit](docs/data-architecture-b09-mutation-closure-audit-20260730.md)
+- [B09 completed closure evidence](docs/data-architecture-b09-closure-20260730.md)
+- [B10 character checkpoints and bounded persistence workers](docs/data-architecture-b10-character-checkpoints-20260730.md)
+- [B11 retry-safe character lifecycle and tombstones](docs/data-architecture-b11-character-lifecycle-20260730.md)
+- [B12 progression, reward, and pet durability](docs/data-architecture-b12-progression-reward-pets-20260731.md)
+- [B13 structured observability, readiness, and graceful drain](docs/data-architecture-b13-observability-readiness-20260731.md)
+- [B14 raw authentication retirement](docs/data-architecture-b14-raw-auth-retirement-20260731.md)
+- [B15 PostgreSQL player ownership fence](docs/data-architecture-b15-player-ownership-fence-20260731.md)
+- [B16 Redis decision and B17 conditional evaluation](docs/data-architecture-b16-b17-redis-decision-20260731.md)
+- [B17 Redis coordination evidence](docs/data-architecture-b17-redis-coordination-20260731.md)
+- [ADR 0005: staged Redis coordination activation](docs/adr/0005-b17-redis-coordination-activation.md)
+- [B17 Redis outage and rollback runbooks](docs/operations/b17-redis-coordination-runbooks.md)
+- [Main-project Redis activation runbook](docs/operations/redis-main-compose-activation.md)
+- [ADR 0004: realm, node, and world-instance topology](docs/adr/0004-realm-and-world-instance-topology.md)
+- [B18A realm and world-instance identity foundation](docs/data-architecture-b18a-realm-instance-foundation-20260731.md)
+- [B18B local instance routing and single-owner mailboxes](docs/data-architecture-b18b-instance-routing-mailboxes-20260731.md)
+- [B18C1 local relay gateway](docs/data-architecture-b18c1-local-relay-gateway-20260731.md)
+- [B18C2 semantic gateway and authenticated worker backhaul](docs/data-architecture-b18c2-semantic-gateway-backhaul-20260731.md)
+- [B19 reconciliation and restore drills](docs/data-architecture-b19-reconciliation-restore-20260731.md)
+- [B19 operations runbook](docs/operations/b19-reconciliation-restore-runbook.md)
+- [B20A legacy persistence inventory and retirement ratchet](docs/data-architecture-b20a-legacy-inventory-ratchet-20260731.md)
+- [B20B account/auth/session persistence cutover](docs/data-architecture-b20b-account-session-cutover-20260731.md)
+- [B20C focused gameplay-state persistence cutover](docs/data-architecture-b20c-gameplay-state-cutover-20260731.md)
+- [B20D compatibility fallback removal](docs/data-architecture-b20d-compatibility-fallback-removal-20260801.md)
+- [B20E PostgreSQL-only runtime composition](docs/data-architecture-b20e-postgresql-only-runtime-20260801.md)
+- [B20F bootstrap and projection cutover](docs/data-architecture-b20f-bootstrap-projection-cutover-20260801.md)
+- [B20G immutable gameplay-content publication](docs/data-architecture-b20g-content-publication-capture-separation-20260801.md)
+- [B20G item-template content cutover](docs/data-architecture-b20g-item-template-content-cutover-20260801.md)
+- [B20G pet-content cutover](docs/data-architecture-b20g-pet-content-cutover-20260801.md)
+- [B20H observation and final-removal gate](docs/data-architecture-b20h-observation-gate-20260801.md)
+- [B20H Redis-coordinated local observation status](docs/data-architecture-b20h-redis-observation-20260801.md)
+- [B20H legacy-retirement runbook](docs/operations/b20h-legacy-retirement-runbook.md)
+
+## Roadmap sections
+
+1. [Executive summary](docs/data-architecture-roadmap/01-executive-summary.md)
+2. [Current-state architecture](docs/data-architecture-roadmap/02-current-state-architecture.md)
+3. [Target architecture](docs/data-architecture-roadmap/03-target-architecture.md)
+4. [Data ownership matrix](docs/data-architecture-roadmap/04-data-ownership-matrix.md)
+5. [ECS persistence strategy](docs/data-architecture-roadmap/05-ecs-persistence-strategy.md)
+6. [PostgreSQL design](docs/data-architecture-roadmap/06-postgresql-design.md)
+7. [Redis design](docs/data-architecture-roadmap/07-redis-design.md)
+8. [MongoDB justification](docs/data-architecture-roadmap/08-mongodb-justification.md)
+9. [UDP and TCP integration](docs/data-architecture-roadmap/09-udp-tcp-integration.md)
+10. [Consistency and messaging strategy](docs/data-architecture-roadmap/10-consistency-messaging-strategy.md)
+11. [Future-feature placement playbook](docs/data-architecture-roadmap/11-future-feature-placement-playbook.md)
+12. [Extension conventions for new features](docs/data-architecture-roadmap/12-extension-conventions.md)
+13. Migration strategy:
+    - [Phases 0-8](docs/data-architecture-roadmap/13a-migration-strategy-phases-00-08.md)
+    - [Phases 9-16](docs/data-architecture-roadmap/13b-migration-strategy-phases-09-16.md)
+14. [Testing strategy](docs/data-architecture-roadmap/14-testing-strategy.md)
+15. [Security and abuse prevention](docs/data-architecture-roadmap/15-security-abuse-prevention.md)
+16. [Deployment and operations](docs/data-architecture-roadmap/16-deployment-operations.md)
+17. [Risks, decisions, and unresolved questions](docs/data-architecture-roadmap/17-risks-decisions-questions.md)
+18. [Implementation backlog](docs/data-architecture-roadmap/18-implementation-backlog.md)
+
+## Evidence and status convention
+
+- **Existing** means the symbol and behavior are present in the repository.
+- **Partially implemented** means a real implementation exists but is
+  incomplete, optional, development-only, or lacks an end-to-end production
+  boundary.
+- **Planned or inferred** means repository direction supports the idea, but
+  no complete feature exists.
+- **Missing** means no implementation was found.
+- **Requires clarification** means a product, capacity, reliability, or
+  operational decision materially affects the design.
+
+The roadmap records the repository state at assessment time. Later completion
+evidence belongs in the B-series reports linked above rather than silently
+rewriting historical findings.

@@ -1,0 +1,115 @@
+== ??$_Uninit_fill_n@PAUSpecialData@CSkillViewWindowUI@@IU12@V?$allocator@USpecialData@CSkillViewWindowUI@@@std@@@std@@YAXPAUSpecialData@CSkillViewWindowUI@@IABU12@AAV?$allocator@USpecialData@CSkillViewWindowUI@@@0@U_Nonscalar_ptr_iterator_tag@0@U_Range_checked_iterator_tag@0@@Z +0x10 ==
+  0x4B3CE0  add      byte ptr [ebx], dh
+  0x4B3CE2  les      ecx, ptr [ecx + 0x1002484]
+  0x4B3CE8  add      byte ptr [eax], al
+  0x4B3CEA  mov      eax, dword ptr [ebp + 8]
+  0x4B3CED  push     ebx
+  0x4B3CEE  push     esi
+  0x4B3CEF  push     edi
+  0x4B3CF0  mov      esi, edx
+  0x4B3CF2  push     eax
+  0x4B3CF3  mov      eax, esi
+  0x4B3CF5  mov      edi, ecx
+  0x4B3CF7  call     0x4b3990  ; ??$_Allocate@UOneSkillInfo@CSkillViewWindowUI@@@std@@YAPAUOneSkillInfo@CSkillViewWindowUI@@IPAU12@@Z +0x20
+  0x4B3CFC  test     edi, edi
+  0x4B3CFE  mov      ebx, eax
+  0x4B3D00  jl       0x4b3d34
+  0x4B3D02  lea      ecx, [esp + 0x10]
+  0x4B3D06  call     0x434ad0  ; __catch$?_Buynode@?$_Tree@V?$_Tmap_traits@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@U?$less@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@@std@@@2@$00@std@@@std@@IAEPAU_Node@?$_Tree_nod@V?$_Tmap_traits@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@U?$less@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@@std@@@2@$00@std@@@2@PAU342@00ABU?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@@2@D@Z$0 +0x35
+  0x4B3D0B  mov      edx, dword ptr [ebx]
+  0x4B3D0D  lea      ecx, [edi + edi*8]
+  0x4B3D10  lea      eax, [edx + ecx*8 + 0xc0]
+  0x4B3D17  push     eax
+  0x4B3D18  push     ecx
+  0x4B3D19  call     0x438050  ; ?_Buynode@?$list@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@IAEPAU_Node@?$_List_nod@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@2@XZ +0x60
+  0x4B3D1E  add      esp, 4
+  0x4B3D21  push     eax
+  0x4B3D22  lea      edi, [esp + 0x18]
+  0x4B3D26  call     0x441ea0  ; ?erase@?$_Tree@V?$_Tmap_traits@H_NU?$less@H@std@@V?$allocator@U?$pair@$$CBH_N@std@@@2@$0A@@std@@@std@@QAE?AViterator@12@V312@@Z +0x2B0
+  0x4B3D2B  mov      edx, edi
+  0x4B3D2D  mov      ecx, esi
+  0x4B3D2F  call     0x4ac810  ; ?insert@?$_Tree@V?$_Tmap_traits@HUstSkill@@U?$less@H@std@@V?$allocator@U?$pair@$$CBHUstSkill@@@std@@@3@$0A@@std@@@std@@QAE?AViterator@12@V312@ABU?$pair@$$CBHUstSkill@@@2@@Z +0x500
+  0x4B3D34  mov      ecx, dword ptr [ebx]
+  0x4B3D36  mov      edx, dword ptr [ecx + 0x94]
+  0x4B3D3C  add      dword ptr [esi + 0x2cc], edx
+  0x4B3D42  mov      eax, dword ptr [ebx]
+  0x4B3D44  mov      ecx, dword ptr [eax + 0x98]
+  0x4B3D4A  add      dword ptr [esi + 0x2d0], ecx
+  0x4B3D50  mov      edi, dword ptr [esi + 0x7f90]
+  0x4B3D56  add      esi, 0x7f8c
+  0x4B3D5C  cmp      edi, dword ptr [esi + 8]
+  0x4B3D5F  jbe      0x4b3d66
+  0x4B3D61  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4B3D66  mov      ebx, dword ptr [esi + 8]
+  0x4B3D69  cmp      dword ptr [esi + 4], ebx
+  0x4B3D6C  jbe      0x4b3d73
+  0x4B3D6E  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4B3D73  cmp      esi, esi
+  0x4B3D75  je       0x4b3d7c
+  0x4B3D77  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4B3D7C  cmp      edi, ebx
+  0x4B3D7E  je       0x4b3dec
+  0x4B3D80  cmp      edi, dword ptr [esi + 8]
+  0x4B3D83  jb       0x4b3d8a
+  0x4B3D85  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4B3D8A  mov      edx, dword ptr [edi]
+  0x4B3D8C  mov      eax, dword ptr [ebp + 8]
+  0x4B3D8F  cmp      dword ptr [edx + 4], eax
+  0x4B3D92  je       0x4b3da3
+  0x4B3D94  cmp      edi, dword ptr [esi + 8]
+  0x4B3D97  jb       0x4b3d9e
+  0x4B3D99  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4B3D9E  add      edi, 0x3c
+  0x4B3DA1  jmp      0x4b3d66
+  0x4B3DA3  cmp      edi, dword ptr [esi + 8]
+  0x4B3DA6  jb       0x4b3dad
+  0x4B3DA8  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4B3DAD  mov      byte ptr [esp + 0xc], 0
+  0x4B3DB2  mov      ecx, dword ptr [esp + 0xc]
+  0x4B3DB6  mov      edx, dword ptr [esp + 0xc]
+  0x4B3DBA  mov      eax, dword ptr [esp + 0xc]
+  0x4B3DBE  push     ecx
+  0x4B3DBF  push     edx
+  0x4B3DC0  push     eax
+  0x4B3DC1  mov      dword ptr [edi + 4], 2
+  0x4B3DC8  mov      ebx, dword ptr [esi + 8]
+  0x4B3DCB  push     edi
+  0x4B3DCC  lea      eax, [edi + 0x3c]
+  0x4B3DCF  call     0x4b4d00  ; ??_ECStatusUI@@UAEPAXI@Z +0x20
+  0x4B3DD4  mov      ecx, dword ptr [esp + 0x1c]
+  0x4B3DD8  mov      eax, dword ptr [esi + 8]
+  0x4B3DDB  push     ecx
+  0x4B3DDC  push     eax
+  0x4B3DDD  add      eax, -0x3c
+  0x4B3DE0  call     0x4aa9d0  ; ??0_Node@?$_Tree_nod@V?$_Tmap_traits@EUMSG_GAMESERVER_INFO@@U?$less@E@std@@V?$allocator@U?$pair@$$CBEUMSG_GAMESERVER_INFO@@@std@@@3@$0A@@std@@@std@@QAE@PAU012@00ABU?$pair@$$CBEUMSG_GAMESERVER_INFO@@@2@D@Z
+  0x4B3DE5  add      esp, 0x18
+  0x4B3DE8  add      dword ptr [esi + 8], -0x3c
+  0x4B3DEC  mov      ecx, dword ptr [esp + 0x10c]
+  0x4B3DF3  pop      edi
+  0x4B3DF4  pop      esi
+  0x4B3DF5  pop      ebx
+  0x4B3DF6  xor      ecx, esp
+  0x4B3DF8  call     0x7b7ffe  ; ??__EClassRestrict@@YAXXZ +0x4E
+  0x4B3DFD  mov      esp, ebp
+  0x4B3DFF  pop      ebp
+  0x4B3E00  ret      4
+  0x4B3E03  int3     
+  0x4B3E04  int3     
+  0x4B3E05  int3     
+  0x4B3E06  int3     
+  0x4B3E07  int3     
+  0x4B3E08  int3     
+  0x4B3E09  int3     
+  0x4B3E0A  int3     
+  0x4B3E0B  int3     
+  0x4B3E0C  int3     
+  0x4B3E0D  int3     
+  0x4B3E0E  int3     
+  0x4B3E0F  int3     
+  0x4B3E10  push     ebp
+  0x4B3E11  mov      ebp, esp
+  0x4B3E13  and      esp, 0xfffffff8
+  0x4B3E16  push     ecx
+  0x4B3E17  push     ebx
+  0x4B3E18  push     esi
+  0x4B3E19  mov      esi, eax

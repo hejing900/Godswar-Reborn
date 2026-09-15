@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{ED5EB72A-A7B8-427E-AFD2-A6CE06BE910E}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>GodswarNetShimTests</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(ProjectDir)Godswar.NetShim.Tests.HolySuit.props" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)..\bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)..\obj\$(Configuration)\$(Platform)\tests\</IntDir>
+    <TargetName>Godswar.NetShim.Checks</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;_WIN32_WINNT=0x0A00;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>Ws2_32.lib;Iphlpapi.lib;Secur32.lib;Crypt32.lib;Bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="AvatarPreloadLifecycleTests.cpp" />
+    <ClCompile Include="AvatarPreloadTests.cpp" />
+    <ClCompile Include="AvatarPreviewGateTests.cpp" />
+    <ClCompile Include="BoundedChunkQueueTests.cpp" />
+    <ClCompile Include="ControlledHostTlsProbe.cpp" />
+    <ClCompile Include="EndpointManifestLoaderTests.cpp" />
+    <ClCompile Include="EndpointManifestTests.cpp" />
+    <ClCompile Include="EndpointManifestTestSupport.cpp" />
+    <ClCompile Include="ExternalTcpConnectorTests.cpp" />
+    <ClCompile Include="LoopbackAcceptorTests.cpp" />
+    <ClCompile Include="LegacyCommandDescriptorStreamTests.cpp" />
+    <ClCompile Include="LoopbackPeerOwnerTests.cpp" />
+    <ClCompile Include="NativeClientBridgeTests.cpp" />
+    <ClCompile Include="NativeClientBridgeLifecycleTests.cpp" />
+    <ClCompile Include="NativeClientCoordinatorTests.cpp" />
+    <ClCompile Include="NetShimTests.cpp" />
+    <ClCompile Include="NetworkShimTestSuite.cpp" />
+    <ClCompile Include="OpaqueDuplexPumpTests.cpp" />
+    <ClCompile Include="OpaqueDuplexPumpLifecycleTests.cpp" />
+    <ClCompile Include="SchannelClientStreamTests.cpp" />
+    <ClCompile Include="SecureClientRuntimeTests.cpp" />
+    <ClCompile Include="SecureClientSessionTests.cpp" />
+    <ClCompile Include="SecureClientProtocolTests.cpp" />
+    <ClCompile Include="SecurePendingOperationRegistryTests.cpp" />
+    <ClCompile Include="SecureEconomyIdentityTests.cpp" />
+    <ClCompile Include="SecureEquipmentBagTransferIdentityTests.cpp" />
+    <ClCompile Include="SecureEquipmentBagTransferParserTests.cpp" />
+    <ClCompile Include="SecureEquipmentBagTransferRegistryTests.cpp" />
+    <ClCompile Include="SecureFactionCrierIdentityTests.cpp" />
+    <ClCompile Include="SecureFactionCrierParserTests.cpp" />
+    <ClCompile Include="SecureFactionCrierRegistryTests.cpp" />
+    <ClCompile Include="SecureOnlineAwardIdentityTests.cpp" />
+    <ClCompile Include="SecureCharacterLifecycleIdentityTests.cpp" />
+    <ClCompile Include="SecureClassSuitIdentityTests.cpp" />
+    <ClCompile Include="SecureClassSuitReferenceIdentityTests.cpp" />
+    <ClCompile Include="SecureClassSuitStagedDeleteIdentityTests.cpp" />
+    <ClCompile Include="SecurePetCommandIdentityTests.cpp" />
+    <ClCompile Include="SecurePetBasicSavvyIdentityTests.cpp" />
+    <ClCompile Include="SecurePetAppearanceIdentityTests.cpp" />
+    <ClCompile Include="SecurePetBindIdentityTests.cpp" />
+    <ClCompile Include="SecurePetOwnerMergeIdentityTests.cpp" />
+    <ClCompile Include="SecurePetManagerUtilityIdentityTests.cpp" />
+    <ClCompile Include="SecurePetRebirthIdentityTests.cpp" />
+    <ClCompile Include="SecurePetSoulContractIdentityTests.cpp" />
+    <ClCompile Include="SecurePetToPetMergeIdentityTests.cpp" />
+    <ClCompile Include="SecurePetIdentityTestSuite.cpp" />
+    <ClCompile Include="SecureGameControlTests.cpp" />
+    <ClCompile Include="SecureGameGrantRegistryTests.cpp" />
+    <ClCompile Include="SecureForgeCommandIdentityTests.cpp" />
+    <ClCompile Include="SecureForgeResultIdentityTests.cpp" />
+    <ClCompile Include="SecureGearEnhancerIdentityTests.cpp" />
+    <ClCompile Include="SecureGearEnhancerResultIdentityTests.cpp" />
+    <ClCompile Include="SecureGearMentorAttributeIdentityTests.cpp" />
+    <ClCompile Include="SecureGearMentorDecomposeIdentityTests.cpp" />
+    <ClCompile Include="SecureGearMentorCommandIdentityTests.cpp" />
+    <ClCompile Include="SecureHolyStoneIdentityTests.cpp" />
+    <ClCompile Include="SecureHolyStoneAdvancedDrillParserTests.cpp" />
+    <ClCompile Include="SecureHolyStoneUpgradeIdentityTests.cpp" />
+    <ClCompile Include="SecureHolyStoneCombineIdentityTests.cpp" />
+    <ClCompile Include="SecureHolyStoneImplementSpiritIdentityTests.cpp" />
+    <ClCompile Include="SecureHolyStoneParserTests.cpp" />
+    <ClCompile Include="SecureHolyStoneRegistryTests.cpp" />
+    <ClCompile Include="SecureKitBagItemDeleteIdentityTests.cpp" />
+    <ClCompile Include="SecureKitBagItemMoveIdentityTests.cpp" />
+    <ClCompile Include="SecureKitBagItemMoveParserTests.cpp" />
+    <ClCompile Include="SecureKitBagItemMoveRegistryTests.cpp" />
+    <ClCompile Include="SecureZodiacSkillGridUpgradeIdentityTests.cpp" />
+    <ClCompile Include="SecureZodiacSkillGridUpgradeParserTests.cpp" />
+    <ClCompile Include="SecureZodiacSkillGridUpgradeRegistryTests.cpp" />
+    <ClCompile Include="SecureZodiacSkillGridSelectionIdentityTests.cpp" />
+    <ClCompile Include="SecureZodiacSkillGridSelectionParserTests.cpp" />
+    <ClCompile Include="SecureZodiacSkillGridSelectionRegistryTests.cpp" />
+    <ClCompile Include="SecureOriginEnhancerIdentityTests.cpp" />
+    <ClCompile Include="SecureOriginEnhancerPacketTests.cpp" />
+    <ClCompile Include="SecureLegacyCommandResultStreamTests.cpp" />
+    <ClCompile Include="SecureManifestProbe.cpp" />
+    <ClCompile Include="SecureRealtimeMovementTests.cpp" />
+    <ClCompile Include="SecureRealtimeMovementChannelTests.cpp" />
+    <ClCompile Include="SecureOuterControlTests.cpp" />
+    <ClCompile Include="SecureOuterStreamTests.cpp" />
+    <ClCompile Include="SecureOuterUdpGrantTests.cpp" />
+    <ClCompile Include="SecureUdpBindingGrantTests.cpp" />
+    <ClCompile Include="SecureUdpClientChannelTests.cpp" />
+    <ClCompile Include="SecureUdpClientWorkerTests.cpp" />
+    <ClCompile Include="SecureUdpProtectedProtocolTests.cpp" />
+    <ClCompile Include="VerifiedImageFileTests.cpp" />
+    <ClCompile Include="WinSocketByteStreamTests.cpp" />
+    <ClCompile Include="..\src\AvatarPreviewGate.cpp" />
+    <ClCompile Include="..\src\OriginAvatarPreviewHost.cpp" />
+    <ClCompile Include="..\src\BoundedChunkQueue.cpp" />
+    <ClCompile Include="..\src\DevelopmentTlsCertificate.cpp" />
+    <ClCompile Include="..\src\EndpointManifest.cpp" />
+    <ClCompile Include="..\src\EndpointManifestCrypto.cpp" />
+    <ClCompile Include="..\src\EndpointManifestLoader.cpp" />
+    <ClCompile Include="..\src\ExternalTcpConnector.cpp" />
+    <ClCompile Include="..\src\FileSha256.cpp" />
+    <ClCompile Include="..\src\LoopbackAcceptor.cpp" />
+    <ClCompile Include="..\src\LoopbackPeerOwner.cpp" />
+    <ClCompile Include="..\src\LegacyCommandDescriptorStream.cpp" />
+    <ClCompile Include="..\src\NativeClientBridge.cpp" />
+    <ClCompile Include="..\src\NativeClientCoordinator.cpp" />
+    <ClCompile Include="..\src\NetClientProxy.cpp" />
+    <ClCompile Include="..\src\OpaqueDuplexPump.cpp" />
+    <ClCompile Include="..\src\SchannelClientStream.cpp" />
+    <ClCompile Include="..\src\SchannelClientStreamBuffers.cpp" />
+    <ClCompile Include="..\src\SchannelClientStreamIo.cpp" />
+    <ClCompile Include="..\src\SchannelClientStreamPostHandshake.cpp" />
+    <ClCompile Include="..\src\VerifiedImageFile.cpp" />
+    <ClCompile Include="..\src\WinSocketByteStream.cpp" />
+    <ClCompile Include="..\src\WinSockRuntime.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AvatarPreloadLifecycleTests.h" />
+    <ClInclude Include="AvatarPreloadTests.h" />
+    <ClInclude Include="AvatarPreviewGateTests.h" />
+    <ClInclude Include="BoundedChunkQueueTests.h" />
+    <ClInclude Include="ControlledHostTlsProbe.h" />
+    <ClInclude Include="EndpointManifestLoaderTests.h" />
+    <ClInclude Include="EndpointManifestTests.h" />
+    <ClInclude Include="EndpointManifestTestSupport.h" />
+    <ClInclude Include="ExternalTcpConnectorTests.h" />
+    <ClInclude Include="LoopbackAcceptorTests.h" />
+    <ClInclude Include="LegacyCommandDescriptorStreamTests.h" />
+    <ClInclude Include="LoopbackPeerOwnerTests.h" />
+    <ClInclude Include="NativeClientBridgeTests.h" />
+    <ClInclude Include="NativeClientBridgeLifecycleTests.h" />
+    <ClInclude Include="NativeClientCoordinatorTests.h" />
+    <ClInclude Include="NetworkShimTestSuite.h" />
+    <ClInclude Include="OpaqueDuplexPumpTests.h" />
+    <ClInclude Include="OpaqueDuplexPumpLifecycleTests.h" />
+    <ClInclude Include="SchannelClientStreamTests.h" />
+    <ClInclude Include="SecureClientRuntimeTests.h" />
+    <ClInclude Include="SecureClientSessionTests.h" />
+    <ClInclude Include="SecureClientProtocolTests.h" />
+    <ClInclude Include="SecureCharacterLifecycleIdentityTests.h" />
+    <ClInclude Include="SecureClassSuitIdentityTests.h" />
+    <ClInclude Include="SecureClassSuitReferenceIdentityTests.h" />
+    <ClInclude Include="SecureClassSuitStagedDeleteIdentityTests.h" />
+    <ClInclude Include="SecurePetCommandIdentityTests.h" />
+    <ClInclude Include="SecurePetBasicSavvyIdentityTests.h" />
+    <ClInclude Include="SecurePetAppearanceIdentityTests.h" />
+    <ClInclude Include="SecurePetBindIdentityTests.h" />
+    <ClInclude Include="SecurePetManagerUtilityIdentityTests.h" />
+    <ClInclude Include="SecurePetOwnerMergeIdentityTests.h" />
+    <ClInclude Include="SecurePetRebirthIdentityTests.h" />
+    <ClInclude Include="SecurePetSoulContractIdentityTests.h" />
+    <ClInclude Include="SecurePetToPetMergeIdentityTests.h" />
+    <ClInclude Include="SecurePetIdentityTestSuite.h" />
+    <ClInclude Include="SecurePendingOperationRegistryTests.h" />
+    <ClInclude Include="SecureEconomyIdentityTests.h" />
+    <ClInclude Include="SecureEquipmentBagTransferIdentityTests.h" />
+    <ClInclude Include="SecureEquipmentBagTransferTestSupport.h" />
+    <ClInclude Include="SecureFactionCrierIdentityTests.h" />
+    <ClInclude Include="SecureFactionCrierTestSupport.h" />
+    <ClInclude Include="SecureOnlineAwardIdentityTests.h" />
+    <ClInclude Include="SecureGameControlTests.h" />
+    <ClInclude Include="SecureGameControlTestSupport.h" />
+    <ClInclude Include="SecureGameGrantRegistryTests.h" />
+    <ClInclude Include="SecureForgeCommandIdentityTests.h" />
+    <ClInclude Include="SecureForgeResultIdentityTests.h" />
+    <ClInclude Include="SecureForgeTestSupport.h" />
+    <ClInclude Include="SecureGearEnhancerIdentityTests.h" />
+    <ClInclude Include="SecureGearEnhancerResultIdentityTests.h" />
+    <ClInclude Include="SecureGearMentorAttributeIdentityTests.h" />
+    <ClInclude Include="SecureGearMentorDecomposeIdentityTests.h" />
+    <ClInclude Include="SecureGearMentorCommandIdentityTests.h" />
+    <ClInclude Include="SecureHolyStoneIdentityTests.h" />
+    <ClInclude Include="SecureHolyStoneAdvancedDrillParserTests.h" />
+    <ClInclude Include="SecureHolyStoneUpgradeIdentityTests.h" />
+    <ClInclude Include="SecureHolyStoneCombineIdentityTests.h" />
+    <ClInclude Include="SecureHolyStoneImplementSpiritIdentityTests.h" />
+    <ClInclude Include="SecureHolyStoneTestSupport.h" />
+    <ClInclude Include="SecureKitBagItemDeleteIdentityTests.h" />
+    <ClInclude Include="SecureKitBagItemMoveIdentityTests.h" />
+    <ClInclude Include="SecureKitBagItemMoveTestSupport.h" />
+    <ClInclude Include="SecureZodiacSkillGridUpgradeIdentityTests.h" />
+    <ClInclude Include="SecureZodiacSkillGridUpgradeTestSupport.h" />
+    <ClInclude Include="SecureZodiacSkillGridSelectionIdentityTests.h" />
+    <ClInclude Include="SecureZodiacSkillGridSelectionTestSupport.h" />
+    <ClInclude Include="SecureOriginEnhancerIdentityTests.h" />
+    <ClInclude Include="SecureOriginEnhancerPacketTests.h" />
+    <ClInclude Include="SecureLegacyCommandResultStreamTests.h" />
+    <ClInclude Include="SecureManifestProbe.h" />
+    <ClInclude Include="SecureRealtimeMovementTests.h" />
+    <ClInclude Include="SecureRealtimeMovementChannelTests.h" />
+    <ClInclude Include="SecureOuterControlTests.h" />
+    <ClInclude Include="SecureOuterStreamTests.h" />
+    <ClInclude Include="SecureOuterUdpGrantTests.h" />
+    <ClInclude Include="SecureUdpBindingGrantTests.h" />
+    <ClInclude Include="SecureUdpClientChannelTests.h" />
+    <ClInclude Include="SecureUdpClientWorkerTests.h" />
+    <ClInclude Include="SecureUdpProtectedProtocolTests.h" />
+    <ClInclude Include="VerifiedImageFileTests.h" />
+    <ClInclude Include="WinSocketByteStreamTests.h" />
+    <ClInclude Include="..\src\AvatarPreviewGate.h" />
+    <ClInclude Include="..\src\BoundedChunkQueue.h" />
+    <ClInclude Include="..\src\ClientRoute.h" />
+    <ClInclude Include="..\src\DevelopmentTlsCertificate.h" />
+    <ClInclude Include="..\src\EndpointManifest.h" />
+    <ClInclude Include="..\src\EndpointManifestCrypto.h" />
+    <ClInclude Include="..\src\EndpointManifestLoader.h" />
+    <ClInclude Include="..\src\ExternalTcpConnector.h" />
+    <ClInclude Include="..\src\FileSha256.h" />
+    <ClInclude Include="..\src\LegacyClientApi.h" />
+    <ClInclude Include="..\src\LegacyCommandDescriptorStream.h" />
+    <ClInclude Include="..\src\LoopbackAcceptor.h" />
+    <ClInclude Include="..\src\LoopbackPeerOwner.h" />
+    <ClInclude Include="..\src\NativeClientBridge.h" />
+    <ClInclude Include="..\src\NativeClientCoordinator.h" />
+    <ClInclude Include="..\src\NativeNetworkLimits.h" />
+    <ClInclude Include="..\src\NetClientProxy.h" />
+    <ClInclude Include="..\src\OpaqueDuplexPump.h" />
+    <ClInclude Include="..\src\SocketHandle.h" />
+    <ClInclude Include="..\src\SchannelClientStream.h" />
+    <ClInclude Include="..\src\SchannelClientStreamInternal.h" />
+    <ClInclude Include="..\src\SchannelClientStreamPostHandshake.h" />
+    <ClInclude Include="..\src\SecureClientManifestDevelopmentKeys.generated.h" />
+    <ClInclude Include="..\src\SecureClientOriginIdentity.generated.h" />
+    <ClInclude Include="..\src\SecureClientManifestBuildContract.h" />
+    <ClInclude Include="..\src\SecureClientRuntime.h" />
+    <ClInclude Include="..\src\SecureClientRuntimeInternal.h" />
+    <ClInclude Include="..\src\SecureClientSession.h" />
+    <ClInclude Include="..\src\SecureClientProtocol.h" />
+    <ClInclude Include="..\src\SecureCharacterLifecycleIdentity.h" />
+    <ClInclude Include="..\src\SecureClassSuitCommandIdentity.h" />
+    <ClInclude Include="..\src\SecurePetCommandIdentity.h" />
+    <ClInclude Include="..\src\SecurePetBindCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureEquipmentBagTransferIdentity.h" />
+    <ClInclude Include="..\src\SecureFactionCrierCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureOnlineAwardCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureForgeCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureHolyStoneCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureKitBagItemDeleteIdentity.h" />
+    <ClInclude Include="..\src\SecureKitBagItemMoveIdentity.h" />
+    <ClInclude Include="..\src\SecureLegacyCommandIdentity.h" />
+    <ClInclude Include="..\src\SecureLegacyFrameStream.h" />
+    <ClInclude Include="..\src\SecureZodiacSkillGridUpgradeIdentity.h" />
+    <ClInclude Include="..\src\SecureZodiacSkillGridSelectionIdentity.h" />
+    <ClInclude Include="..\src\SecurePendingOperationRegistry.h" />
+    <ClInclude Include="..\src\SecureGameControl.h" />
+    <ClInclude Include="..\src\SecureGameGrantRegistry.h" />
+    <ClInclude Include="..\src\SecureRealtimeMovementProtocol.h" />
+    <ClInclude Include="..\src\SecureRealtimeMovementRouter.h" />
+    <ClInclude Include="..\src\SecureOuterStream.h" />
+    <ClInclude Include="..\src\SecureUdpBindingProtocol.h" />
+    <ClInclude Include="..\src\SecureUdpBindingGrant.h" />
+    <ClInclude Include="..\src\SecureUdpClientChannel.h" />
+    <ClInclude Include="..\src\SecureUdpClientWorker.h" />
+    <ClInclude Include="..\src\SecureUdpCrypto.h" />
+    <ClInclude Include="..\src\SecureUdpProtectedProtocol.h" />
+    <ClInclude Include="..\src\SecureUdpReplayWindow.h" />
+    <ClInclude Include="..\src\VerifiedImageFile.h" />
+    <ClInclude Include="..\src\WinSocketByteStream.h" />
+    <ClInclude Include="..\src\WinSockRuntime.h" />
+  </ItemGroup>
+  <Import Project="$(ProjectDir)Godswar.NetShim.Tests.SecureSources.props" />
+  <ItemGroup>
+    <ProjectReference Include="..\src\Godswar.NetShim.vcxproj">
+      <Project>{22CE8D23-B3F7-462C-8D98-117919C90CE5}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(ProjectDir)Godswar.NetShim.Tests.Warehouse.props" />
+  <Import Project="$(ProjectDir)Godswar.NetShim.Tests.FighterLevelSeal.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

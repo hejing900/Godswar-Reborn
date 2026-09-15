@@ -1,0 +1,176 @@
+== ?insert@?$_Tree@V?$_Tmap_traits@HUstSkill@@U?$less@H@std@@V?$allocator@U?$pair@$$CBHUstSkill@@@std@@@3@$0A@@std@@@std@@QAE?AViterator@12@V312@ABU?$pair@$$CBHUstSkill@@@2@@Z +0x470 ==
+  0x4AC780  inc      eax
+  0x4AC781  pop      ss
+  0x4AC782  add      byte ptr [eax], al
+  0x4AC784  jl       0x4ac703
+  0x4AC78A  add      edx, 0x1748
+  0x4AC790  sub      dword ptr [esp + 0x18], 1
+  0x4AC795  mov      dword ptr [esp + 0x14], edx
+  0x4AC799  jne      0x4ac6ff
+  0x4AC79F  xor      ebx, ebx
+  0x4AC7A1  cmp      dword ptr [esp + 0x4c], ebx
+  0x4AC7A5  jle      0x4ac7e9
+  0x4AC7A7  mov      ebp, dword ptr [esp + 0x48]
+  0x4AC7AB  jmp      0x4ac7b4
+  0x4AC7AD  lea      ecx, [ecx]
+  0x4AC7B0  mov      ecx, dword ptr [esp + 0x30]
+  0x4AC7B4  test     edi, edi
+  0x4AC7B6  je       0x4ac7c1
+  0x4AC7B8  sub      ecx, edi
+  0x4AC7BA  sar      ecx, 2
+  0x4AC7BD  cmp      ebx, ecx
+  0x4AC7BF  jb       0x4ac7ca
+  0x4AC7C1  call     0x7b829d  ; ??__EITEM_TYPE_STRING@@YAXXZ +0x16D
+  0x4AC7C6  mov      edi, dword ptr [esp + 0x2c]
+  0x4AC7CA  mov      edi, dword ptr [edi + ebx*4]
+  0x4AC7CD  mov      esi, ebp
+  0x4AC7CF  mov      ecx, 0x3e
+  0x4AC7D4  add      ebx, 1
+  0x4AC7D7  add      ebp, 0xf8
+  0x4AC7DD  cmp      ebx, dword ptr [esp + 0x4c]
+  0x4AC7E1  rep movsd dword ptr es:[edi], dword ptr [esi]
+  0x4AC7E3  mov      edi, dword ptr [esp + 0x2c]
+  0x4AC7E7  jl       0x4ac7b0
+  0x4AC7E9  test     edi, edi
+  0x4AC7EB  je       0x4ac7f6
+  0x4AC7ED  push     edi
+  0x4AC7EE  call     0x7b7904  ; ??__EITEM_APPENDTYPE_STRING@@YAXXZ +0xD4
+  0x4AC7F3  add      esp, 4
+  0x4AC7F6  mov      ecx, dword ptr [esp + 0x38]
+  0x4AC7FA  mov      dword ptr fs:[0], ecx
+  0x4AC801  pop      ecx
+  0x4AC802  pop      edi
+  0x4AC803  pop      esi
+  0x4AC804  pop      ebp
+  0x4AC805  pop      ebx
+  0x4AC806  add      esp, 0x30
+  0x4AC809  ret      8
+  0x4AC80C  int3     
+  0x4AC80D  int3     
+  0x4AC80E  int3     
+  0x4AC80F  int3     
+  0x4AC810  push     ebp
+  0x4AC811  mov      ebp, esp
+  0x4AC813  and      esp, 0xfffffff8
+  0x4AC816  sub      esp, 0x10c
+  0x4AC81C  mov      eax, dword ptr [0x9c79b4]
+  0x4AC821  xor      eax, esp
+  0x4AC823  mov      dword ptr [esp + 0x108], eax
+  0x4AC82A  push     ebx
+  0x4AC82B  push     esi
+  0x4AC82C  push     edi
+  0x4AC82D  mov      edi, edx
+  0x4AC82F  mov      eax, dword ptr [edi + 0xf4]
+  0x4AC835  mov      eax, dword ptr [eax + 0x214]
+  0x4AC83B  cmp      eax, 0x15
+  0x4AC83E  mov      esi, ecx
+  0x4AC840  mov      dword ptr [esp + 0x14], esi
+  0x4AC844  mov      dword ptr [esp + 0xc], edi
+  0x4AC848  je       0x4ac8f6
+  0x4AC84E  cmp      eax, 0x16
+  0x4AC851  je       0x4ac8f6
+  0x4AC857  xor      ebx, ebx
+  0x4AC859  lea      edx, [esi + 0xb78]
+  0x4AC85F  xor      edi, edi
+  0x4AC861  xor      eax, eax
+  0x4AC863  cmp      byte ptr [edx + 0x1740], 0
+  0x4AC86A  je       0x4ac881
+  0x4AC86C  cmp      edi, 0x18
+  0x4AC86F  jge      0x4ac881
+  0x4AC871  lea      ecx, [edx + eax]
+  0x4AC874  test     ecx, ecx
+  0x4AC876  je       0x4ac881
+  0x4AC878  cmp      dword ptr [ecx + 0xf4], 0
+  0x4AC87F  je       0x4ac8b5
+  0x4AC881  add      eax, 0xf8
+  0x4AC886  add      edi, 1
+  0x4AC889  cmp      eax, 0x1740
+  0x4AC88E  jl       0x4ac863
+  0x4AC890  add      ebx, 1
+  0x4AC893  add      edx, 0x1748
+  0x4AC899  cmp      ebx, 4
+  0x4AC89C  jl       0x4ac85f
+  0x4AC89E  xor      al, al
+  0x4AC8A0  pop      edi
+  0x4AC8A1  pop      esi
+  0x4AC8A2  pop      ebx
+  0x4AC8A3  mov      ecx, dword ptr [esp + 0x108]
+  0x4AC8AA  xor      ecx, esp
+  0x4AC8AC  call     0x7b7ffe  ; ??__EClassRestrict@@YAXXZ +0x4E
+  0x4AC8B1  mov      esp, ebp
+  0x4AC8B3  pop      ebp
+  0x4AC8B4  ret      
+  0x4AC8B5  imul     ebx, ebx, 0x1748
+  0x4AC8BB  cmp      byte ptr [ebx + esi + 0x22b8], 0
+  0x4AC8C3  lea      eax, [ebx + esi + 0xb78]
+  0x4AC8CA  je       0x4ac8df
+  0x4AC8CC  mov      esi, dword ptr [esp + 0xc]
+  0x4AC8D0  imul     edi, edi, 0xf8
+  0x4AC8D6  add      edi, eax
+  0x4AC8D8  mov      ecx, 0x3e
+  0x4AC8DD  rep movsd dword ptr es:[edi], dword ptr [esi]
+  0x4AC8DF  mov      al, 1
+  0x4AC8E1  pop      edi
+  0x4AC8E2  pop      esi
+  0x4AC8E3  pop      ebx
+  0x4AC8E4  mov      ecx, dword ptr [esp + 0x108]
+  0x4AC8EB  xor      ecx, esp
+  0x4AC8ED  call     0x7b7ffe  ; ??__EClassRestrict@@YAXXZ +0x4E
+  0x4AC8F2  mov      esp, ebp
+  0x4AC8F4  pop      ebp
+  0x4AC8F5  ret      
+  0x4AC8F6  call     0x4acbb0  ; ?insert@?$_Tree@V?$_Tmap_traits@HUstPassiveSkill@@U?$less@H@std@@V?$allocator@U?$pair@$$CBHUstPassiveSkill@@@std@@@3@$0A@@std@@@std@@QAE?AViterator@12@V312@ABU?$pair@$$CBHUstPassiveSkill@@@2@@Z +0xF0
+  0x4AC8FB  test     eax, eax
+  0x4AC8FD  jne      0x4ac93d
+  0x4AC8FF  xor      ebx, ebx
+  0x4AC901  add      esi, 0xb78
+  0x4AC907  mov      dword ptr [esp + 0x10], 4
+  0x4AC90F  jmp      0x4ac915
+  0x4AC911  mov      edi, dword ptr [esp + 0xc]
+  0x4AC915  mov      ecx, esi
+  0x4AC917  call     0x4168a0  ; ?erase@?$_Tree@V?$_Tmap_traits@HV?$map@HV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@U?$less@H@2@V?$allocator@U?$pair@$$CBHV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@2@@std@@U?$less@H@2@V?$allocator@U?$pair@$$CBHV?$map@HV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@U?$less@H@2@V?$allocator@U?$pair@$$CBHV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@2@@std@@@std@@@2@$0A@@std@@@std@@QAE?AViterator@12@V312@@Z +0x650
+  0x4AC91C  add      ebx, eax
+  0x4AC91E  add      esi, 0x1748
+  0x4AC924  sub      dword ptr [esp + 0x10], 1
+  0x4AC929  jne      0x4ac911
+  0x4AC92B  mov      ecx, dword ptr [esp + 0xc]
+  0x4AC92F  movsx    edx, byte ptr [ecx + 0x4b]
+  0x4AC933  cmp      ebx, edx
+  0x4AC935  jl       0x4ac89e
+  0x4AC93B  mov      edi, ecx
+  0x4AC93D  mov      esi, edi
+  0x4AC93F  mov      ecx, 0x3e
+  0x4AC944  lea      edi, [esp + 0x18]
+  0x4AC948  rep movsd dword ptr es:[edi], dword ptr [esi]
+  0x4AC94A  mov      edi, dword ptr [esp + 0x14]
+  0x4AC94E  xor      esi, esi
+  0x4AC950  add      edi, 0xb78
+  0x4AC956  lea      eax, [esp + 0x18]
+  0x4AC95A  push     eax
+  0x4AC95B  push     edi
+  0x4AC95C  call     0x416a50  ; ?clear@?$_Tree@V?$_Tmap_traits@HV?$map@HV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@U?$less@H@2@V?$allocator@U?$pair@$$CBHV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@2@@std@@U?$less@H@2@V?$allocator@U?$pair@$$CBHV?$map@HV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@U?$less@H@2@V?$allocator@U?$pair@$$CBHV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@std@@@2@@std@@@std@@@2@$0A@@std@@@std@@QAEXXZ +0x30
+  0x4AC961  test     al, al
+  0x4AC963  jne      0x4ac8df
+  0x4AC969  add      esi, 1
+  0x4AC96C  add      edi, 0x1748
+  0x4AC972  cmp      esi, 4
+  0x4AC975  jl       0x4ac956
+  0x4AC977  mov      ecx, dword ptr [esp + 0x114]
+  0x4AC97E  pop      edi
+  0x4AC97F  pop      esi
+  0x4AC980  pop      ebx
+  0x4AC981  xor      ecx, esp
+  0x4AC983  call     0x7b7ffe  ; ??__EClassRestrict@@YAXXZ +0x4E
+  0x4AC988  mov      esp, ebp
+  0x4AC98A  pop      ebp
+  0x4AC98B  ret      
+  0x4AC98C  int3     
+  0x4AC98D  int3     
+  0x4AC98E  int3     
+  0x4AC98F  int3     
+  0x4AC990  sub      esp, 8
+  0x4AC993  push     ebx
+  0x4AC994  push     ebp
+  0x4AC995  push     esi
+  0x4AC996  mov      esi, ecx
+  0x4AC998  push     edi

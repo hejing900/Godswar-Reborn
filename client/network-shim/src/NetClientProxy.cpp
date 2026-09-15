@@ -1,0 +1,497 @@
+#include "NetClientProxy.h"
+
+#include <cstdint>
+#include <new>
+
+namespace godswar::network {
+
+namespace net_client_proxy_detail {
+
+bool IsRawFighterProjectionEligible(
+    SecureClientRuntimeState runtimeState,
+    const NativeClientSnapshot& client,
+    bool originHostSupported) noexcept {
+    return runtimeState == SecureClientRuntimeState::Disabled &&
+        client.registered &&
+        client.state == NativeClientState::Connected &&
+        client.decision == ClientRouteDecision::PassThrough &&
+        originHostSupported;
+}
+
+} // namespace net_client_proxy_detail
+
+NetClientProxy::NetClientProxy(
+    ILegacyNetClient* legacyClient,
+    NativeClientCoordinator* coordinator,
+    SecureClientRuntime* secureRuntime,
+    NativeProxyId proxyId,
+    bool enableAvatarGate,
+    AvatarReadinessProbe readinessProbe,
+    LegacyMessageDisposer messageDisposer,
+    AvatarPreloadRequester preloadRequester) noexcept
+    : legacyClient_(legacyClient),
+      coordinator_(coordinator),
+      secureRuntime_(secureRuntime),
+      proxyId_(proxyId),
+      avatarPreviewGate_(
+          enableAvatarGate,
+          readinessProbe,
+          messageDisposer,
+          preloadRequester) {
+    InitializeSRWLock(&secureSendLock_);
+}
+
+ILegacyNetClient* NetClientProxy::Create(
+    ILegacyNetClient* legacyClient) noexcept {
+    return CreateWithRuntimeForTesting(
+        legacyClient,
+        &ProcessNativeClientCoordinator(),
+        &ProcessSecureClientRuntime());
+}
+
+ILegacyNetClient* NetClientProxy::CreateWithCoordinatorForTesting(
+    ILegacyNetClient* legacyClient,
+    NativeClientCoordinator* coordinator) noexcept {
+    return CreateWithRuntimeForTesting(
+        legacyClient,
+        coordinator,
+        nullptr);
+}
+
+ILegacyNetClient* NetClientProxy::CreateWithRuntimeForTesting(
+    ILegacyNetClient* legacyClient,
+    NativeClientCoordinator* coordinator,
+    SecureClientRuntime* secureRuntime) noexcept {
+    if (legacyClient == nullptr) {
+        return nullptr;
+    }
+    if (coordinator == nullptr) {
+        legacyClient->Release();
+        return nullptr;
+    }
+
+    NativeProxyId proxyId = 0;
+    if (coordinator->Register(&proxyId) !=
+        NativeCoordinatorResult::Success) {
+        legacyClient->Release();
+        return nullptr;
+    }
+
+    auto* proxy = new (std::nothrow) NetClientProxy(
+        legacyClient,
+        coordinator,
+        secureRuntime,
+        proxyId,
+        IsSupportedOriginAvatarHost(),
+        AreOriginAvatarResourcesReady,
+        DestroyLegacyMessage,
+        RequestOriginAvatarPreload);
+    if (proxy == nullptr) {
+        static_cast<void>(coordinator->Unregister(proxyId));
+        legacyClient->Release();
+    }
+
+    return proxy;
+}
+
+ILegacyNetClient* NetClientProxy::CreateForTesting(
+    ILegacyNetClient* legacyClient,
+    bool enableAvatarGate,
+    AvatarReadinessProbe readinessProbe,
+    LegacyMessageDisposer messageDisposer,
+    AvatarPreloadRequester preloadRequester) noexcept {
+    if (legacyClient == nullptr) {
+        return nullptr;
+    }
+
+    auto* proxy = new (std::nothrow) NetClientProxy(
+        legacyClient,
+        nullptr,
+        nullptr,
+        0,
+        enableAvatarGate,
+        readinessProbe,
+        messageDisposer,
+        preloadRequester);
+    if (proxy == nullptr) {
+        legacyClient->Release();
+    }
+
+    return proxy;
+}
+
+std::uint32_t NetClientProxy::Release() {
+    auto* legacyClient = legacyClient_;
+    avatarPreviewGate_.Reset();
+    warehousePageHost_.Reset();
+    rawFighterProjectionBridge_.Reset();
+    StopSecureSession();
+    legacyClient_ = nullptr;
+    if (coordinator_ != nullptr) {
+        static_cast<void>(coordinator_->Unregister(proxyId_));
+    }
+    coordinator_ = nullptr;
+    secureRuntime_ = nullptr;
+    proxyId_ = 0;
+    const auto result = legacyClient->Release();
+    delete this;
+    return result;
+}
+
+void NetClientProxy::SetHost(const char* host, std::uint16_t port) {
+    if (coordinator_ != nullptr) {
+        const auto result =
+            coordinator_->SetHost(proxyId_, host, port);
+        if (result != NativeCoordinatorResult::Success) {
+            if (result == NativeCoordinatorResult::InvalidArgument) {
+                static_cast<void>(coordinator_->Reset(proxyId_));
+            }
+            return;
+        }
+
+        NativeClientSnapshot snapshot{};
+        if (!coordinator_->TryGetSnapshot(
+                proxyId_,
+                &snapshot)) {
+            static_cast<void>(coordinator_->Reset(proxyId_));
+            return;
+        }
+        if (snapshot.decision !=
+            ClientRouteDecision::PassThrough) {
+            // Secure and rejected logical endpoints are never handed to the
+            // stock DLL. A secure bridge supplies only a loopback endpoint.
+            return;
+        }
+    }
+
+    legacyClient_->SetHost(host, port);
+}
+
+bool NetClientProxy::Connect() {
+    avatarPreviewGate_.Reset();
+    warehousePageHost_.Reset();
+    rawFighterProjectionBridge_.Reset();
+
+    if (coordinator_ == nullptr) {
+        return legacyClient_->Connect();
+    }
+
+    ClientBridgePlan plan{};
+    const auto beginResult =
+        coordinator_->BeginConnect(proxyId_, &plan);
+    if (beginResult != NativeCoordinatorResult::Success) {
+        SetLastError(
+            beginResult == NativeCoordinatorResult::RouteRejected
+                ? ERROR_ACCESS_DENIED
+                : ERROR_INVALID_STATE);
+        return false;
+    }
+
+    if (plan.decision == ClientRouteDecision::Login ||
+        plan.decision == ClientRouteDecision::Game) {
+        return ConnectSecure(plan);
+    }
+
+    if (plan.decision != ClientRouteDecision::PassThrough) {
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        SetLastError(ERROR_ACCESS_DENIED);
+        return false;
+    }
+    if (!legacyClient_->Connect()) {
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        return false;
+    }
+
+    if (coordinator_->MarkConnected(plan) !=
+        NativeCoordinatorResult::Success) {
+        legacyClient_->DisConnect();
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        return false;
+    }
+
+    return true;
+}
+
+void NetClientProxy::DisConnect() {
+    avatarPreviewGate_.Reset();
+    warehousePageHost_.Reset();
+    rawFighterProjectionBridge_.Reset();
+    if (secureSession_ != nullptr) {
+        StopSecureSession();
+    } else {
+        legacyClient_->DisConnect();
+    }
+    if (coordinator_ != nullptr) {
+        static_cast<void>(coordinator_->Reset(proxyId_));
+    }
+}
+
+void NetClientProxy::Process() {
+    static_cast<void>(warehouse_page_host_detail::
+        PrepareRuntimePatchOnLoad());
+    if (secureSession_ != nullptr &&
+        !secureSession_->Poll()) {
+        StopSecureSession();
+        if (coordinator_ != nullptr) {
+            static_cast<void>(coordinator_->Reset(proxyId_));
+        }
+    }
+    if (!ApplyPendingFighterExperienceProjections()) {
+        rawFighterProjectionBridge_.Reset();
+        if (secureSession_ != nullptr) {
+            StopSecureSession();
+            if (coordinator_ != nullptr) {
+                static_cast<void>(coordinator_->Reset(proxyId_));
+            }
+        }
+    }
+    std::uint8_t pageRequest[12]{};
+    int pageRequestBytes = 0;
+    if (warehousePageHost_.TryBuildPageRequest(
+            pageRequest,
+            sizeof(pageRequest),
+            &pageRequestBytes)) {
+        warehousePageHost_.CompletePageRequestSend(
+            SendMsg(pageRequest, pageRequestBytes));
+    }
+    legacyClient_->Process();
+}
+
+std::uint32_t NetClientProxy::GetStatus() const {
+    return legacyClient_->GetStatus();
+}
+
+void* NetClientProxy::PickMsg() {
+    if (avatarPreviewGate_.BlocksLegacyPolling()) {
+        return avatarPreviewGate_.TryRelease();
+    }
+
+    void* message = legacyClient_->PickMsg();
+    if (IsRawPassThroughConnected()) {
+        static_cast<void>(
+            rawFighterProjectionBridge_.ObserveServerMessage(message));
+    }
+    warehousePageHost_.ObserveServerMessage(message);
+    if (secureSession_ != nullptr) {
+        secureSession_->ObserveLegacyServerMessage(message);
+    }
+    return avatarPreviewGate_.Filter(message);
+}
+
+bool NetClientProxy::SendMsg(const void* data, int size) {
+    AcquireSRWLockExclusive(&secureSendLock_);
+    std::uint8_t warehousePacket[20]{};
+    std::uint8_t rawFighterPacket[
+        LegacyFighterLevelSealActionPacketBytes]{};
+    RawFighterLevelSealPreparedSend rawFighterPrepared{};
+    const void* routedData = data;
+    if (warehousePageHost_.TryRewriteClientPacket(
+            data,
+            size,
+            warehousePacket,
+            sizeof(warehousePacket))) {
+        routedData = warehousePacket;
+    }
+    if (IsRawPassThroughConnected() &&
+        rawFighterProjectionBridge_.TryPrepareClientPacket(
+            routedData,
+            size,
+            rawFighterPacket,
+            sizeof(rawFighterPacket),
+            &rawFighterPrepared)) {
+        routedData = rawFighterPacket;
+    }
+    if (secureSession_ != nullptr) {
+        const auto routed =
+            secureSession_->RouteLegacyMovement(routedData, size);
+        if (routed ==
+            SecureRealtimeMovementRouteResult::Accepted) {
+            ReleaseSRWLockExclusive(&secureSendLock_);
+            return true;
+        }
+        if (routed ==
+            SecureRealtimeMovementRouteResult::Rejected) {
+            ReleaseSRWLockExclusive(&secureSendLock_);
+            return false;
+        }
+    }
+
+    std::uint64_t descriptorToken = 0;
+    const auto preparation =
+        secureSession_ == nullptr
+            ? SecureLegacySendPreparationResult::NotRequired
+            : secureSession_->PrepareLegacySend(
+                routedData,
+                size,
+                &descriptorToken);
+    if (preparation ==
+        SecureLegacySendPreparationResult::Rejected) {
+        ReleaseSRWLockExclusive(&secureSendLock_);
+        return false;
+    }
+
+    const bool sent = legacyClient_->SendMsg(routedData, size);
+    rawFighterProjectionBridge_.CompleteClientSend(
+        rawFighterPrepared,
+        sent);
+    if (sent) {
+        warehousePageHost_.ObserveClientPacket(routedData, size);
+    }
+    if (!sent &&
+        preparation ==
+            SecureLegacySendPreparationResult::Prepared) {
+        // If ciphertext already started, later bytes cannot safely inherit
+        // the remaining descriptor. Close instead; the process registry keeps
+        // the UUID so a reconnect can replay the unknown outcome.
+        if (!secureSession_->CancelPreparedLegacySend(
+                descriptorToken)) {
+            StopSecureSession();
+            if (coordinator_ != nullptr) {
+                static_cast<void>(
+                    coordinator_->Reset(proxyId_));
+            }
+        }
+    }
+    ReleaseSRWLockExclusive(&secureSendLock_);
+    return sent;
+}
+
+long NetClientProxy::GetMsgNum() {
+    return avatarPreviewGate_.AdjustMessageCount(
+        legacyClient_->GetMsgNum());
+}
+
+bool NetClientProxy::ConnectSecure(
+    const ClientBridgePlan& plan) noexcept {
+    SecureClientSessionConfiguration configuration{};
+    if (secureSession_ != nullptr ||
+        !TryBuildSecureConfiguration(&configuration)) {
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        SetLastError(ERROR_ACCESS_DENIED);
+        return false;
+    }
+
+    auto* session = new (std::nothrow)
+        SecureClientSession(configuration);
+    SecureZeroMemory(
+        configuration.clientInstanceId,
+        sizeof(configuration.clientInstanceId));
+    SecureZeroMemory(
+        configuration.originSha256,
+        sizeof(configuration.originSha256));
+    if (session == nullptr) {
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return false;
+    }
+    if (!session->Connect(legacyClient_, plan)) {
+        delete session;
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        SetLastError(ERROR_CONNECTION_REFUSED);
+        return false;
+    }
+    if (coordinator_->MarkConnected(plan) !=
+        NativeCoordinatorResult::Success) {
+        session->Disconnect();
+        delete session;
+        static_cast<void>(coordinator_->Reset(proxyId_));
+        SetLastError(ERROR_OPERATION_ABORTED);
+        return false;
+    }
+
+    secureSession_ = session;
+    return true;
+}
+
+bool NetClientProxy::TryBuildSecureConfiguration(
+    SecureClientSessionConfiguration* configuration) noexcept {
+    if (configuration == nullptr) {
+        return false;
+    }
+    *configuration = SecureClientSessionConfiguration{};
+    if (secureRuntime_ == nullptr ||
+        !secureRuntime_->TryCopyManifest(
+            &configuration->manifest) ||
+        !secureRuntime_->TryCopyClientInstanceId(
+            configuration->clientInstanceId,
+            sizeof(configuration->clientInstanceId)) ||
+        !secureRuntime_->TryCopyOriginSha256(
+            configuration->originSha256,
+            sizeof(configuration->originSha256))) {
+        return false;
+    }
+
+    configuration->grantRegistry =
+        secureRuntime_->GrantRegistry();
+    configuration->operationRegistry =
+        secureRuntime_->OperationRegistry();
+    configuration->snapshotContext = secureRuntime_;
+    configuration->snapshotRecorder =
+        [](void* context,
+           const SecureClientSessionSnapshot& snapshot) noexcept {
+            auto* runtime =
+                static_cast<SecureClientRuntime*>(context);
+            if (runtime != nullptr) {
+                runtime->RetainSessionSnapshot(snapshot);
+            }
+        };
+    return configuration->grantRegistry != nullptr &&
+        configuration->operationRegistry != nullptr;
+}
+
+bool NetClientProxy::IsRawPassThroughConnected() const noexcept {
+    if (secureSession_ != nullptr || coordinator_ == nullptr ||
+        secureRuntime_ == nullptr) {
+        return false;
+    }
+    NativeClientSnapshot snapshot{};
+    return coordinator_->TryGetSnapshot(proxyId_, &snapshot) &&
+        net_client_proxy_detail::IsRawFighterProjectionEligible(
+            secureRuntime_->Snapshot().state,
+            snapshot,
+            fighterExperienceHost_.IsSupported());
+}
+
+bool NetClientProxy::
+ApplyPendingFighterExperienceProjections() noexcept {
+    RawFighterExperienceProjection rawProjection{};
+    while (rawFighterProjectionBridge_.TryTakeProjection(
+            &rawProjection)) {
+        if (!fighterExperienceHost_.Apply(
+                rawProjection.currentExperience,
+                rawProjection.maximumExperience)) {
+            return false;
+        }
+    }
+
+    auto* registry = secureRuntime_ == nullptr
+        ? nullptr
+        : secureRuntime_->OperationRegistry();
+    if (registry == nullptr) {
+        return true;
+    }
+
+    // SecureOuterStream validates and publishes on its bridge worker. Origin
+    // state and UI are mutated only here, from the stock client's Process
+    // thread, after UUID/family/action/result validation has succeeded.
+    SecureFighterExperienceProjection projection{};
+    while (registry->TryTakeFighterExperienceProjection(&projection)) {
+        if (!fighterExperienceHost_.Apply(
+                projection.currentExperience,
+                projection.maximumExperience)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void NetClientProxy::StopSecureSession() noexcept {
+    if (secureSession_ == nullptr) {
+        return;
+    }
+    secureSession_->Disconnect();
+    delete secureSession_;
+    secureSession_ = nullptr;
+}
+
+} // namespace godswar::network
