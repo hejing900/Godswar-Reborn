@@ -48,6 +48,7 @@ internal interface IGameStore : IAsyncDisposable
         int talentExperience,
         CancellationToken cancellationToken = default);
 
+<<<<<<< HEAD
     /// <summary>
     /// Persists every quest the character carries, plus the ones it has finished.
     /// </summary>
@@ -68,6 +69,8 @@ internal interface IGameStore : IAsyncDisposable
         int gold,
         CancellationToken cancellationToken = default);
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     Task<ZodiacSkillGridActivationResult?> ActivateZodiacSkillGridAsync(
         int accountId,
         int characterId,

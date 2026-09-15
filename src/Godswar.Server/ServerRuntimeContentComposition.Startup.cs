@@ -3,10 +3,15 @@ using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.Rewards;
 using Godswar.Server.Application.Warehouse;
 using Godswar.Server.Application.World;
+<<<<<<< HEAD
 using Godswar.Server.Application.World.Content;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Game;
 using Godswar.Server.Infrastructure.WorldContent;
+=======
+using Godswar.Server.Application.WorldInstances;
+using Godswar.Server.Game;
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Infrastructure.WorldInstances;
 using Godswar.Server.Infrastructure.Rewards;
 using Godswar.Server.State;
@@ -49,12 +54,17 @@ internal static partial class ServerRuntimeContentComposition
         var monsterRewardPolicy =
             await PostgresMonsterRewardPolicySnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString);
+<<<<<<< HEAD
         var monsterLoot =
             await PostgresMonsterLootContentSnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString);
         MedusaRewardPolicyCatalog.Install(medusaRewards);
         MedusaMonsterContentCatalog.Install(medusaMonsters);
         MonsterLootContentCatalog.Install(monsterLoot);
+=======
+        MedusaRewardPolicyCatalog.Install(medusaRewards);
+        MedusaMonsterContentCatalog.Install(medusaMonsters);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         var world = await ServerWorldContentComposition.TryLoadAsync(options);
         if (world is null)
         {

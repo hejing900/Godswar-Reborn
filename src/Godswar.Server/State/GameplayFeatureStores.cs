@@ -15,6 +15,7 @@ internal interface ICapitalShopPurchaseStore
             Character: null,
             CurrencyBalance: 0));
 
+<<<<<<< HEAD
     Task<CapitalShopSaleResult> SellCapitalShopItemAsync(
         int accountId,
         int characterId,
@@ -24,6 +25,8 @@ internal interface ICapitalShopPurchaseStore
         Task.FromResult(CapitalShopSaleResult.Rejected(
             CapitalShopSaleStatus.UnsupportedItem));
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }
 
 /// <summary>Idempotent loot and summoned-pet reward supplements.</summary>

@@ -19,6 +19,7 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
+<<<<<<< HEAD
     /// <summary>
     /// Per-tick traffic that would bury the diagnostic file: the UI heartbeat,
     /// the client's movement stream and the world spawn/vitals updates.
@@ -26,6 +27,8 @@ internal sealed partial class GameClientHandler
     private static bool IsTraceNoise(ushort opcode) =>
         opcode is 10015 or 10016 or 10017 or 10194;
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private async Task HandlePacketAsync(GamePacket packet, CancellationToken cancellationToken)
     {
         if (_session.AllowsPayloadDiagnostics)
@@ -33,6 +36,7 @@ internal sealed partial class GameClientHandler
             LogReceived(packet);
         }
 
+<<<<<<< HEAD
         // A diagnostic for clicks that produce no answer at all: the file trace
         // survives the container's folded stdout, so the next click can be read
         // back with its opcode and payload even when the handler never runs.
@@ -50,6 +54,8 @@ internal sealed partial class GameClientHandler
                 []);
         }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (_session.BoundGamePrincipal is not null &&
             _account is null &&
             packet.Opcode is not (
@@ -159,13 +165,17 @@ internal sealed partial class GameClientHandler
                 await HandleBasicAttackAsync(packet, cancellationToken);
                 break;
             case Opcodes.Revive:
+<<<<<<< HEAD
             case Opcodes.ReviveLegacy:
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 await HandleReviveAsync(packet, cancellationToken);
                 break;
             case Opcodes.Kitbag:
             case Opcodes.Storage:
             case Opcodes.MoveItem:
             case Opcodes.Sell:
+<<<<<<< HEAD
                 // The same opcode carries an inventory move and the corpse
                 // click that opens a loot window, so the loot source is claimed
                 // before the log-only inventory path.
@@ -176,6 +186,8 @@ internal sealed partial class GameClientHandler
                     break;
                 }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 LogInventoryPacket(packet);
                 break;
             case Opcodes.PickupDrops:
@@ -219,6 +231,7 @@ internal sealed partial class GameClientHandler
             case Opcodes.NpcFunctionAction:
                 await HandleNpcFunctionActionAsync(packet, cancellationToken);
                 break;
+<<<<<<< HEAD
             case Opcodes.MallCatalog:
                 await HandleMallCatalogRequestAsync(packet, cancellationToken);
                 break;
@@ -241,6 +254,9 @@ internal sealed partial class GameClientHandler
             case Opcodes.QuestActionPair:
                 await HandleQuestActionPairAsync(packet, cancellationToken);
                 break;
+=======
+            case Opcodes.NpcShopPurchase: await HandleCapitalNpcShopPurchaseAsync(packet, cancellationToken); break;
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             case Opcodes.GearEnhancerItemSelection:
                 HandleGearEnhancerItemSelection(packet);
                 break;
@@ -334,11 +350,14 @@ internal sealed partial class GameClientHandler
                 _enterUiReadyReceived = true;
                 Console.WriteLine($"[game] EnterUiReady character={_character?.Name ?? "<none>"}");
                 await SendPostEnterBootstrapAsync(cancellationToken);
+<<<<<<< HEAD
                 // A quest whose objectives are already met is published only now:
                 // the client crashed dereferencing npc zero while the frame arrived
                 // ahead of the world entry, and the reference only ever sends it in
                 // the middle of play, right behind the kill that finished the quest.
                 await SendLoginQuestProgressAsync(cancellationToken);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 break;
             case Opcodes.GameServerReady:
             case Opcodes.GameServerInfo:
@@ -346,10 +365,13 @@ internal sealed partial class GameClientHandler
             case 10192:
                 Console.WriteLine($"[game] ignored {Opcodes.Name(packet.Opcode)} opcode={packet.Opcode}");
                 break;
+<<<<<<< HEAD
             // The client sells with 10060, not the known-but-unused 10053.
             case Opcodes.SellItem:
                 await HandleSellItemRequestAsync(packet, cancellationToken);
                 break;
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             default:
                 Console.WriteLine(
                     $"[game] unknown {Opcodes.Name(packet.Opcode)} opcode={packet.Opcode} len={packet.Length} {packet.ToHexPreview()}");

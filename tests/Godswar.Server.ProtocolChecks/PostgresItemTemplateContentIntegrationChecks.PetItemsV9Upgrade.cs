@@ -29,8 +29,11 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             .Append(WarehouseItemContentBaseline.StorageBoxKeyItemId)
             .Append(CaptureToolItemId)
             .Append(LegacyInstanceOpalItemContentBaseline.ItemId)
+<<<<<<< HEAD
             .Concat(ClientCatalogItemContentBaseline.ItemTemplates
                 .Select(static item => item.Id))
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             .ToArray();
         var tombstones = await BuildOfficialElementalTombstonesAsync(
             dataSource);
@@ -104,6 +107,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             await using var reader = await command.ExecuteReaderAsync();
             Check.True(
                 await reader.ReadAsync() &&
+<<<<<<< HEAD
                 reader.GetInt32(0) ==
                     1773 + ClientCatalogItemContentBaseline.ShippedItemCount &&
                 reader.GetInt32(1) == 30 &&
@@ -112,6 +116,15 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
                 "exact live pets-v2 upgrade retains tombstones, books, Nameplates, the Storage Box Key, the capture tool, and the reviewed client catalog");
             Check.True(
                 upgraded.Revision == ClientCatalogV1Revision &&
+=======
+                reader.GetInt32(0) == 1773 &&
+                reader.GetInt32(1) == 30 &&
+                reader.GetInt32(2) == 14 &&
+                reader.GetInt32(3) == 1,
+                "exact live pets-v2 upgrade retains tombstones, books, Nameplates, the Storage Box Key, and the capture tool");
+            Check.True(
+                upgraded.Revision == OfficialOpalV1Revision &&
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 await ReadCompleteRevisionFingerprintAsync(
                     dataSource,
                     computed) == predecessorFingerprint,

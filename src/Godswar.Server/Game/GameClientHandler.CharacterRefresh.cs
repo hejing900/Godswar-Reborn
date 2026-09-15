@@ -39,11 +39,14 @@ internal sealed partial class GameClientHandler
                     updated);
             updated.EquipmentEffectsVisible =
                 current.EquipmentEffectsVisible;
+<<<<<<< HEAD
             // Quest progress belongs to the session's live character. A store
             // round-trip that was built for an equipment change must not replace it
             // with an empty list.
             updated.Quests = current.Quests;
             updated.QuestCompletedIds = current.QuestCompletedIds;
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         _character = updated;

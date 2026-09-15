@@ -403,6 +403,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         int Level,
         long InventoryRevision,
         short PetShedCapacity,
+<<<<<<< HEAD
         long PetShedRevision,
         long WalletRevision,
         int Silver,
@@ -410,6 +411,9 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         int MaximumHp,
         int CurrentMp,
         int MaximumMp);
+=======
+        long PetShedRevision);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
     private sealed record StoredInbox(
         long InboxId,
@@ -477,6 +481,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
                 PetDurableReceiptStatus.OwnerUnmerged;
     }
 
+<<<<<<< HEAD
     /// <summary>
     /// A committed silver grant whose wallet columns were already advanced on
     /// <c>character_base</c>. Only the append-only ledger row is outstanding.
@@ -489,6 +494,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         long WalletRevision,
         string ReasonCode);
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private sealed record InventoryMutation(
         long ItemInstanceId,
         string MutationKind,

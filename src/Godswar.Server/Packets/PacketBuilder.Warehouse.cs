@@ -16,6 +16,7 @@ internal static partial class PacketBuilder
     private const int WarehouseNativeBoxCount = 4;
     internal const uint WarehousePageProjectionUserMarker = 0x57485000;
 
+<<<<<<< HEAD
     /// <summary>
     /// Opens the storage page. <paramref name="extraFlags"/> carries the pages the
     /// npc can open as well: the reference server sent 0x23 (storage 0x20 plus
@@ -26,6 +27,11 @@ internal static partial class PacketBuilder
         uint npcInteractionId,
         string clientScriptKey,
         int extraFlags = 0)
+=======
+    public static byte[] WarehouseDialogOpenAck(
+        uint npcInteractionId,
+        string clientScriptKey)
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     {
         if (npcInteractionId == 0)
         {
@@ -46,7 +52,11 @@ internal static partial class PacketBuilder
             npcInteractionId);
         BinaryPrimitives.WriteInt32LittleEndian(
             packet.AsSpan(8, 4),
+<<<<<<< HEAD
             WarehouseDialogMode | extraFlags);
+=======
+            WarehouseDialogMode);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         PacketText.WriteFixedAscii(
             packet.AsSpan(16, 32),
             clientScriptKey);

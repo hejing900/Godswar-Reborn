@@ -18,9 +18,12 @@ internal sealed partial class GameSessionRegistry
         float targetZ)
     {
         ArgumentNullException.ThrowIfNull(session);
+<<<<<<< HEAD
         ReviveTrace.Log(
             $"XFER-MAP attempt src={expectedSourceMapId} dst={targetMapId} " +
             $"pos={targetX:F2},{targetZ:F2} stack={Environment.StackTrace}");
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(targetMapId) ||
             targetMapId == expectedSourceMapId ||
             !_gameplayCatalogs.MapTraversal.TryGetMap(
@@ -159,10 +162,13 @@ internal sealed partial class GameSessionRegistry
             character.PositionX = targetX;
             character.PositionZ = targetZ;
             characterMutated = true;
+<<<<<<< HEAD
             ReviveTrace.Log(
                 $"XFER-CORE committed {existing.MapId}->{target.MapId} " +
                 $"name={character.Name} pos={targetX:F2},{targetZ:F2} " +
                 $"stack={Environment.StackTrace}");
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             transfer.Commit(
                 () => _sessions[session] = updated);
 

@@ -223,6 +223,7 @@ internal abstract class GameStoreTestStub :
             CancellationToken cancellationToken = default) =>
         throw Unsupported();
 
+<<<<<<< HEAD
     public virtual Task SaveCharacterQuestStateAsync(
         int accountId,
         int characterId,
@@ -239,6 +240,8 @@ internal abstract class GameStoreTestStub :
         CancellationToken cancellationToken = default) =>
         throw Unsupported();
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public virtual Task<ZodiacLevelUpgradeResult?>
         UpgradeZodiacLevelAsync(
             int accountId,

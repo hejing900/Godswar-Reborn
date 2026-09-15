@@ -77,9 +77,12 @@ internal static class DataArchitectureCheckCatalog
             WarehouseHandlerChecks.CheckName,
             WarehouseHandlerChecks.RunAsync),
         (
+<<<<<<< HEAD
             WarehouseHandlerChecks.SecondaryTellerCheckName,
             WarehouseHandlerChecks.RunSecondaryTellerAsync),
         (
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             OnlineAwardHandlerChecks.CheckName,
             OnlineAwardHandlerChecks.RunAsync),
         (

@@ -11,7 +11,10 @@ internal static partial class PacketBuilder
 
     public static byte[] MonsterLoot(
         uint monsterObjectId,
+<<<<<<< HEAD
         Guid deathEventId,
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         IReadOnlyList<MonsterLootEntry> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);
@@ -53,6 +56,7 @@ internal static partial class PacketBuilder
             BinaryPrimitives.WriteUInt32LittleEndian(
                 item.Slice(24),
                 checked(((uint)entry.Quantity << 24) | 0x0000_0101u));
+<<<<<<< HEAD
             // Captured ground-item identity at +64/+68. The client echoes both
             // halves back with its pickup request reply so it can clear the
             // matching ground item.
@@ -65,10 +69,13 @@ internal static partial class PacketBuilder
             BinaryPrimitives.WriteUInt32LittleEndian(
                 item.Slice(68),
                 groundKey.Low);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         return packet;
     }
 
+<<<<<<< HEAD
     /// <summary>
     /// Answers the client's corpse click. Captured 2026-09-15 on the reference
     /// server: `C2S 10050` (20 bytes) `{corpseObjectId, 0, dropIndex, 0}` is
@@ -114,6 +121,8 @@ internal static partial class PacketBuilder
         return packet;
     }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public static byte[] MonsterLootPickup(
         uint playerObjectId,
         uint monsterObjectId,

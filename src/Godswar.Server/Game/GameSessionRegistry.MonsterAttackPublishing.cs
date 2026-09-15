@@ -111,11 +111,14 @@ internal sealed partial class GameSessionRegistry
                     expectedTargetVitalsRevision,
                     requireTargetDead))
             {
+<<<<<<< HEAD
                 ReviveTrace.Log(
                     $"ECS-SEND-DROPPED label={label} " +
                     $"cancel={cancellationToken.IsCancellationRequested} " +
                     $"requireDead={requireTargetDead} " +
                     $"expectVitals={expectedTargetVitalsRevision?.ToString() ?? "null"}");
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 return ExactMonsterAttackAdmissionOutcome
                     .CanceledOrStale;
             }

@@ -13,7 +13,11 @@ internal enum LegacyInstanceDailyEntryClaimStatus : byte
 
 internal static class LegacyInstanceDailyEntryPolicy
 {
+<<<<<<< HEAD
     public const ushort DefaultFreeEntryLimit = 100;
+=======
+    public const ushort DefaultFreeEntryLimit = 3;
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
     public static ushort? GetDefaultPaidRetryLimit(
         InstanceCallerEntryKind instanceKind) => instanceKind switch

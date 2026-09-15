@@ -63,6 +63,7 @@ function Invoke-AvatarPreloadPatch {
         [string]$RepositoryRoot
     )
 
+<<<<<<< HEAD
     # Re-baselined for the local client at D:\Godswar Origin. The audited pair
     # above assumed a build whose .rdata was already executable, which is what the
     # earlier cave patches left behind; this client's .rdata had to be extended and
@@ -76,6 +77,12 @@ function Invoke-AvatarPreloadPatch {
         '9D8E984F163AD838A2B19E27C6585B0E2E96AEEF2CCBB1AD76967B7376E57322'
     $patchedSha256 =
         '35F7A94B638B1B58F5F880D834BCADFB59ECDE04CE8F0A59B56757F095307CD4'
+=======
+    $priorSha256 =
+        '753BE49FE94B6F4C0E3329BC8905945BD9B0F1A790B4B9038E69C2A5AD49ED79'
+    $patchedSha256 =
+        'E0F5BC951C6E37550F4D9CC1E25BFDCB4F020466ADD854DC2E7EA04E0D22F81C'
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     $stockNetSha256 =
         '1CC3F9AABBC339300DF06795AB22EAD1ACC7F4CBB47F2F2DBF36F1CF19BCA00C'
     $expectedLength = 6676480

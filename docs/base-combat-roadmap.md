@@ -40,6 +40,7 @@ silently reinterpreted.
 
 ### Death and revive
 
+<<<<<<< HEAD
 - Client revive opcode `10028` (captured 2026-09-15) is exactly 12 bytes: local
   player object ID at `+4` and revive type at `+8`. `Revive.lua` names the
   types (`0` stone, `1` money, `2` free); only `2` has a captured server
@@ -51,13 +52,23 @@ silently reinterpreted.
   capital fallback and traces `REVIVE-LANDING-FALLBACK`.
 - The revive response opens by clearing the revived player's fight state
   (`10025`, as captured) before the world re-entry.
+=======
+- Client revive opcode `10019` is exactly 12 bytes: local player object ID at
+  `+4` and revive type at `+8`. The preserved original vector identifies type
+  `2` as the free camp revive. Other types remain rejected until captured.
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 - Server death opcode `10018` is 28 bytes and carries player identity,
   position, map, and the captured terminal marker.
 - Dead `WalkBegin`, `WalkEnd`, and `Walk` traffic is rejected before cast
   interruption, broadcast, transition, or persistence in both Legacy and ECS
+<<<<<<< HEAD
   runtimes. A valid type-2 revive advances life state once, relocates to the
   per-map landing point, restores 10 percent HP/MP, checkpoints both, and
   re-enters the world.
+=======
+  runtimes. A valid type-2 revive advances life state once, relocates to camp,
+  restores 10 percent HP/MP, checkpoints both, and re-enters the world.
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
 ## Authoritative stat inventory
 

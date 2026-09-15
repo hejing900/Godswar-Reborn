@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 
+<<<<<<< HEAD
 FROM mcr.microsoft.com/dotnet/sdk:10.0.400 AS build
+=======
+FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 WORKDIR /src
 
 COPY GodswarServer.sln ./

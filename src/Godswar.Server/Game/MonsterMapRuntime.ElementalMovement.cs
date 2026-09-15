@@ -33,6 +33,7 @@ internal sealed partial class MonsterMapRuntime
     {
         lock (_gate)
         {
+<<<<<<< HEAD
             // A player kill leaves the corpse spawned but dead with combat phase
             // None (ResetCombat), so the loot-driven corpse window must accept
             // any dead, still-spawned monster of the same generation.
@@ -40,6 +41,14 @@ internal sealed partial class MonsterMapRuntime
                 monster.SpawnGeneration != expectedSpawnGeneration ||
                 monster.IsAlive ||
                 !monster.IsSpawned)
+=======
+            if (!_monsters.TryGetValue(objectId, out var monster) ||
+                monster.SpawnGeneration != expectedSpawnGeneration ||
+                monster.IsAlive ||
+                !monster.IsSpawned ||
+                monster.CombatPhase !=
+                    MonsterCombatPhase.AwaitingRetirement)
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             {
                 return false;
             }

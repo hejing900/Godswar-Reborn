@@ -7,7 +7,11 @@ internal static partial class PostgresMigrationFoundationChecks
     private static void CheckForwardOnlyCatalog()
     {
         Check.Equal(
+<<<<<<< HEAD
             148,
+=======
+            144,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             PostgresSchemaMigrationCatalog.All.Count,
             "migration catalog entry count");
         var baseline = PostgresSchemaMigrationCatalog.All[0];

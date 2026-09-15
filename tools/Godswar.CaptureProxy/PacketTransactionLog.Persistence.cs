@@ -60,7 +60,11 @@ sealed partial class PacketTransactionLog
         if (!await reader.ReadAsync())
         {
             Console.Error.WriteLine(
+<<<<<<< HEAD
                 $"[数据库] 跳过怪物模板 {templateKey}：指定地图 {monsterMapId} 上没有该模板");
+=======
+                $"[db] skipped monster template={templateKey}: no template exists for explicit map {monsterMapId}");
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _monsterTemplateCache[templateKey] = null;
             return null;
         }

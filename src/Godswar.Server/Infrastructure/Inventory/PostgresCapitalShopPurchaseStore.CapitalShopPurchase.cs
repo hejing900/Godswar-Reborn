@@ -147,7 +147,11 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
             accountId,
             characterId,
             character.Value,
+<<<<<<< HEAD
             ToCurrencyCode(offer.Currency),
+=======
+            offer.Currency,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             balanceAfter,
             walletRevision,
             inventoryRevision,
@@ -158,7 +162,11 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
             inboxId,
             accountId,
             characterId,
+<<<<<<< HEAD
             ToCurrencyCode(offer.Currency),
+=======
+            offer.Currency,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             checked((int)totalCost),
             currencyBalance,
             balanceAfter,
@@ -177,9 +185,12 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
             CapitalNpcShopCurrency.Silver => refreshed.Silver,
             CapitalNpcShopCurrency.Gold => refreshed.Gold,
             CapitalNpcShopCurrency.BindingGold => refreshed.BindingGold,
+<<<<<<< HEAD
             CapitalNpcShopCurrency.Honor => refreshed.MedusaHonorPoints,
             CapitalNpcShopCurrency.Point => refreshed.ExchangePoint,
             CapitalNpcShopCurrency.Medal => refreshed.ExchangeMedal,
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _ => throw new ArgumentOutOfRangeException(
                 nameof(offer),
                 offer.Currency,
@@ -207,9 +218,12 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         await using var command = new NpgsqlCommand(
             """
             SELECT "Money", "Stone", "BindingGold",
+<<<<<<< HEAD
                    COALESCE(medusa_honor_points, 0),
                    COALESCE(exchange_point, 0),
                    COALESCE(exchange_medal, 0),
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                    wallet_revision, inventory_revision
             FROM public.character_base
             WHERE id = @characterId AND account_id = @accountId
@@ -227,11 +241,16 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
                 reader.GetInt32(0),
                 reader.GetInt32(1),
                 reader.GetInt32(2),
+<<<<<<< HEAD
                 reader.GetInt32(3),
                 reader.GetInt32(4),
                 reader.GetInt32(5),
                 reader.GetInt64(6),
                 reader.GetInt64(7))
+=======
+                reader.GetInt64(3),
+                reader.GetInt64(4))
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             : null;
     }
 
@@ -239,9 +258,12 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         int Silver,
         int Gold,
         int BindingGold,
+<<<<<<< HEAD
         int Honor,
         int Point,
         int Medal,
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         long WalletRevision,
         long InventoryRevision)
     {
@@ -251,9 +273,12 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
                 CapitalNpcShopCurrency.Silver => Silver,
                 CapitalNpcShopCurrency.Gold => Gold,
                 CapitalNpcShopCurrency.BindingGold => BindingGold,
+<<<<<<< HEAD
                 CapitalNpcShopCurrency.Honor => Honor,
                 CapitalNpcShopCurrency.Point => Point,
                 CapitalNpcShopCurrency.Medal => Medal,
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(currency),
                     currency,

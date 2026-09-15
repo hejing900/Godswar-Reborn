@@ -57,6 +57,7 @@ internal static partial class PacketBuilder
             var packetLength = BinaryPrimitives.ReadUInt16LittleEndian(
                 packets.AsSpan(offset, sizeof(ushort)));
             if (packetLength < ShopCatalogHeaderBytes ||
+<<<<<<< HEAD
                 offset + packetLength > packets.Length)
             {
                 throw new InvalidDataException(
@@ -74,6 +75,11 @@ internal static partial class PacketBuilder
                     service,
                     packets[offset + 9],
                     frameItemId,
+=======
+                offset + packetLength > packets.Length ||
+                !CapitalNpcServiceProtocol.TryGetShopCurrency(
+                    packets[offset + 9],
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     out var currency))
             {
                 throw new InvalidDataException(
@@ -145,10 +151,15 @@ internal static partial class PacketBuilder
                     packetOffset + ShopCatalogHeaderBytes +
                     (itemIndex * ShopCatalogItemBytes),
                     ShopCatalogItemBytes);
+<<<<<<< HEAD
                 if (TryGetCapitalShopCatalogCurrency(
                         service,
                         packets[packetOffset + 9],
                         expectedItemId,
+=======
+                if (CapitalNpcServiceProtocol.TryGetShopCurrency(
+                        packets[packetOffset + 9],
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                         out var currency) &&
                     TryReadCapitalShopOffer(
                         record,
@@ -165,6 +176,7 @@ internal static partial class PacketBuilder
         return false;
     }
 
+<<<<<<< HEAD
     /// <summary>
     /// Resolves the balance a catalog listing charges.
     /// </summary>
@@ -193,6 +205,8 @@ internal static partial class PacketBuilder
             out currency);
     }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static byte[] GetCapitalShopCatalogSource(
         CapitalNpcServiceKind service) =>
         service switch
@@ -201,8 +215,11 @@ internal static partial class PacketBuilder
                 BoundGoldVendorCatalog.Value,
             CapitalNpcServiceKind.BindingGoldShop =>
                 BindingGoldShopCatalog.Value,
+<<<<<<< HEAD
             CapitalNpcServiceKind.PointExchanger =>
                 PointExchangerShopCatalog.Value,
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _ => GetCapturedCapitalShopCatalogSource(service)
         };
 

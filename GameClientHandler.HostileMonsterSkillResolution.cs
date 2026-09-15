@@ -65,14 +65,14 @@ internal sealed partial class GameClientHandler
             _session,
             character,
             advanceWorldRevision: false);
-<<<<<<< HEAD
-        // The client only clears its local "casting" state when it observes a
-        // cast terminator. The hit path publishes SkillCastImpact for that
-        // reason; a miss must publish the same terminator or the caster stays
-        // locked in the casting stance forever.
-        var (targetX, targetZ) = ResolveMissImpactTarget(cast);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
+
+        // 未命中同样需要终结帧(SkillCastImpact),否则客户端会一直停留在施法状态。
+        // A miss must also emit the impact terminator frame; without it the
+        // client remains visually locked in its casting state.
+        var selfImpact = PacketBuilder.SkillCastImpact(
+            packet.Buffer,
+            LocalPlayerObjectId);
+
         var casterNotified = true;
         try
         {
@@ -90,23 +90,15 @@ internal sealed partial class GameClientHandler
                     "SkillMissCastSelf");
             }
 
-<<<<<<< HEAD
             await _registry.DeliverMonsterPacketToViewerAsync(
                 _session,
                 character.CurrentMap,
                 cast.TargetObjectId,
-                PacketBuilder.SkillCastImpact(
-                    LocalPlayerObjectId,
-                    cast.TargetObjectId,
-                    cast.SkillId,
-                    targetX,
-                    targetZ),
+                selfImpact,
                 targetSpawnGeneration,
                 cancellationToken,
                 "SkillMissCastImpactSelf");
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             if (combat.Mp > 0)
             {
                 await _session.SendAsync(
@@ -125,6 +117,17 @@ internal sealed partial class GameClientHandler
                 $"[skill] miss caster notification failed character={character.Name} target={cast.TargetObjectId}: {ex.Message}");
         }
 
+        var impactRecipients =
+            await _registry.BroadcastToMonsterViewersAsync(
+                character.CurrentMap,
+                cast.TargetObjectId,
+                PacketBuilder.SkillCastImpact(
+                    packet.Buffer,
+                    CurrentPlayerObjectId),
+                cancellationToken,
+                _session,
+                "SkillMissCastImpactWorld",
+                expectedSpawnGeneration: targetSpawnGeneration);
         var visualRecipients = publishCastVisual
             ? await _registry.BroadcastToMonsterViewersAsync(
                 character.CurrentMap,
@@ -137,51 +140,11 @@ internal sealed partial class GameClientHandler
                 "SkillMissCastWorld",
                 expectedSpawnGeneration: targetSpawnGeneration)
             : 0;
-<<<<<<< HEAD
-        await _registry.BroadcastToMonsterViewersAsync(
-            character.CurrentMap,
-            cast.TargetObjectId,
-            PacketBuilder.SkillCastImpact(
-                CurrentPlayerObjectId,
-                cast.TargetObjectId,
-                cast.SkillId,
-                targetX,
-                targetZ),
-            cancellationToken,
-            _session,
-            "SkillMissCastImpactWorld",
-            expectedSpawnGeneration: targetSpawnGeneration);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await PersistSkillVitalsAsync(
             character,
             areaSkill: false,
             cancellationToken);
         Console.WriteLine(
-            $"[skill] unreported miss character={character.Name} skill={cast.SkillId} target={cast.TargetObjectId} event={resolution.EventId} hit={resolution.Rolls.HitRollBasisPoints}/{resolution.Rolls.HitChanceBasisPoints} mp={currentMana}/{character.MaxMp} caster-notified={casterNotified} viewers={visualRecipients}");
+            $"[skill] unreported miss character={character.Name} skill={cast.SkillId} target={cast.TargetObjectId} event={resolution.EventId} hit={resolution.Rolls.HitRollBasisPoints}/{resolution.Rolls.HitChanceBasisPoints} mp={currentMana}/{character.MaxMp} caster-notified={casterNotified} viewers={visualRecipients} impacts={impactRecipients}");
     }
-<<<<<<< HEAD
-
-    /// <summary>
-    /// The impact frame mirrors the authoritative monster position when the
-    /// runtime still holds the target, and otherwise falls back to the
-    /// requested ground point. A miss is exactly the case where no damage
-    /// snapshot exists, so the position cannot come from the hit pipeline.
-    /// </summary>
-    private (float X, float Z) ResolveMissImpactTarget(
-        in SkillCastRequest cast)
-    {
-        if (_registry.TryGetMonsterSnapshot(
-                _session,
-                _character!.CurrentMap,
-                cast.TargetObjectId,
-                out var target))
-        {
-            return (target.X, target.Z);
-        }
-
-        return (cast.TargetX, cast.TargetZ);
-    }
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

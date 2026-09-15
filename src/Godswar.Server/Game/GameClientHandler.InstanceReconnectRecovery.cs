@@ -15,6 +15,7 @@ internal sealed partial class GameClientHandler
         }
 
         var savedMap = _character.CurrentMap;
+<<<<<<< HEAD
         ReviveTrace.Log($"PREPARE-RECONNECT savedMap={savedMap}");
         if (!GameDefaults.TryRecoverUnavailableInstanceLocation(
                 _character))
@@ -24,6 +25,14 @@ internal sealed partial class GameClientHandler
         }
 
         ReviveTrace.Log($"PREPARE-RECONNECT recovered map={_character.CurrentMap} pos={_character.PositionX:F2},{_character.PositionZ:F2}");
+=======
+        if (!GameDefaults.TryRecoverUnavailableInstanceLocation(
+                _character))
+        {
+            return;
+        }
+
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         _unavailableInstanceReconnectMap = savedMap;
         _positionDirty = true;
     }

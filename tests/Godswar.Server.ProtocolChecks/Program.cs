@@ -48,10 +48,13 @@ internal static partial class Program
             ("Pet Healing combat-text and vitals protocol", PetHealingTalentProtocolChecks.RunAsync),
             .. DataArchitectureIntegrationChecks(),
             .. PetProtocolCheckCatalog.All,
+<<<<<<< HEAD
             // BagConsumableUseChecks is parked with the paused bag-consumable
             // feature: its frame builder does not reproduce the captured
             // opcode-10040 cast yet, and the runtime wiring is removed, so the
             // check is not registered until that work resumes.
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             ("Character camp starting location", CheckCharacterCampStartingLocationAsync),
             ("Saved character location persistence", CheckSavedCharacterLocationPersistenceAsync),
             ("Persistent monster-kill progression", CheckMonsterKillProgressionAsync),
@@ -189,7 +192,10 @@ internal static partial class Program
             ("NPC movement-cell visibility", CheckNpcMovementCellVisibilityAsync),
             ("Monster movement-cell visibility and spawn layout", CheckMonsterMovementCellVisibilityAsync),
             ("World boss outdoor-area catalog", WorldBossCatalogChecks.RunAsync),
+<<<<<<< HEAD
             (MonsterLootChannelChecks.CheckName, MonsterLootChannelChecks.RunAsync),
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             ("Persisted world-boss respawn across restart", CheckPersistedWorldBossRespawnAsync),
             ("Monster ECS shadow parity", MonsterEcsParityChecks.RunAsync),
             ("Reversible monster runtime cutover", MonsterRuntimeCutoverChecks.RunAsync),

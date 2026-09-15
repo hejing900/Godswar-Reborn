@@ -43,6 +43,7 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+<<<<<<< HEAD
         if (await TryHandleMallFunctionActionAsync(
                 npcId,
                 dialogIndex,
@@ -52,6 +53,8 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         HolyStoneWireIntent? secureHolyStoneIntent = null;
         HolyStoneWireIntent? rawHolyStoneIntent = null;
         if (packet.ClientOperationId.HasValue &&

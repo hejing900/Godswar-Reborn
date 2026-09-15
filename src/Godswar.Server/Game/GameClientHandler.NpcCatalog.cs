@@ -121,8 +121,12 @@ internal sealed partial class GameClientHandler
             if (entering.Length > 0)
             {
                 await _session.SendAsync(
+<<<<<<< HEAD
                     PacketBuilder.NpcSpawns(
                         ProjectQuestMarkerTables(entering)),
+=======
+                    PacketBuilder.NpcSpawns(entering),
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     cancellationToken,
                     "NpcCatalogRevisionSpawns",
                     framed: false);

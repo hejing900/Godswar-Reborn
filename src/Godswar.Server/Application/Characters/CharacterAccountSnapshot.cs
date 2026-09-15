@@ -47,6 +47,7 @@ internal sealed record CharacterIdentitySnapshot(
     public long FactionCrierRevision { get; init; }
 
     public long OnlineAwardRevision { get; init; }
+<<<<<<< HEAD
 
     /// <summary>
     /// The quests the character carries, in quest id order.
@@ -65,6 +66,10 @@ internal sealed record CharacterIdentitySnapshot(
 /// <summary>One accepted quest as the login snapshot carries it.</summary>
 internal readonly record struct LoadedQuestSnapshot(uint QuestId, int Progress);
 
+=======
+}
+
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 internal sealed record CharacterAppearanceSnapshot(
     byte Gender,
     byte Camp,
@@ -109,9 +114,13 @@ internal sealed record CharacterWalletSnapshot(
     int Gold,
     int BindingGold = 0,
     int MedusaHonorPoints = 0,
+<<<<<<< HEAD
     long MedusaRewardRevision = 0,
     int ExchangePoint = 0,
     int ExchangeMedal = 0);
+=======
+    long MedusaRewardRevision = 0);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
 internal sealed record CharacterLoadoutSnapshot(
     string Equipment,

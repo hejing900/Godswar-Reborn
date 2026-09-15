@@ -27,10 +27,16 @@ internal static class PetItemsV3UpgradePolicyChecks
         var publicationSource = type.GetField("PublicationSource", flags)
             ?.GetRawConstantValue() as string ?? string.Empty;
         Check.Equal(
+<<<<<<< HEAD
             "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1+" +
             "client-catalog-v1",
             publicationSource,
             "the client-catalog release retains the reviewed Opal lineage");
+=======
+            "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1",
+            publicationSource,
+            "the Opal release retains the reviewed warehouse lineage");
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Check.True(publicationSource.Length is > 0 and <= 96,
             "current item publication provenance fits the durable source column");
         return Task.CompletedTask;

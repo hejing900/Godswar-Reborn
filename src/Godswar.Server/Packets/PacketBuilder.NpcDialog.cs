@@ -140,6 +140,7 @@ internal static partial class PacketBuilder
             scriptKey);
     }
 
+<<<<<<< HEAD
     // The flags word is a bitmask of the pages an npc can open, not a single
     // choice. The reference server sent the combinations itself: 0x23 (bank 0x20
     // plus quest 3) for Sparta_100, the warehouse manager, and 0x07 (shop 4 plus
@@ -154,11 +155,20 @@ internal static partial class PacketBuilder
         NpcDialogOpenAck(
             npcId,
             flags: CapitalNpcServiceProtocol.DescriptionOpenFlags | extraFlags,
+=======
+    public static byte[] NpcDescriptionDialogOpenAck(
+        uint npcId,
+        string scriptKey) =>
+        NpcDialogOpenAck(
+            npcId,
+            flags: CapitalNpcServiceProtocol.DescriptionOpenFlags,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             packedDialog: 0,
             scriptKey);
 
     public static byte[] NpcShopDialogOpenAck(
         uint npcId,
+<<<<<<< HEAD
         string scriptKey,
         int extraFlags = 0) =>
         NpcDialogOpenAck(
@@ -179,16 +189,29 @@ internal static partial class PacketBuilder
         NpcDialogOpenAck(
             npcId,
             flags: QuestContentBaseline.QuestOpenFlags | extraFlags,
+=======
+        string scriptKey) =>
+        NpcDialogOpenAck(
+            npcId,
+            flags: CapitalNpcServiceProtocol.ShopOpenFlags,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             packedDialog: 0,
             scriptKey);
 
     public static byte[] NpcPrizeChestDialogOpenAck(
         uint npcId,
+<<<<<<< HEAD
         string scriptKey,
         int extraFlags = 0) =>
         NpcDialogOpenAck(
             npcId,
             flags: CapitalNpcServiceProtocol.PrizeChestOpenFlags | extraFlags,
+=======
+        string scriptKey) =>
+        NpcDialogOpenAck(
+            npcId,
+            flags: CapitalNpcServiceProtocol.PrizeChestOpenFlags,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             packedDialog: 0,
             scriptKey);
 

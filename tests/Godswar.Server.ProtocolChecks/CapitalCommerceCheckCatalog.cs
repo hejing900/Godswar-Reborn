@@ -15,8 +15,12 @@ internal static class CapitalCommerceCheckCatalog
         (PostgresCapitalShopPurchaseIntegrationChecks.CheckName,
             PostgresCapitalShopPurchaseIntegrationChecks.RunAsync),
         (PostgresGameplayFeatureAdapterChecks.CheckName,
+<<<<<<< HEAD
             PostgresGameplayFeatureAdapterChecks.RunAsync),
         (QuestProtocolChecks.CheckName,
             QuestProtocolChecks.RunAsync)
+=======
+            PostgresGameplayFeatureAdapterChecks.RunAsync)
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     ];
 }

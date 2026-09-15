@@ -7,6 +7,7 @@ namespace Godswar.Server.Domain.World.Content;
 /// </summary>
 internal static class WarehouseNpcProtocol
 {
+<<<<<<< HEAD
     public const uint AthensWarehouseNpcId = 5165;
     public const uint SpartaWarehouseNpcId = 47750;
     public const uint DuelArenaWarehouseNpcId = 5202;
@@ -16,6 +17,12 @@ internal static class WarehouseNpcProtocol
     public const uint AthensSecondaryWarehouseNpcId = 5238;
     public const uint SpartaSecondaryWarehouseNpcId = 5097;
     public const uint AthensManagerNpcId = 5272;
+=======
+    public const uint AthensWarehouseNpcId = 5164;
+    public const uint SpartaWarehouseNpcId = 47750;
+    public const uint DuelArenaWarehouseNpcId = 5202;
+    public const uint AthensManagerNpcId = 5273;
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public const uint SpartaManagerNpcId = 5131;
 
     public const int ManagerDialogIndex = 106;
@@ -32,8 +39,11 @@ internal static class WarehouseNpcProtocol
         (npcKey, interactionId) is
             ("Athens_025", AthensWarehouseNpcId) or
             ("Sparta_023", SpartaWarehouseNpcId) or
+<<<<<<< HEAD
             ("Athens_100", AthensSecondaryWarehouseNpcId) or
             ("Sparta_100", SpartaSecondaryWarehouseNpcId) or
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             ("DuelArena_001", DuelArenaWarehouseNpcId);
 
     public static bool IsDuelArenaWarehouseEndpoint(

@@ -304,7 +304,10 @@ internal sealed partial class GameSessionRegistry
             $"impact-skill={impactSkillId} damage={damage} " +
             $"hp={targetContext.Character.CurrentHp}/" +
             $"{targetContext.Character.MaxHp} killed={killed}");
+<<<<<<< HEAD
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         finally
         {

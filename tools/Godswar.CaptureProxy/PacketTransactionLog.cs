@@ -133,7 +133,11 @@ sealed partial class PacketTransactionLog : IAsyncDisposable
             }
             catch (Exception ex)
             {
+<<<<<<< HEAD
                 Console.Error.WriteLine($"[数据库] 写入 packet_transactions 失败：{ex.Message}");
+=======
+                Console.Error.WriteLine($"[db] packet transaction insert failed: {ex.Message}");
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             }
         }
     }

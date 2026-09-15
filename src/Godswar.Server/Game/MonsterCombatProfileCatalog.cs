@@ -129,13 +129,18 @@ internal sealed class MonsterCombatProfileCatalog
                 out var template) ||
             _fallback.TryGetValue(monster.TemplateKey, out template);
         template = known ? template : TemplateProfile.Default;
+<<<<<<< HEAD
         var profile = Resolve(
+=======
+        return Resolve(
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             monster.Tier,
             template,
             authoritativeIsElite: known && template.IsElite,
             // Unknown published identity fails closed for boss-control
             // immunity without changing the default combat-rating scale.
             authoritativeIsBoss: !known || template.IsBoss);
+<<<<<<< HEAD
         // A passive spawn's own level still scales its health and defense, but
         // what it hits back with does not: the reference's level 141 spies in
         // Athens city take exactly one point off whatever character disturbs
@@ -143,6 +148,8 @@ internal sealed class MonsterCombatProfileCatalog
         return MonsterAggroPolicy.IsPassiveTemplate(monster.TemplateKey)
             ? profile with { PhysicalAttack = 1, MagicAttack = 1 }
             : profile;
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     internal static MonsterCombatProfile Resolve(

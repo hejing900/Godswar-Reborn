@@ -6,6 +6,7 @@ using System.Threading.Channels;
 using Godswar.Server.Packets;
 using Npgsql;
 
+<<<<<<< HEAD
 // 控制台默认使用系统 ANSI 代码页，中文提示会显示成乱码。
 // 在打印任何内容之前把输出编码切成 UTF-8。
 try
@@ -47,6 +48,9 @@ catch (ArgumentException ex)
     return 1;
 }
 
+=======
+var options = Options.Parse(args);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(options.OutputPath))!);
 
 using var cts = new CancellationTokenSource();
@@ -60,6 +64,7 @@ await using var log = new CaptureLog(options.OutputPath);
 await using var packetLog = await PacketTransactionLog.CreateAsync(options, cts.Token);
 var state = new ProxyState(options.DefaultGameHost, options.DefaultGamePort);
 
+<<<<<<< HEAD
 Console.WriteLine("========================================");
 Console.WriteLine("  GodsWar 抓包代理（Capture Proxy）");
 Console.WriteLine("========================================");
@@ -79,6 +84,23 @@ if (packetLog is not null)
 Console.WriteLine();
 Console.WriteLine("请把游戏客户端连接到上面的登录端口，然后在游戏里操作需要抓取的功能。");
 Console.WriteLine("按 Ctrl+C 停止。");
+=======
+Console.WriteLine("Godswar capture proxy");
+Console.WriteLine($"Login:  0.0.0.0:{options.LocalLoginPort} -> {options.LoginHost}:{options.LoginPort}");
+Console.WriteLine($"Game:   0.0.0.0:{options.LocalGamePort} -> redirect target");
+Console.WriteLine($"Rewrite game redirect to #{options.LocalAdvertisedHost}:{options.LocalGamePort}");
+Console.WriteLine($"Log:    {Path.GetFullPath(options.OutputPath)}");
+Console.WriteLine(packetLog is null
+    ? "DB:     disabled"
+    : $"DB:     packet_transactions session={packetLog.SessionId}");
+if (packetLog is not null)
+{
+    Console.WriteLine(options.MonsterMapId is short monsterMapId
+        ? $"Mobs:   explicit map {monsterMapId}"
+        : "Mobs:   packet log only; spawn upserts require --monster-map-id");
+}
+Console.WriteLine("Press Ctrl+C to stop.");
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
 var login = RunListenerAsync(
     "LOGIN",
@@ -100,9 +122,12 @@ var game = RunListenerAsync(
 
 await Task.WhenAll(login, game);
 
+<<<<<<< HEAD
 // 顶层语句中只要出现 return 带值，就必须保证所有路径都返回值。
 return 0;
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 static async Task RunListenerAsync(
     string name,
     int localPort,
@@ -300,7 +325,11 @@ static byte[] ReapplyPatchToRaw(byte[] raw, byte[] clear, byte[] patchedClear)
 
     if (patchedClear.Length != raw.Length)
     {
+<<<<<<< HEAD
         throw new InvalidOperationException("重写明文数据包时不允许改变字节数。");
+=======
+        throw new InvalidOperationException("Clear-text packet rewrite cannot change byte count.");
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     var output = raw.ToArray();

@@ -120,8 +120,12 @@ internal sealed partial class MonsterMapRuntime
                 }
 
                 if (MonsterAggroPolicy.IsAggressive(
+<<<<<<< HEAD
                         monster.Definition.Tier,
                         monster.Definition.TemplateKey) &&
+=======
+                        monster.Definition.Tier) &&
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     MonsterAggroPolicy.TrySelectNearestAggressiveTarget(
                         targetsByCharacterId,
                         monster.CurrentX,

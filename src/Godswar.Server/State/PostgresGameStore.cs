@@ -73,6 +73,7 @@ internal sealed partial class PostgresGameStore :
         cb.position_revision,
         cb.character_slot, cb.lifecycle_state, cb.lifecycle_version,
         cb.deleted_at, cb.restore_until, cb.purge_after,
+<<<<<<< HEAD
         cb.fighter_level_sealed, cb.server_id, cb."BindingGold",
         COALESCE(cb.medusa_honor_points, 0),
         COALESCE(cb.exchange_point, 0),
@@ -95,6 +96,9 @@ internal sealed partial class PostgresGameStore :
             WHERE quest.character_id = cb.id AND quest.state = 1
             ORDER BY quest.quest_id
         )
+=======
+        cb.fighter_level_sealed, cb.server_id, cb."BindingGold"
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         """;
 
     private readonly NpgsqlDataSource _dataSource;

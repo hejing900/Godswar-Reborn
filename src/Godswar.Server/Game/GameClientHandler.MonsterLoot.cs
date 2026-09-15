@@ -7,6 +7,7 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
+<<<<<<< HEAD
     /// <summary>
     /// Answers the client's corpse click (C2S 10050, 16-byte payload) so the
     /// client opens that corpse's loot window and only then requests the drop.
@@ -157,6 +158,8 @@ internal sealed partial class GameClientHandler
         return response;
     }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private async Task HandleMonsterLootPickupAsync(
         GamePacket packet,
         CancellationToken cancellationToken)

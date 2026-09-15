@@ -33,6 +33,7 @@ internal sealed record CapitalShopPurchaseResult(
 {
     public bool Purchased => Status == CapitalShopPurchaseStatus.Purchased;
 }
+<<<<<<< HEAD
 
 internal enum CapitalShopSaleStatus
 {
@@ -60,3 +61,5 @@ internal sealed record CapitalShopSaleResult(
     public static CapitalShopSaleResult Rejected(CapitalShopSaleStatus status) =>
         new(status, Character: null, 0, 0, 0, 0, 0);
 }
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0

@@ -1,7 +1,10 @@
 using System.Buffers.Binary;
+<<<<<<< HEAD
 using Godswar.Server.Application.World;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Networking;
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Packets;
 using Godswar.Server.Protocol;
 using Godswar.Server.Domain.World.Content;
@@ -31,23 +34,29 @@ internal sealed partial class GameClientHandler
         if (!TryResolveMapNpc(npcId, out var npc))
         {
             _warehouseAccessContext = null;
+<<<<<<< HEAD
             QuestFrameTrace.Append(
                 $"[npc] dialog open ignored: unknown npc={npcId} " +
                 $"map={_character?.CurrentMap.ToString() ?? "<none>"} " +
                 $"len={packet.Length}",
                 []);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Console.WriteLine(
                 $"[npc] dialog open ignored: unknown npc={npcId} " +
                 $"map={_character?.CurrentMap.ToString() ?? "<none>"}");
             return;
         }
 
+<<<<<<< HEAD
         QuestFrameTrace.Append(
             $"[npc] dialog open received npc={npcId} key={npc.NpcKey} " +
             $"map={npc.MapId} len={packet.Length} buffer={packet.Buffer.Length} " +
             $"carried={_character?.Quests.Count ?? 0}",
             []);
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         // The stock client can leave normal storage open while the related
         // manager dialogue is used. Preserve only an access lease that was
         // already issued by the normal Warehouse NPC; the manager never
@@ -59,6 +68,7 @@ internal sealed partial class GameClientHandler
             _warehouseAccessContext = null;
         }
 
+<<<<<<< HEAD
         // The flags word is a bitmask, so an npc whose normal page is something
         // else keeps it and gains the quest page. Computed once here because every
         // branch below needs the same answer.
@@ -66,6 +76,8 @@ internal sealed partial class GameClientHandler
             ? QuestContentBaseline.QuestOpenFlags
             : 0;
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (WarehouseNpcProtocol.IsWarehouseEndpoint(
                 npc.NpcKey,
                 npc.InteractionId))
@@ -77,8 +89,12 @@ internal sealed partial class GameClientHandler
                     PacketBuilder.WarehouseDialogOpenAck(
                         npc.InteractionId,
                         WarehouseNpcProtocol.ClientScriptKey(
+<<<<<<< HEAD
                             npc.NpcKey, npc.InteractionId),
                         questFlags),
+=======
+                            npc.NpcKey, npc.InteractionId)),
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     cancellationToken,
                     "WarehouseDialogOpenAck");
             }
@@ -91,6 +107,7 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+<<<<<<< HEAD
         if (QuestContentBaseline.IsNewbieGuide(npc.InteractionId))
         {
             // Replayed from the reference capture: the guide opens with the 10067
@@ -145,11 +162,17 @@ internal sealed partial class GameClientHandler
                 $"[npc] dialog open branch=duel-arena npc={npc.InteractionId} " +
                 $"key={npc.NpcKey}",
                 []);
+=======
+        if (await TryHandleDuelArenaNpcDialogOpenAsync(
+                packet, npc, cancellationToken))
+        {
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             return;
         }
 
         if (await TryHandleCapitalNpcDialogOpenAsync(
                 npc,
+<<<<<<< HEAD
                 questFlags,
                 cancellationToken))
         {
@@ -161,10 +184,19 @@ internal sealed partial class GameClientHandler
         }
 
         var (routes, text) = await ResolveNpcDialogueRoutesAsync(
+=======
+                cancellationToken))
+        {
+            return;
+        }
+
+        var routes = await ResolveNpcDialogueRoutesAsync(
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             npc,
             cancellationToken);
         if (routes.Count == 0)
         {
+<<<<<<< HEAD
             // A published NPC may carry dialogue text without any extended
             // function: the Wishing Pool is one, and the captured Duel Arena
             // Vendor and capital Teaching Manager are others. Advertise the
@@ -189,6 +221,8 @@ internal sealed partial class GameClientHandler
                 $"text={(text is null ? "none" : "empty")} " +
                 $"capital={CapitalNpcServiceProtocol.TryResolve(npc, out _)}",
                 []);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             return;
         }
 
@@ -245,11 +279,14 @@ internal sealed partial class GameClientHandler
                 $"behavior={route.Behavior} dialog={route.DialogIndex} " +
                 $"order={route.RouteOrder}");
         }
+<<<<<<< HEAD
 
         QuestFrameTrace.Append(
             $"[npc] dialog open branch=routes npc={npc.InteractionId} " +
             $"key={npc.NpcKey} script={clientScriptKey} routes={routes.Count}",
             []);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     private async Task HandleNpcDialogPageRequestAsync(
@@ -316,6 +353,7 @@ internal sealed partial class GameClientHandler
         Console.WriteLine(
             $"[npc] page request npc={npcId} key={npc.NpcKey}");
     }
+<<<<<<< HEAD
 
     /// <summary>
     /// Opens the stock client's plain description window for a published NPC
@@ -345,4 +383,6 @@ internal sealed partial class GameClientHandler
             $"[npc] description open npc={npc.InteractionId} " +
             $"key={npc.NpcKey}");
     }
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

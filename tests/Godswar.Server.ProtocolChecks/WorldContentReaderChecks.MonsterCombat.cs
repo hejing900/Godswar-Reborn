@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 using System.Buffers.Binary;
 using Godswar.Server.Application.World;
 using Godswar.Server.Domain.World.Content;
+=======
+using Godswar.Server.Application.World;
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Game;
 
 namespace Godswar.Server.ProtocolChecks;
@@ -78,6 +82,7 @@ internal static partial class WorldContentReaderChecks
             WorldContentRevisionHasher.HashGameplay(magicalContent).Sha256 !=
                 WorldContentRevisionHasher.HashGameplay(specialContent).Sha256,
             "monster attack type participates in the sealed gameplay revision");
+<<<<<<< HEAD
 
         CheckPassiveSpawnCombat();
     }
@@ -131,5 +136,7 @@ internal static partial class WorldContentReaderChecks
         var deer = MonsterCombatProfileCatalog.Empty.Resolve(
             Spawn("A_normal_deer_001", 3));
         Check.Equal(31, deer.PhysicalAttack, "an ordinary spawn keeps its tier attack");
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 }

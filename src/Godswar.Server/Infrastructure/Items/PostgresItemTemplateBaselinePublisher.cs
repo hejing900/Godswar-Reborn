@@ -22,8 +22,12 @@ internal static partial class PostgresItemTemplateBaselinePublisher
     // The revision hashes the complete manifest; this bounded provenance label
     // identifies the current additions without restating every prior family.
     private const string PublicationSource =
+<<<<<<< HEAD
         "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1+" +
         "client-catalog-v1";
+=======
+        "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1";
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
     public static async Task<ItemTemplatePublicationResult>
         EnsurePublishedAsync(
@@ -111,12 +115,15 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                     transaction,
                     existing.Revision,
                     cancellationToken);
+<<<<<<< HEAD
             var hasClientCatalogItems =
                 await PublishedClientCatalogItemsAreCompleteAsync(
                     connection,
                     transaction,
                     existing.Revision,
                     cancellationToken);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             if (hasClassSuitItems &&
                 hasElementalContent &&
                 hasSocketSpells &&
@@ -126,7 +133,10 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                 hasWarehouseItems &&
                 hasOpal &&
                 hasMountSpeedProfile &&
+<<<<<<< HEAD
                 hasClientCatalogItems &&
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 publishedHolySuit.OperationPolicy.Equals(
                     ReviewedHolySuitPolicy.OperationPolicy))
             {
@@ -171,11 +181,14 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                     transaction,
                     existing.Revision,
                     cancellationToken);
+<<<<<<< HEAD
                 await EnsureClientCatalogMutableTemplateCompatibilityAsync(
                     connection,
                     transaction,
                     existing.Revision,
                     cancellationToken);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 await transaction.CommitAsync(cancellationToken);
                 return new ItemTemplatePublicationResult(
                     existing.Revision,
@@ -281,11 +294,14 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             transaction,
             revision,
             cancellationToken);
+<<<<<<< HEAD
         await EnsureClientCatalogMutableTemplateCompatibilityAsync(
             connection,
             transaction,
             revision,
             cancellationToken);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await PublishRevisionAsync(
             connection,
             transaction,

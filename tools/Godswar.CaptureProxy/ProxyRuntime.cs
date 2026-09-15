@@ -31,7 +31,11 @@ sealed class PacketFrameAccumulator
     {
         if (clearChunk.Length != rawChunk.Length)
         {
+<<<<<<< HEAD
             throw new InvalidOperationException("明文与原始数据包缓冲区长度必须一致。");
+=======
+            throw new InvalidOperationException("Clear and raw packet buffers must have the same length.");
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         _clearPending.AddRange(clearChunk.ToArray());

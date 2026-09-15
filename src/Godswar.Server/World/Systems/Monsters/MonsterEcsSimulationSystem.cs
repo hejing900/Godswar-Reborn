@@ -136,8 +136,12 @@ internal sealed class MonsterEcsSimulationSystem(
             }
 
             if (MonsterAggroPolicy.IsAggressive(
+<<<<<<< HEAD
                     identity.Definition.Tier,
                     identity.Definition.TemplateKey) &&
+=======
+                    identity.Definition.Tier) &&
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 MonsterAggroPolicy.TrySelectNearestAggressiveTarget(
                     frame.Targets,
                     transform.X,

@@ -17,7 +17,10 @@ internal static partial class WarehouseHandlerChecks
     public static async Task RunAsync()
     {
         await CheckCommittedDepositAsync();
+<<<<<<< HEAD
         await CheckCommittedWithdrawAsync();
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await CheckManagerClickPreservesOpenAccessAsync();
         await CheckDuplicateDepositAsync();
         await CheckExpiredAccessAsync();
@@ -129,6 +132,7 @@ internal static partial class WarehouseHandlerChecks
             "fresh transfer settles securely after authoritative projections");
     }
 
+<<<<<<< HEAD
     private static async Task CheckCommittedWithdrawAsync()
     {
         var beforeCharacter = CharacterSnapshot(
@@ -218,6 +222,8 @@ internal static partial class WarehouseHandlerChecks
             "withdrawal settles securely as an applied transfer");
     }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static async Task CheckDuplicateDepositAsync()
     {
         var afterCharacter = CharacterSnapshot(
@@ -478,6 +484,7 @@ internal static partial class WarehouseHandlerChecks
     private static ushort ReadOpcode(byte[] packet) =>
         BinaryPrimitives.ReadUInt16LittleEndian(packet.AsSpan(2));
 
+<<<<<<< HEAD
     private static bool IsWarehouseSourceClear(
         byte[] packet,
         int warehouseSlot,
@@ -496,6 +503,8 @@ internal static partial class WarehouseHandlerChecks
                 (ushort)WarehouseStorageType.Normal;
     }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static bool IsKitBagClear(byte[] packet, int slot)
     {
         var page = Math.DivRem(slot, 24, out var cell);

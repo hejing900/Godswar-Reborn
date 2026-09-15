@@ -111,6 +111,7 @@ internal sealed partial class GameClientHandler : IClientHandler
                             ServerTraceOutcome.Cancelled);
                         throw;
                     }
+<<<<<<< HEAD
                     catch (Exception ex)
                     {
                         activity.Complete(
@@ -124,6 +125,12 @@ internal sealed partial class GameClientHandler : IClientHandler
                             $"len={packet.Length} " +
                             $"character={_character?.Name ?? "(none)"} " +
                             $"{ex.GetType().Name}: {ex.Message}");
+=======
+                    catch
+                    {
+                        activity.Complete(
+                            ServerTraceOutcome.Faulted);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                         throw;
                     }
                 }

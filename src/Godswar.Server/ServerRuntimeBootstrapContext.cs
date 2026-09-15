@@ -3,12 +3,18 @@ using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.Realms;
 using Godswar.Server.Application.Rewards;
 using Godswar.Server.Application.World;
+<<<<<<< HEAD
 using Godswar.Server.Application.World.Content;
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Application.Warehouse;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Infrastructure;
 using Godswar.Server.Infrastructure.Rewards;
+<<<<<<< HEAD
 using Godswar.Server.Infrastructure.WorldContent;
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Infrastructure.WorldInstances;
 using Godswar.Server.State;
 
@@ -79,6 +85,7 @@ internal sealed class ServerRuntimeBootstrapContext
             PostgresMonsterRewardPolicySnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString,
                 cancellationToken);
+<<<<<<< HEAD
         var monsterLoot = await
             PostgresMonsterLootContentSnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString,
@@ -86,6 +93,10 @@ internal sealed class ServerRuntimeBootstrapContext
         MedusaRewardPolicyCatalog.Install(medusaRewards);
         MedusaMonsterContentCatalog.Install(medusaMonsters);
         MonsterLootContentCatalog.Install(monsterLoot);
+=======
+        MedusaRewardPolicyCatalog.Install(medusaRewards);
+        MedusaMonsterContentCatalog.Install(medusaMonsters);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         return new(
             options,
             world,

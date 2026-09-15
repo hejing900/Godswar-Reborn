@@ -96,7 +96,11 @@ now pass locally; production activation remains open. Records:
   cadence, with `1.7` units and `1500 ms` as the unarmed fallback. At most `0.5`
   units of client-reported auto-approach is reconciled; arbitrary client
   coordinates and request-tail bytes remain untrusted.
+<<<<<<< HEAD
 - Normal monsters are passive until damaged, then chase the attacker, strike on the captured cadence, persist player damage/death, and clear aggro on death, disconnect, map change, or leash failure. The installed client's `10028` type-2 free revive (historically `10019`) validates the local dead player before returning them to the death map's own captured revive point with 10% HP/MP; maps without a captured landing keep the camp fallback, and unsupported revive modes do not mutate state.
+=======
+- Normal monsters are passive until damaged, then chase the attacker, strike on the captured cadence, persist player damage/death, and clear aggro on death, disconnect, map change, or leash failure. The preserved original `10019` type-2 free revive validates the local dead player before returning them to camp with 10% HP/MP; unsupported revive modes do not mutate state.
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 - Higher-tier monster attack extrapolation is isolated in `MonsterCombatResolver`; the captured normal-monster EXP multiplier and original tier curve are isolated in `MonsterRewardCatalog`; fighter thresholds live in `PlayerExperienceCatalog`. Update those catalogs when broader working-server captures replace the current normal-field assumptions.
 - Monster-kill EXP modifiers use independent additive stacks for Fighter, Talent, and pet EXP. Premium Battle Pass and the configured faction-area benefit enter all three stacks; Donator and Trick or Treat remain Fighter-only, while Talent- and pet-specific status families remain isolated. A separate database policy applies a startup-pinned `1x`-`5x` global multiplier to all three channels, with one final truncation after the additive and global multipliers.
 - Active EXP effects are composed into the native full-status snapshot on opcode `10167`; custom client statuses `1500-1504`, `1506`, and `1507` identify Donator tiers, faction-area control, and Premium Battle Pass. Status `1505` remains unused because an older Erebus Lion patch assigned it before the mount moved to `1390`.

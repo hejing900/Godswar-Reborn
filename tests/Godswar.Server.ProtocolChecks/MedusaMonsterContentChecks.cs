@@ -170,10 +170,14 @@ internal static class MedusaMonsterContentChecks
             drop.LootIndex,
             drop.ItemId,
             drop.Quantity)).ToArray();
+<<<<<<< HEAD
         var packet = PacketBuilder.MonsterLoot(
             0x1234_5678,
             deathEventId,
             entries);
+=======
+        var packet = PacketBuilder.MonsterLoot(0x1234_5678, entries);
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Check.True(
             packet.Length == 228 &&
             BinaryPrimitives.ReadUInt16LittleEndian(packet) == 228 &&
@@ -193,20 +197,27 @@ internal static class MedusaMonsterContentChecks
                     BinaryPrimitives.ReadUInt32LittleEndian(
                         item.Slice(sentinel * 4)) == uint.MaxValue;
             }
+<<<<<<< HEAD
             var groundKey = MonsterLootGroundKey.Resolve(
                 deathEventId,
                 entries[index].RuleLootIndex);
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Check.True(
                 BinaryPrimitives.ReadUInt32LittleEndian(item) ==
                     entries[index].ItemId &&
                 sentinelsMatch &&
                 BinaryPrimitives.ReadUInt32LittleEndian(item.Slice(24)) ==
                     ((uint)entries[index].Quantity << 24 | 0x101u) &&
+<<<<<<< HEAD
                 item[28..64].IndexOfAnyExcept((byte)0) < 0 &&
                 BinaryPrimitives.ReadUInt32LittleEndian(item.Slice(64)) ==
                     groundKey.High &&
                 BinaryPrimitives.ReadUInt32LittleEndian(item.Slice(68)) ==
                     groundKey.Low,
+=======
+                item[28..].IndexOfAnyExcept((byte)0) < 0,
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 $"drop {index} matches captured opcode-10029 layout");
         }
 

@@ -35,7 +35,9 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
+        // 混合生命周期档案不再拒绝建角请求,否则客户端永远无法创建角色。
+        // Do not reject character creation for a mixed lifecycle profile;
+        // otherwise the client can never create a character.
         //if (_characterLifecycleCommands is not null)
         //{
         //    await RejectMixedLifecycleProfileAsync(
@@ -44,16 +46,6 @@ internal sealed partial class GameClientHandler
         //        cancellationToken);
         //    return;
         //}
-=======
-        if (_characterLifecycleCommands is not null)
-        {
-            await RejectMixedLifecycleProfileAsync(
-                CommandFamily.CharacterCreate,
-                "create",
-                cancellationToken);
-            return;
-        }
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
         await HandleCompatibilityCharacterCreateAsync(
             character,
@@ -83,7 +75,9 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
+        // 理由同上:删除角色走兼容分支,不再因混合档案被拒绝。
+        // Same rationale as character creation: deletion falls through to the
+        // compatibility path instead of being rejected.
         //if (_characterLifecycleCommands is not null)
         //{
         //    await RejectMixedLifecycleProfileAsync(
@@ -92,16 +86,6 @@ internal sealed partial class GameClientHandler
         //        cancellationToken);
         //    return;
         //}
-=======
-        if (_characterLifecycleCommands is not null)
-        {
-            await RejectMixedLifecycleProfileAsync(
-                CommandFamily.CharacterDelete,
-                "delete",
-                cancellationToken);
-            return;
-        }
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
         await HandleCompatibilityCharacterDeleteAsync(
             characterName,

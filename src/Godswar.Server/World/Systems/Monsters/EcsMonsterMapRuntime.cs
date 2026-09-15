@@ -231,7 +231,12 @@ internal sealed class EcsMonsterMapRuntime : IMonsterMapRuntime
                 ref _world.Get<MonsterCombatComponent>(entity);
             if (vitals.SpawnGeneration != expectedSpawnGeneration ||
                 vitals.IsAlive ||
+<<<<<<< HEAD
                 !vitals.IsSpawned)
+=======
+                !vitals.IsSpawned ||
+                combat.Phase != MonsterCombatPhase.AwaitingRetirement)
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             {
                 return false;
             }

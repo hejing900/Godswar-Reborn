@@ -135,6 +135,7 @@ internal sealed partial class JsonGameStore :
         }
     }
 
+<<<<<<< HEAD
     public async Task SaveCharacterQuestStateAsync(
         int accountId,
         int characterId,
@@ -201,6 +202,8 @@ internal sealed partial class JsonGameStore :
         }
     }
 
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public async Task<CharacterProgressionResult?> ApplyMonsterKillRewardAsync(
         int accountId,
         int characterId,

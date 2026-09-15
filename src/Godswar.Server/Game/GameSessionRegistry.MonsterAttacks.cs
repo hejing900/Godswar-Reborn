@@ -219,6 +219,7 @@ internal sealed partial class GameSessionRegistry
                                         "was held.");
                                 }
                                 deathLifeRevision = advancedLifeRevision;
+<<<<<<< HEAD
                                 ReviveTrace.Log(
                                     $"KILL name={targetContext.Character.Name} " +
                                     $"map={targetContext.Character.CurrentMap} " +
@@ -230,6 +231,8 @@ internal sealed partial class GameSessionRegistry
                                     $"map={targetContext.Character.CurrentMap} " +
                                     $"pos={targetContext.Character.PositionX:F2},{targetContext.Character.PositionZ:F2} " +
                                     $"hp={targetContext.Character.CurrentHp}/{targetContext.Character.MaxHp}");
+=======
+>>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                             }
                         }
                     }
