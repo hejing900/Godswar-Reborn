@@ -35,16 +35,8 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
-        //if (_characterLifecycleCommands is not null)
-        //{
-        //    await RejectMixedLifecycleProfileAsync(
-        //        CommandFamily.CharacterCreate,
-        //        "create",
-        //        cancellationToken);
-        //    return;
-        //}
-=======
+        // A profile that routes lifecycle through the durable executor must
+        // never also mutate the broad legacy store; the model checks pin this.
         if (_characterLifecycleCommands is not null)
         {
             await RejectMixedLifecycleProfileAsync(
@@ -53,7 +45,6 @@ internal sealed partial class GameClientHandler
                 cancellationToken);
             return;
         }
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
         await HandleCompatibilityCharacterCreateAsync(
             character,
@@ -83,16 +74,6 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
-        //if (_characterLifecycleCommands is not null)
-        //{
-        //    await RejectMixedLifecycleProfileAsync(
-        //        CommandFamily.CharacterDelete,
-        //        "delete",
-        //        cancellationToken);
-        //    return;
-        //}
-=======
         if (_characterLifecycleCommands is not null)
         {
             await RejectMixedLifecycleProfileAsync(
@@ -101,7 +82,6 @@ internal sealed partial class GameClientHandler
                 cancellationToken);
             return;
         }
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
         await HandleCompatibilityCharacterDeleteAsync(
             characterName,

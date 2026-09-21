@@ -4,7 +4,13 @@ internal enum KitBagItemGrantStatus
 {
     Added,
     CharacterNotFound,
-    InsufficientCapacity
+    InsufficientCapacity,
+
+    /// <summary>
+    /// The character could not cover the gold cost the caller attached to the
+    /// grant. Nothing was written.
+    /// </summary>
+    InsufficientGold
 }
 
 internal sealed record KitBagItemGrantResult(

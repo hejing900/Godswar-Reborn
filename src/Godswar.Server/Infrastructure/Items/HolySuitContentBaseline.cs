@@ -18,6 +18,13 @@ internal static class HolySuitContentBaseline
     private const string Icon2 =
         "./Localization/en_us/UI/Texture/Icon2.gwo";
 
+    internal const int DiviniumWareItemId =
+        HolySuitContentBaselineV2.DiviniumWareItemId;
+    internal const string WareTexture =
+        HolySuitContentBaselineV2.WareTexture;
+    internal const string DiviniumIcon =
+        HolySuitContentBaselineV2.DiviniumIcon;
+
     public static IReadOnlyList<ItemTemplateSeed> ItemTemplates { get; } =
     [
         Item(9010, "Shenqi9010", "Bronze Ware", "0,0", 0, "0,0", 99),

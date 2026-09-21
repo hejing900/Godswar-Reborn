@@ -285,12 +285,7 @@ internal static partial class MedusaInstanceOwnershipChecks
             ClientSession session)
     {
         var advanceAt = DateTimeOffset.UtcNow.AddMinutes(1);
-        _ = fixture.Runtime.Owner.Invoke(
-            map => map.AdvanceMonsters(
-                advanceAt,
-                memberSession => fixture.Registry
-                    .GetPlayerLifeRevision(memberSession)),
-            TimeSpan.FromSeconds(3));
+        _ = MonsterOwnerCheckSteps.Advance(fixture.Runtime, fixture.Registry, advanceAt);
         var initial = FindMonster(
             fixture.Map,
             fixture.RosterSpawnId);
@@ -320,12 +315,8 @@ internal static partial class MedusaInstanceOwnershipChecks
 
         for (var index = 1; index <= 160; index++)
         {
-            _ = fixture.Runtime.Owner.Invoke(
-                map => map.AdvanceMonsters(
-                    advanceAt.AddMilliseconds(index * 100),
-                    memberSession => fixture.Registry
-                        .GetPlayerLifeRevision(memberSession)),
-                TimeSpan.FromSeconds(3));
+            _ = MonsterOwnerCheckSteps.Advance(fixture.Runtime, fixture.Registry,
+                advanceAt.AddMilliseconds(index * 100));
             var current = RequiredMonster(
                 fixture.Map,
                 initial.ObjectId);

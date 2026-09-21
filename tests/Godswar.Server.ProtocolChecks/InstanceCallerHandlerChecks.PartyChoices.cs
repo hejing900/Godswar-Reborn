@@ -166,7 +166,7 @@ internal static partial class InstanceCallerHandlerChecks
         Check.True(
             leader.Character.CurrentMap == leader.SourceMapId &&
             GetSourceInstanceId(leader) == sourceInstanceId &&
-            leader.ReadPackets().Skip(before).Single().SequenceEqual(
+            ReadAdmissionPackets(leader.ReadPackets().Skip(before)).Single().SequenceEqual(
                 PacketBuilder.NpcFunctionActionResponse(
                     InstanceCallerProtocol.AthensNpcId,
                     InstanceCallerProtocol.DialogIndex,

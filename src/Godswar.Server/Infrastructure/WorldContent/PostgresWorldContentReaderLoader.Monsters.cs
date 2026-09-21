@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 using System.Buffers.Binary;
 using System.Text;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Application.World;
 using Godswar.Server.Domain.World.Content;
 using Npgsql;
@@ -145,7 +142,6 @@ internal static partial class PostgresWorldContentReaderLoader
 
         return canonical;
     }
-<<<<<<< HEAD
 
     // ========================================================================
     // Authored Thermopylae (map 8) population.
@@ -699,6 +695,4 @@ internal static partial class PostgresWorldContentReaderLoader
 
         return [.. spawns];
     }
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

@@ -253,16 +253,11 @@ internal static class WarehouseContractChecks
         }
 
         Check.True(
-<<<<<<< HEAD
             WarehouseNpcProtocol.IsWarehouseEndpoint("Athens_025", 5165) &&
-=======
-            WarehouseNpcProtocol.IsWarehouseEndpoint("Athens_025", 5164) &&
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             WarehouseNpcProtocol.IsWarehouseEndpoint("Sparta_023", 47750) &&
             !WarehouseNpcProtocol.IsWarehouseEndpoint("Sparta_023", 5022) &&
             WarehouseNpcProtocol.IsManagerEndpoint("Sparta_134", 5131) &&
             !WarehouseNpcProtocol.IsManagerEndpoint("Sparta_134", 5133),
-<<<<<<< HEAD
             "runtime routes accept the interaction IDs the server publishes, " +
             "which for a captured map are the reference's own");
 
@@ -286,9 +281,6 @@ internal static class WarehouseContractChecks
             !WarehouseNpcProtocol.IsWarehouseEndpoint("Sparta_023", 5097) &&
             !WarehouseNpcProtocol.IsWarehouseEndpoint("Athens_025", 5238),
             "each teller key is bound to its own published interaction ID");
-=======
-            "runtime routes accept published interaction IDs, not source provenance IDs");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     private static void CheckAccessLeaseBounds()

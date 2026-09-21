@@ -14,7 +14,6 @@ internal readonly record struct ReviveRequest(
     {
         request = default;
         if (packet.Length != PacketLength ||
-<<<<<<< HEAD
             BinaryPrimitives.ReadUInt16LittleEndian(packet[..2]) != PacketLength)
         {
             return false;
@@ -24,11 +23,6 @@ internal readonly record struct ReviveRequest(
         // earlier lineage captures carried the identical body on 10019.
         var opcode = BinaryPrimitives.ReadUInt16LittleEndian(packet.Slice(2, 2));
         if (opcode != Opcodes.Revive && opcode != Opcodes.ReviveLegacy)
-=======
-            BinaryPrimitives.ReadUInt16LittleEndian(packet[..2]) != PacketLength ||
-            BinaryPrimitives.ReadUInt16LittleEndian(packet.Slice(2, 2)) !=
-                Opcodes.Revive)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         {
             return false;
         }

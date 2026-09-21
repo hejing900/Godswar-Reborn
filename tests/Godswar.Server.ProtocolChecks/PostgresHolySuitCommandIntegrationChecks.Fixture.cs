@@ -10,7 +10,9 @@ internal static partial class PostgresHolySuitCommandIntegrationChecks
 {
     private static async Task<Fixture> CreateFixtureAsync(
         string connectionString,
-        int realmId = 1)
+        int realmId = 1,
+        int bindingGold = 0,
+        short initialPrisms = 20)
     {
         var token = Guid.NewGuid().ToString("N")[..12];
         await using var connection = new NpgsqlConnection(connectionString);
@@ -26,8 +28,8 @@ internal static partial class PostgresHolySuitCommandIntegrationChecks
             """
             INSERT INTO character_base(
                 account_id,server_id,name,camp,profession,fighter_job_lv,
-                fighter_job_exp,"Money","Stone")
-            VALUES(@accountId,@realmId,@name,1,1,80,4000000000,0,0)
+                fighter_job_exp,"Money","Stone","BindingGold")
+            VALUES(@accountId,@realmId,@name,1,1,80,4000000000,0,0,@bindingGold)
             RETURNING id;
             """,
             connection,
@@ -35,6 +37,7 @@ internal static partial class PostgresHolySuitCommandIntegrationChecks
         character.Parameters.AddWithValue("accountId", accountId);
         character.Parameters.AddWithValue("realmId", realmId);
         character.Parameters.AddWithValue("name", $"HS{token}");
+        character.Parameters.AddWithValue("bindingGold", bindingGold);
         var characterId = Convert.ToInt32(
             await character.ExecuteScalarAsync());
         await InsertItemAsync(connection, transaction, characterId, 0,
@@ -49,8 +52,11 @@ internal static partial class PostgresHolySuitCommandIntegrationChecks
             Item(9014, stack: 99));
         await InsertItemAsync(connection, transaction, characterId, 5,
             Item(9023, bound: 1));
-        await InsertItemAsync(connection, transaction, characterId, 6,
-            Item(9025, bound: 1, stack: 20));
+        if (initialPrisms > 0)
+        {
+            await InsertItemAsync(connection, transaction, characterId, 6,
+                Item(9025, bound: 1, stack: initialPrisms));
+        }
         await InsertItemAsync(connection, transaction, characterId, 7,
             Item(9024));
         Check.True(await PostgresCharacterEconomyBaseline.EnsureAsync(

@@ -62,6 +62,8 @@ internal static class StructuredLogCodes
                 "legacy_diagnostic_suppressed",
             OperationalLogEvent.StartupFailure => "startup_failure",
             OperationalLogEvent.StartupFailureFrame => "startup_failure_frame",
+            OperationalLogEvent.RuntimeFailure => "runtime_failure",
+            OperationalLogEvent.RuntimeFailureFrame => "runtime_failure_frame",
             _ => throw new ArgumentOutOfRangeException(nameof(eventId))
         };
 

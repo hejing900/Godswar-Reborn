@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "generator": "built-in image_gen",
+  "entries": [
+    {
+      "slug": "runesteel",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory upgrade material icon for a classic fantasy MMORPG, displayed at only 36x36 pixels. Primary request: a compact beveled forged metal ingot made of deep emerald green RuneSteel, two simple luminous green rune grooves; dark green metal with crisp emerald specular edges. Three-quarter isometric view, centered complete object, simple bold silhouette, thick readable edges, hand-painted polished game inventory art. Fill approximately 82% of a square canvas; small consistent padding on every side. Transparent background with real alpha. A single ingot only. No text, letters, caption, border, tile frame, pedestal, ground plane, drop shadow, surrounding sparks, loose gems or extra objects. Strong readable volume and color separation even when downscaled to 36 pixels. This is one of a coherent family of metallic ingot icons.",
+      "itemId": 9014,
+      "source": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-f328c101-cb23-4613-b035-db9d8b9c6f6d.png",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "slug": "arcanite",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory upgrade material icon for a classic fantasy MMORPG, displayed at only 36x36 pixels. Primary request: a compact beveled forged metal ingot made of rich violet Arcanite, violet crystalline facets fused into the metal, two restrained glowing arcane grooves; clear purple dominant color. Three-quarter isometric view, centered complete object, simple bold silhouette, thick readable edges, hand-painted polished game inventory art. Fill approximately 82% of a square canvas; small consistent padding on every side. Transparent background with real alpha. A single ingot only. No text, letters, caption, border, tile frame, pedestal, ground plane, drop shadow, surrounding sparks, loose gems or extra objects. Strong readable volume and color separation even when downscaled to 36 pixels. This is one of a coherent family of metallic ingot icons.",
+      "itemId": 9015,
+      "source": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-18df8bfd-d142-41e5-830b-aded5ffd9272.png",
+      "x": 36,
+      "y": 0
+    },
+    {
+      "slug": "seraphite",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory upgrade material icon for a classic fantasy MMORPG, displayed at only 36x36 pixels. Primary request: a compact beveled forged metal ingot made of fiery crimson Seraphite, deliberate bright gold bands and edge accents, glowing ember-red interior grooves; crimson dominant with legible gold accents. Three-quarter isometric view, centered complete object, simple bold silhouette, thick readable edges, hand-painted polished game inventory art. Fill approximately 82% of a square canvas; small consistent padding on every side. Transparent background with real alpha. A single ingot only. No text, letters, caption, border, tile frame, pedestal, ground plane, drop shadow, surrounding sparks, loose gems or extra objects. Strong readable volume and color separation even when downscaled to 36 pixels. This is one of a coherent family of metallic ingot icons.",
+      "itemId": 9016,
+      "source": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-22572561-616e-486d-ad02-f873ac5fb5d5.png",
+      "x": 72,
+      "y": 0
+    },
+    {
+      "slug": "divinium",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory upgrade material icon for a classic fantasy MMORPG, displayed at only 36x36 pixels. Primary request: a compact beveled forged metal ingot made of pearlescent ivory Divinium, luminous polished ivory surface with subtle iridescent cyan rose lavender highlights along bevels, restrained pale gold trim; ivory dominant. Three-quarter isometric view, centered complete object, simple bold silhouette, thick readable edges, hand-painted polished game inventory art. Fill approximately 82% of a square canvas; small consistent padding on every side. Transparent background with real alpha. A single ingot only. No text, letters, caption, border, tile frame, pedestal, ground plane, drop shadow, surrounding sparks, loose gems or extra objects. Strong readable volume and color separation even when downscaled to 36 pixels. This is one of a coherent family of metallic ingot icons.",
+      "itemId": 9017,
+      "source": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-3e7f367b-ad2e-46f7-a05e-9c2c52e9bc6d.png",
+      "x": 108,
+      "y": 0
+    }
+  ]
+}

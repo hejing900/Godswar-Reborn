@@ -1,3 +1,4 @@
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Networking;
 
 namespace Godswar.Server.Game;
@@ -8,44 +9,83 @@ internal sealed partial class MapInstance
         DateTimeOffset now,
         Func<ClientSession, long?>? lifeRevisionResolver = null)
     {
-        var combatTargets = Snapshot()
-            .Where(static context => context.WorldReady)
-            .Select(context => (
-                Context: context,
-                LifeRevision: lifeRevisionResolver is null
-                    ? (long?)0
-                    : lifeRevisionResolver(context.Session)))
-            .Where(static candidate =>
-                candidate.LifeRevision is not null)
-            .Select(static candidate => ProjectCombatTarget(
-                candidate.Context,
-                candidate.LifeRevision!.Value))
+        return AdvanceMonsters(now,
+            CaptureMonsterCombatTargets(Snapshot(), lifeRevisionResolver),
+            lifeRevisionResolver);
+    }
+
+    public MonsterRuntimeTick AdvanceMonsters(
+        DateTimeOffset now,
+        IReadOnlyList<MonsterCombatTarget> combatTargets,
+        Func<ClientSession, long?>? lifeRevisionResolver = null)
+    {
+        // Projection can wait on player vitals, so callers prepare it outside
+        // the owner. Revalidate membership and life here without taking any
+        // player lock; final hit commits still validate their exact authority.
+        var members = Snapshot().Where(static context => context.WorldReady)
+            .ToLookup(static context => context.CharacterId);
+        var currentTargets = combatTargets.Where(target =>
+            members[target.CharacterId].Any(context =>
+                context.ObjectId == target.ObjectId &&
+                context.Ownership == target.Ownership &&
+                context.WorldInstanceId == target.WorldInstanceId &&
+                context.WorldRevision == target.WorldRevision &&
+                context.WorldMembershipEpoch == target.WorldMembershipEpoch &&
+                (lifeRevisionResolver is null ||
+                 lifeRevisionResolver(context.Session) == target.LifeRevision)))
             .ToArray();
 
         lock (_monsterRuntimeGate)
         {
-            return _monsterRuntime?.Advance(now, combatTargets) ??
+            return _monsterRuntime?.Advance(now, currentTargets) ??
                 new MonsterRuntimeTick(false, []);
         }
     }
 
-    private static MonsterCombatTarget ProjectCombatTarget(
-        GameSessionContext context,
-        long lifeRevision)
+    internal static IReadOnlyList<MonsterCombatTarget> CaptureMonsterCombatTargets(
+        IReadOnlyList<GameSessionContext> members,
+        Func<ClientSession, long?>? lifeRevisionResolver = null,
+        Action? projectionStarting = null)
     {
-        lock (context.Character.VitalsSync)
+        if (SingleOwnerMailboxExecutionContext.Current is not null)
         {
-            return new MonsterCombatTarget(
-                context.CharacterId,
-                context.Character.PositionX,
-                context.Character.PositionZ,
-                context.Character.CurrentHp > 0,
-                context.ObjectId,
-                lifeRevision,
-                context.Ownership,
-                context.WorldInstanceId,
-                context.WorldRevision,
-                context.WorldMembershipEpoch);
+            throw new InvalidOperationException(
+                "Monster target vitals must be projected outside the world owner.");
         }
+
+        var targets = new List<MonsterCombatTarget>(members.Count);
+        foreach (var context in members)
+        {
+            if (!context.WorldReady)
+            {
+                continue;
+            }
+
+            projectionStarting?.Invoke();
+            lock (context.Character.VitalsSync)
+            {
+                var lifeRevision = lifeRevisionResolver is null
+                    ? 0
+                    : lifeRevisionResolver(context.Session);
+                if (lifeRevision is null)
+                {
+                    continue;
+                }
+
+                targets.Add(new MonsterCombatTarget(
+                    context.CharacterId,
+                    context.Character.PositionX,
+                    context.Character.PositionZ,
+                    context.Character.CurrentHp > 0,
+                    context.ObjectId,
+                    lifeRevision.Value,
+                    context.Ownership,
+                    context.WorldInstanceId,
+                    context.WorldRevision,
+                    context.WorldMembershipEpoch));
+            }
+        }
+
+        return targets.ToArray();
     }
 }

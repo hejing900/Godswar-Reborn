@@ -202,7 +202,10 @@ internal sealed partial class PinnedWorldContentReader
             Classes = progression.Classes,
             TalentEffects = progression.TalentEffects,
             Talents = progression.Talents,
-            SkillBooks = progression.SkillBooks
+            SkillBooks = progression.SkillBooks,
+            MonsterCombatBalances = MonsterCombatBalanceContent.Pin(
+                content.MonsterCombatBalances,
+                monsters)
         };
     }
 

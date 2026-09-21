@@ -1,9 +1,6 @@
 using System.Buffers.Binary;
 using Godswar.Server.Application.Characters;
-<<<<<<< HEAD
 using Godswar.Server.Domain.World.Content;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Game;
 using Godswar.Server.Protocol;
 using Godswar.Server.State;
@@ -106,20 +103,16 @@ internal static partial class BackhaulSkillHandlerChecks
         var valid = CreateRevivePacket(
             LocalPlayerObjectId,
             ReviveRequest.FreeReviveType);
-<<<<<<< HEAD
         Check.Equal(
             (ushort)10028,
             Opcodes.Revive,
             "the revive request opcode is the captured 10028");
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Check.True(
             ReviveRequest.TryParse(valid.Buffer, out var parsed) &&
             parsed.PlayerObjectId == LocalPlayerObjectId &&
             parsed.ReviveType == ReviveRequest.FreeReviveType,
             "capture-proven exact free-revive frame parses");
 
-<<<<<<< HEAD
         // Captured 2026-09-15 from the running client: C2S 10028 with
         // object 1167 and revive type 2 (free), sent 13.5 s after death and
         // answered with the Athens landing frame.
@@ -139,8 +132,6 @@ internal static partial class BackhaulSkillHandlerChecks
                 out _),
             "legacy 10019 revive frame still parses");
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         var trailing = CreateRevivePacket(
             LocalPlayerObjectId,
             ReviveRequest.FreeReviveType,
@@ -185,7 +176,6 @@ internal static partial class BackhaulSkillHandlerChecks
 
     private static async Task CheckCaptureProvenFreeReviveAsync()
     {
-<<<<<<< HEAD
         CheckReviveLandingCatalog();
 
         // An uncaptured death map keeps the camp-capital fallback. The fixture
@@ -243,11 +233,6 @@ internal static partial class BackhaulSkillHandlerChecks
             characterName);
         var character = fixture.Character;
         character.CurrentMap = deathMap;
-=======
-        await using var fixture = await InterruptFixture.CreateAsync(
-            "CaptureProvenFreeRevive");
-        var character = fixture.Character;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         character.CurrentHp = 0;
         character.CurrentMp = 0;
         SetField(fixture.Handler, "_characterSnapshotLoaded", true);
@@ -279,7 +264,6 @@ internal static partial class BackhaulSkillHandlerChecks
             initialLifeRevision + 1,
             fixture.Registry.GetPlayerLifeRevision(
                 fixture.Socket.Session),
-<<<<<<< HEAD
             $"free revive advances life revision exactly once ({landing})");
         Check.Equal(
             expectedMap,
@@ -320,56 +304,13 @@ internal static partial class BackhaulSkillHandlerChecks
             persistedX == expectedX &&
             persistedZ == expectedZ,
             $"free revive persists the restored position ({landing})");
-=======
-            "free revive advances life revision exactly once");
-        Check.Equal(
-            GameDefaults.SpartaCapitalMap,
-            character.CurrentMap,
-            "free revive restores the camp capital");
-        Check.Equal(
-            GameDefaults.StartingPositionX,
-            character.PositionX,
-            "free revive restores starting X");
-        Check.Equal(
-            GameDefaults.StartingPositionZ,
-            character.PositionZ,
-            "free revive restores starting Z");
-        Check.Equal(
-            character.MaxHp / 10,
-            character.CurrentHp,
-            "free revive restores ten percent HP");
-        Check.Equal(
-            character.MaxMp / 10,
-            character.CurrentMp,
-            "free revive restores ten percent MP");
-        Check.Equal(
-            1,
-            fixture.Store.PositionWrites.Count,
-            "free revive persists one position checkpoint");
-        Check.Equal(
-            1,
-            fixture.Store.VitalsWrites.Count,
-            "free revive persists one vitals checkpoint");
-        Check.True(
-            fixture.Store.PositionWrites[0] is
-            {
-                MapId: GameDefaults.SpartaCapitalMap,
-                X: GameDefaults.StartingPositionX,
-                Z: GameDefaults.StartingPositionZ
-            },
-            "free revive persists the restored position");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Check.True(
             fixture.Store.VitalsWrites[0] is
             {
                 CurrentHp: 250,
                 CurrentMp: 150
             },
-<<<<<<< HEAD
             $"free revive persists the restored vitals ({landing})");
-=======
-            "free revive persists the restored vitals");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
         var reachedEnterComplete = false;
         // An empty 24-slot bag still emits its complete detail/index pages.
@@ -385,11 +326,7 @@ internal static partial class BackhaulSkillHandlerChecks
         }
         Check.True(
             reachedEnterComplete,
-<<<<<<< HEAD
             $"free revive completes the bounded re-entry bootstrap ({landing})");
-=======
-            "free revive completes the bounded re-entry bootstrap");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     private static async Task AssertReviveRejectedWithoutMutationAsync(

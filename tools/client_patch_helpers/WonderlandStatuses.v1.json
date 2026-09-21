@@ -1,0 +1,8 @@
+[
+  {"id":1510,"kind":1011,"style":1,"seconds":15,"icon":"216,0","en_us":{"name":"Petbird Blessing","note":"Physical and magical attack are multiplied by 5 for 15 seconds."},"zh_cn":{"name":"宠鸟祝福","note":"物理攻击与魔法攻击提高至5倍，持续15秒。"}},
+  {"id":1511,"kind":1012,"style":1,"seconds":15,"icon":"324,72","en_us":{"name":"Putrid Bird Blessing","note":"Hit rating is increased by 25000 for 15 seconds."},"zh_cn":{"name":"腐鸟祝福","note":"命中提高25000，持续15秒。"}},
+  {"id":1512,"kind":1013,"style":0,"seconds":2,"icon":"252,108","en_us":{"name":"Wonderland Stun","note":"Movement and attacks are interrupted. Skills cannot be used for 2 seconds."},"zh_cn":{"name":"幻境眩晕","note":"移动与攻击被中断，2秒内无法使用技能。"}},
+  {"id":1513,"kind":1014,"style":0,"seconds":2,"icon":"252,108","en_us":{"name":"Wonderland Silence","note":"Skills cannot be used for 2 seconds. Basic attacks and potions remain available."},"zh_cn":{"name":"幻境沉默","note":"2秒内无法使用技能，仍可普通攻击和使用药水。"}},
+  {"id":1514,"kind":1015,"style":0,"seconds":8,"icon":"144,36","en_us":{"name":"Spear Blast: Weakened Armor","note":"Physical defense is reduced by 40% for 8 seconds."},"zh_cn":{"name":"枪击：护甲削弱","note":"物理防御降低40%，持续8秒。"}},
+  {"id":1515,"kind":1016,"style":0,"seconds":10,"icon":"144,36","en_us":{"name":"Armor Rend","note":"Physical defense is reduced by 50% for 10 seconds."},"zh_cn":{"name":"撕裂护甲","note":"物理防御降低50%，持续10秒。"}}
+]

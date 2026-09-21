@@ -48,7 +48,6 @@ internal interface IGameStore : IAsyncDisposable
         int talentExperience,
         CancellationToken cancellationToken = default);
 
-<<<<<<< HEAD
     /// <summary>
     /// Persists every quest the character carries, plus the ones it has finished.
     /// </summary>
@@ -69,8 +68,6 @@ internal interface IGameStore : IAsyncDisposable
         int gold,
         CancellationToken cancellationToken = default);
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     Task<ZodiacSkillGridActivationResult?> ActivateZodiacSkillGridAsync(
         int accountId,
         int characterId,
@@ -183,6 +180,19 @@ internal interface IGameStore : IAsyncDisposable
         int accountId,
         int characterId,
         uint itemId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Grants one Wishing Pool skill book. Separate from the developer grant so the
+    /// wishing pool does not depend on the developer allowlist or channel.
+    /// <paramref name="goldCost"/> is debited from the character's own gold in the
+    /// same transaction; pass zero for the free wish.
+    /// </summary>
+    Task<KitBagItemGrantResult> AddWishingPoolSkillBookAsync(
+        int accountId,
+        int characterId,
+        uint itemId,
+        int goldCost,
         CancellationToken cancellationToken = default);
 
     Task<ForgeTransactionResult> ForgeEquipmentAsync(

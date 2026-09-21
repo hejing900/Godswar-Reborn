@@ -23,7 +23,6 @@ internal static class Opcodes
     // packet for another world object is its captured death notification,
     // while a 24-byte packet for the local player loads a new scene.
     public const ushort SceneChange = 10018;
-<<<<<<< HEAD
     // The client revive request. The installed client sends
     // CReviveUI::Send_ReviveMsg as an exact 12-byte frame: +4 is the local
     // player object id and +8 is the revive type (0 stone, 1 money, 2 free,
@@ -33,10 +32,8 @@ internal static class Opcodes
     // the same 12-byte body on 10019, which is also the server EnterMain
     // opcode, so both spellings are accepted.
     public const ushort Revive = 10028;
+    public const ushort NativeRevive = 10028;
     public const ushort ReviveLegacy = 10019;
-=======
-    public const ushort Revive = 10019;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public const ushort Kitbag = 10022;
     public const ushort Storage = 10023;
     // The installed Origin client maps its warehouse item snapshot handler to
@@ -55,19 +52,15 @@ internal static class Opcodes
     public const ushort BreakItem = 10051;
     public const ushort StorageItem = 10052;
     public const ushort Sell = 10053;
-<<<<<<< HEAD
     // The installed client sells with 10060 rather than the known-but-unused
     // 10053. The request is four bytes: the bag page and the index inside that
     // page, so the authoritative slot is (page * 24) + index. It carries no
     // quantity because the client sells the whole addressed stack.
     public const ushort SellItem = 10060;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public const ushort BagItemAction = 10056;
     // MSG_STORAGE_ITEM is bidirectional: the client requests a transfer and
     // the server echoes the same canonical 20-byte descriptor after commit.
     public const ushort WarehouseTransfer = 10059;
-<<<<<<< HEAD
     // Quest protocol family, captured from the reference server on 2026-09-13.
     // Offsets below count from the start of the frame, so "+4" is the first
     // payload word after the 4-byte length+opcode header. 10082 and 10084 are
@@ -92,13 +85,10 @@ internal static class Opcodes
     public const ushort QuestAction = 10082;
     public const ushort QuestSceneQuery = 10083;
     public const ushort QuestAccepted = 10084;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     // The installed client dispatch table maps 10090 to
     // MSG_PLAYER_ACCEPTQUESTS. Quest snapshots are character-specific and
     // must never be replayed from a captured login session.
     public const ushort PlayerAcceptedQuests = 10090;
-<<<<<<< HEAD
     public const ushort QuestActionPair = 10091;
     public const ushort QuestActionPairAck = 10092;
     // 10076 = the follow-up quest's detail, 10086 = the completed hand-in,
@@ -108,15 +98,12 @@ internal static class Opcodes
     public const ushort QuestMarkerList = 10077;
     public const ushort QuestHandInList = 10080;
     public const ushort QuestHandInAck = 10086;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public const ushort NpcDialogOpen = 10067;
     public const ushort NpcDialogPageRequest = 10068;
     public const ushort NpcFunctionAction = 10069;
     public const ushort NpcFunctionActionResponse = 10070;
     public const ushort NpcShopCatalog = 10071;
     public const ushort NpcShopPurchase = 10073;
-<<<<<<< HEAD
     // The cash mall behind the client's function key. The client sends this
     // eight-byte request once when the mall is opened and the reference answers
     // with the fifteen-frame catalog; nothing about the mall travels over the
@@ -125,8 +112,6 @@ internal static class Opcodes
     // Buying from that mall: twenty bytes, category, listing index, quantity and
     // item id. Captured live on 2026-09-14 23:29:48, not on the reference.
     public const ushort MallPurchase = 10180;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     // Equipment forging uses the same opcode for the client request and the
     // server result. The selection and cancel packets are separate messages.
     public const ushort ForgeStart = 10109;
@@ -170,6 +155,7 @@ internal static class Opcodes
     public const ushort RepetitionResponse = 10217;
     public const ushort RepetitionInstanceMembers = 10218;
     public const ushort RepetitionLeave = 10221;
+    public const ushort RepetitionQueueState = 10222;
     public const ushort RepetitionInvitation = 10224;
     public const ushort RepetitionCompletionState = 10227;
     public const ushort RepetitionFightInfo = 10229;
@@ -219,7 +205,6 @@ internal static class Opcodes
     public const ushort PlayerStateAction = 10320;
     public const ushort PlayerInspectFollowup = 10342;
     public const ushort EnterUiReady = 10357;
-<<<<<<< HEAD
     // Captured S2C silver grant: a 16-byte frame whose leading dword is the
     // grant kind (25 for a money bag), then the player object id and the
     // amount. Captured 2026-09-15 as `10007428190000002502000010270000`
@@ -227,8 +212,6 @@ internal static class Opcodes
     // 10040 cast of item skill 4600. The second observed kind, 49, belongs to
     // the talent stone (skill 4630) and is not implemented.
     public const ushort BagSilverGrant = 10356;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public const ushort Ping = 10015;
 
     public static string Name(ushort opcode)
@@ -253,10 +236,7 @@ internal static class Opcodes
             WalkEnd => nameof(WalkEnd),
             SceneChange => nameof(SceneChange),
             Revive => nameof(Revive),
-<<<<<<< HEAD
             ReviveLegacy => nameof(ReviveLegacy),
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Kitbag => nameof(Kitbag),
             Storage => nameof(Storage),
             WarehouseSnapshot => nameof(WarehouseSnapshot),
@@ -272,7 +252,6 @@ internal static class Opcodes
             BreakItem => "EquipmentItemEquipRequest",
             StorageItem => nameof(StorageItem),
             Sell => nameof(Sell),
-<<<<<<< HEAD
             SellItem => nameof(SellItem),
             BagItemAction => nameof(BagItemAction),
             WarehouseTransfer => nameof(WarehouseTransfer),
@@ -287,22 +266,14 @@ internal static class Opcodes
             QuestMarkerList => nameof(QuestMarkerList),
             QuestHandInList => nameof(QuestHandInList),
             QuestHandInAck => nameof(QuestHandInAck),
-=======
-            BagItemAction => nameof(BagItemAction),
-            WarehouseTransfer => nameof(WarehouseTransfer),
-            PlayerAcceptedQuests => nameof(PlayerAcceptedQuests),
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             NpcDialogOpen => nameof(NpcDialogOpen),
             NpcDialogPageRequest => nameof(NpcDialogPageRequest),
             NpcFunctionAction => nameof(NpcFunctionAction),
             NpcFunctionActionResponse => nameof(NpcFunctionActionResponse),
             NpcShopCatalog => nameof(NpcShopCatalog),
             NpcShopPurchase => nameof(NpcShopPurchase),
-<<<<<<< HEAD
             MallCatalog => nameof(MallCatalog),
             MallPurchase => nameof(MallPurchase),
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             ForgeStart => nameof(ForgeStart),
             ForgeSelection => nameof(ForgeSelection),
             ForgeReplacementSelection => nameof(ForgeReplacementSelection),
@@ -369,10 +340,7 @@ internal static class Opcodes
             PlayerStateAction => nameof(PlayerStateAction),
             PlayerInspectFollowup => nameof(PlayerInspectFollowup),
             EnterUiReady => nameof(EnterUiReady),
-<<<<<<< HEAD
             BagSilverGrant => nameof(BagSilverGrant),
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             10192 => "ClientMovementOrLoad",
             _ => "Unknown"
         };

@@ -222,6 +222,19 @@ internal sealed partial class GameClientHandler
                     "DurablePetBagActivationSlotClear");
             }
             await SendKitBagRefreshAsync(cancellationToken);
+            if (receipt.Status ==
+                PetDurableReceiptStatus.PetExperienceBoostActivated)
+            {
+                // A pet-experience potion is a bag item, not a skill: it changes
+                // neither the pet nor any derived stat, and it casts nothing.
+                // The slot clear and kit-bag refresh above already answer the
+                // use; the only remaining work is to publish the recomposed
+                // status snapshot so the granted status and its countdown reach
+                // the status bar, instead of the pet-list fallback.
+                await SendExperienceBoostStatusAsync(
+                    "pet-experience-boost-potion",
+                    cancellationToken);
+            }
             if (receipt.EquipmentSlot >= 0)
             {
                 var equipment = PacketBuilder.EquipmentItemSnapshot(

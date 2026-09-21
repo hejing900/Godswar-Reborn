@@ -69,6 +69,18 @@ internal sealed partial class MapInstance
     {
         lock (_atlantisEncounterGate) return _atlantisCompletionEvidence;
     }
+
+    internal bool HasAdmittedAtlantisPetOwner(int accountId, int characterId)
+    {
+        lock (_atlantisEncounterGate)
+        {
+            return _atlantisRewardReservation != Guid.Empty &&
+                _atlantisRewardAdmissions.Contains(characterId) &&
+                _atlantisRewardCandidates.TryGetValue(characterId, out var member) &&
+                member.AccountId == accountId &&
+                TryGetAtlantisRunSnapshot(out _);
+        }
+    }
 }
 
 internal sealed record AtlantisCompletionIdentity(int AccountId, int CharacterId, string Name, byte Camp);

@@ -140,7 +140,6 @@ internal static partial class PacketBuilder
             scriptKey);
     }
 
-<<<<<<< HEAD
     // The flags word is a bitmask of the pages an npc can open, not a single
     // choice. The reference server sent the combinations itself: 0x23 (bank 0x20
     // plus quest 3) for Sparta_100, the warehouse manager, and 0x07 (shop 4 plus
@@ -155,20 +154,11 @@ internal static partial class PacketBuilder
         NpcDialogOpenAck(
             npcId,
             flags: CapitalNpcServiceProtocol.DescriptionOpenFlags | extraFlags,
-=======
-    public static byte[] NpcDescriptionDialogOpenAck(
-        uint npcId,
-        string scriptKey) =>
-        NpcDialogOpenAck(
-            npcId,
-            flags: CapitalNpcServiceProtocol.DescriptionOpenFlags,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             packedDialog: 0,
             scriptKey);
 
     public static byte[] NpcShopDialogOpenAck(
         uint npcId,
-<<<<<<< HEAD
         string scriptKey,
         int extraFlags = 0) =>
         NpcDialogOpenAck(
@@ -189,31 +179,30 @@ internal static partial class PacketBuilder
         NpcDialogOpenAck(
             npcId,
             flags: QuestContentBaseline.QuestOpenFlags | extraFlags,
-=======
-        string scriptKey) =>
-        NpcDialogOpenAck(
-            npcId,
-            flags: CapitalNpcServiceProtocol.ShopOpenFlags,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             packedDialog: 0,
             scriptKey);
 
     public static byte[] NpcPrizeChestDialogOpenAck(
         uint npcId,
-<<<<<<< HEAD
         string scriptKey,
         int extraFlags = 0) =>
         NpcDialogOpenAck(
             npcId,
             flags: CapitalNpcServiceProtocol.PrizeChestOpenFlags | extraFlags,
-=======
-        string scriptKey) =>
-        NpcDialogOpenAck(
-            npcId,
-            flags: CapitalNpcServiceProtocol.PrizeChestOpenFlags,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             packedDialog: 0,
             scriptKey);
+
+    /// <summary>
+    /// Builds the 48-byte npc dialog acknowledgement from an explicit function
+    /// type and packed button word. Used for the installed client's extended-npc
+    /// function pages, where the flags word selects the client-side script.
+    /// </summary>
+    public static byte[] NpcFunctionDialogOpenAck(
+        uint npcId,
+        int functionType,
+        int packedDialog,
+        string scriptKey) =>
+        NpcDialogOpenAck(npcId, functionType, packedDialog, scriptKey);
 
     private static byte[] NpcDialogOpenAck(
         uint npcId,
@@ -320,6 +309,11 @@ internal static partial class PacketBuilder
         {
             BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(12 + (i * 4), 4), subIds[i]);
         }
+
+        Console.WriteLine(
+            $"[10070-hex] npc={npcId} dialog={dialogIndex} " +
+            $"subIds=[{string.Join(',', subIds)}] " +
+            $"hex={Convert.ToHexString(packet)}");
 
         return packet;
     }

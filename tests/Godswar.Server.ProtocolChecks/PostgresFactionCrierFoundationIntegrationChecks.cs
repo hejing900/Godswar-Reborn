@@ -14,7 +14,6 @@ internal static partial class PostgresFactionCrierFoundationIntegrationChecks
 
     private const string ConnectionStringVariable =
         "GODSWAR_TEST_POSTGRES_CONNECTION_STRING";
-<<<<<<< HEAD
 
     // Historical lineage entry counts, captured before the reviewed
     // client-catalog family existed.
@@ -31,12 +30,6 @@ internal static partial class PostgresFactionCrierFoundationIntegrationChecks
         1758 + ReviewedClientCatalogEntryCount;
     private const int LiveUpgradeCaptureToolEntryCount =
         1773 + ReviewedClientCatalogEntryCount;
-=======
-    private const string FreshCaptureToolRevision =
-        "C4DC19A390A6CEF59D548E36425905A75AB4877708A14FCA99E606D2255F2228";
-    private const string LiveUpgradeCaptureToolRevision =
-        "9A6D6087087937D57DAED7DD93871F02CAED74124166A5CC1EB69D86DBACD121";
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
     private static readonly Regex DisposableDatabasePattern = new(
         @"^godswar_(?:b09|b12)_[a-z0-9_]{1,48}$",
@@ -76,17 +69,9 @@ internal static partial class PostgresFactionCrierFoundationIntegrationChecks
         var publication = await PostgresItemTemplateBaselinePublisher
             .EnsurePublishedAsync(dataSource);
         Check.True(
-<<<<<<< HEAD
             publication.EntryCount == FreshCaptureToolEntryCount ||
             publication.EntryCount == LiveUpgradeCaptureToolEntryCount,
             "immutable item content includes Nameplates, the Storage Box Key, the capture tool, and the reviewed client catalog");
-=======
-            (publication.EntryCount == 1758 &&
-             publication.Revision == FreshCaptureToolRevision) ||
-            (publication.EntryCount == 1772 &&
-             publication.Revision == LiveUpgradeCaptureToolRevision),
-            "immutable item content includes Nameplates, the Storage Box Key, and the capture tool");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await AssertNameplatePublicationAsync(
             dataSource,
             publication.Revision,
@@ -125,12 +110,8 @@ internal static partial class PostgresFactionCrierFoundationIntegrationChecks
         Check.True(
             await reader.ReadAsync() &&
             reader.GetString(0).EndsWith(
-<<<<<<< HEAD
                 "+pets-v5+nameplates-v1+warehouse-v1+opal-v1+" +
                 "client-catalog-v1",
-=======
-                "+pets-v5+nameplates-v1+warehouse-v1",
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 StringComparison.Ordinal) &&
             reader.GetInt32(1) == entryCount &&
             reader.GetInt32(2) == 6 &&

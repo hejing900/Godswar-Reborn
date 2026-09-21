@@ -428,7 +428,6 @@ internal sealed partial class GameClientHandler
 
         if (npcDelta.Entering.Count > 0)
         {
-<<<<<<< HEAD
             var projected = ProjectQuestMarkerTables(npcDelta.Entering);
             foreach (var npc in projected)
             {
@@ -444,10 +443,6 @@ internal sealed partial class GameClientHandler
 
             await _session.SendAsync(
                 PacketBuilder.NpcSpawns(projected),
-=======
-            await _session.SendAsync(
-                PacketBuilder.NpcSpawns(npcDelta.Entering),
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 cancellationToken,
                 "NearbyNpcSpawns",
                 framed: false);

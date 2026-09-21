@@ -119,7 +119,10 @@ internal sealed partial class GameClientHandler
         ILegacyInstanceDailyEntryClaimStore?
             legacyInstanceDailyEntries = null,
         ILegacyInstanceOpalPaymentStore?
-            legacyInstanceOpalPayments = null)
+            legacyInstanceOpalPayments = null,
+        Godswar.Server.Infrastructure.WishingPool
+            .PostgresWishingPoolUsageStore? wishingPoolUsage = null,
+        TimeProvider? flameBlastTimeProvider = null)
     {
         if (backhaulSkillCastTime < TimeSpan.Zero)
         {
@@ -138,6 +141,7 @@ internal sealed partial class GameClientHandler
         }
 
         _session = session;
+        _flameBlastTimeProvider = flameBlastTimeProvider ?? TimeProvider.System;
         _store = gameStore;
         _capitalShopPurchases = gameStore as ICapitalShopPurchaseStore ??
             UnsupportedGameplayFeatures.Instance;
@@ -233,6 +237,7 @@ internal sealed partial class GameClientHandler
         _medusaDailyEntries = medusaDailyEntries;
         _legacyInstanceDailyEntries = legacyInstanceDailyEntries;
         _legacyInstanceOpalPayments = legacyInstanceOpalPayments;
+        _wishingPoolUsage = wishingPoolUsage;
         _petOwnerMergeEnergyInterval =
             petOwnerMergeEnergyInterval ?? TimeSpan.FromSeconds(3);
         _petOwnerMergeRechargeInterval =

@@ -16,9 +16,25 @@ internal static class MonsterAttackRangePolicy
 
     public static float Resolve(
         in MonsterCombatProfile profile,
-        CapturedMonsterSpawn definition)
+        CapturedMonsterSpawn definition,
+        bool passive = false)
     {
         ArgumentNullException.ThrowIfNull(definition);
+        if (profile.AuthoredAttackRange is { } authoredRange)
+        {
+            if (passive && authoredRange == 0f)
+            {
+                return 0f;
+            }
+            if (authoredRange <= 0 || !float.IsFinite(authoredRange))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(profile),
+                    "Authored attack reach must be finite and positive.");
+            }
+
+            return authoredRange;
+        }
 
         // AttackType primarily identifies the damage channel. The stock
         // Gorgon Archer is authored as physical despite using a bow.

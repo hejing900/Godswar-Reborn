@@ -1,0 +1,194 @@
+{
+  "atlas": "HolySuitWare.gwo",
+  "entries": [
+    {
+      "icon": {
+        "file": "runesteel-36.png",
+        "rect": [
+          0,
+          0,
+          36,
+          36
+        ],
+        "sha256": "48219d7adde8bb2cca59fa892b7ab2d90cdbb896427855874d18ea0b54c0f169"
+      },
+      "item_id": 9014,
+      "name": "RuneSteel Ingot",
+      "slug": "runesteel",
+      "source": "source/runesteel.png",
+      "source_alpha_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_optical_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_sha256": "b9f8101f12ca60bbe91f6057da91f3baf50e3c7cc2854cff87e7dead2eddb1b9",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 5
+    },
+    {
+      "icon": {
+        "file": "arcanite-36.png",
+        "rect": [
+          36,
+          0,
+          36,
+          36
+        ],
+        "sha256": "805241ba26bed5d994194f4dcc465f33cb4c6b2047a833e52fccd6a3a51d360f"
+      },
+      "item_id": 9015,
+      "name": "Arcanite Crystal",
+      "slug": "arcanite",
+      "source": "source/arcanite.png",
+      "source_alpha_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_optical_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_sha256": "61738a0a52e4abdbb59a8ef171c931b116128ef279a9322c157c5fe4ffaf7b01",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 6
+    },
+    {
+      "icon": {
+        "file": "seraphite-36.png",
+        "rect": [
+          72,
+          0,
+          36,
+          36
+        ],
+        "sha256": "828f590a5a329d0bcb0263bdff0c3b2688d0f0502da56582efe4864fdedde078"
+      },
+      "item_id": 9016,
+      "name": "Seraphite Core",
+      "slug": "seraphite",
+      "source": "source/seraphite.png",
+      "source_alpha_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_optical_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_sha256": "721bc25c13b494767cff0afaa2edbaf568a55d4401200043659e6d438a242bef",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 7
+    },
+    {
+      "icon": {
+        "file": "divinium-36.png",
+        "rect": [
+          108,
+          0,
+          36,
+          36
+        ],
+        "sha256": "2c4ffed2d7b36cd64c48173b8aa0ae8095bbe9957adb345f11ea8e4ddef18e40"
+      },
+      "item_id": 9017,
+      "name": "Divinium Essence",
+      "slug": "divinium",
+      "source": "source/divinium.png",
+      "source_alpha_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_optical_bounds": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "source_sha256": "cde12b790febff9e0376b6c854a453dbb4b49584167b7e7fd0dcfbc33a41fd4e",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 8
+    }
+  ],
+  "format": "TGA type10 RLE BGRA32; bottom-origin descriptor0x08; scanline-bounded packets",
+  "generation": {
+    "file": "generation.json",
+    "sha256": "8ca19ef4fee4d766ef3f6a875f84aa7a979cd6e647e3e17b8eb40a18390307b6"
+  },
+  "height": 1024,
+  "native_format": {
+    "extension_bytes": 495,
+    "header_bytes": 18,
+    "reference_atlas": "Icon3.gwo",
+    "reference_sha256": "3c27e65ddc369728137050006f84b535fa68686ad1cdff7b3f495d24197c7d29",
+    "sha256": "d9e0f1f5b0e422f14f348da737f67a4a36cee93c1d93cf8f7db1cf86c0b05693"
+  },
+  "outputs": {
+    "HolySuitWare.gwo": {
+      "bytes": 61699,
+      "sha256": "8797d77fc0ad57cfea78a78cb988e18eaad683769b502eba0d17ea5c2abde2d4"
+    },
+    "HolySuitWare.png": {
+      "bytes": 18210,
+      "sha256": "33eb1d45cbb6c78906dece7f2286ed11f0d2225ed1bbbcda1163676b1bdb1ca8"
+    },
+    "arcanite-36.png": {
+      "bytes": 3095,
+      "sha256": "805241ba26bed5d994194f4dcc465f33cb4c6b2047a833e52fccd6a3a51d360f"
+    },
+    "divinium-36.png": {
+      "bytes": 3276,
+      "sha256": "2c4ffed2d7b36cd64c48173b8aa0ae8095bbe9957adb345f11ea8e4ddef18e40"
+    },
+    "icons-native.png": {
+      "bytes": 11826,
+      "sha256": "92c8a4840f8d1a75fa1e103e372a3b3851615d9129bf4e283dfef928d58a8e8f"
+    },
+    "preview.png": {
+      "bytes": 39703,
+      "sha256": "10b3eacfdd73997cc6551bc316ef22c6f9408cb8a4c250aa730d474145ad9b8c"
+    },
+    "runesteel-36.png": {
+      "bytes": 3063,
+      "sha256": "48219d7adde8bb2cca59fa892b7ab2d90cdbb896427855874d18ea0b54c0f169"
+    },
+    "seraphite-36.png": {
+      "bytes": 2919,
+      "sha256": "828f590a5a329d0bcb0263bdff0c3b2688d0f0502da56582efe4864fdedde078"
+    }
+  },
+  "pillow_version": "12.0.0",
+  "pipeline": "tools/PrepareHolySuitWareIcons.py",
+  "resampling": "stock36px grid; nearest sample; exact native Platinum alpha; no extra padding",
+  "schema_version": 2,
+  "stock_reference_sha256": "ee94261a9e34d6a63a88b89df991d6a6a876bee6f9b2c83e1fc8c39d6d3c6f24",
+  "width": 1024
+}

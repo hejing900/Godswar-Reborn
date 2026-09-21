@@ -1,0 +1,96 @@
+{
+  "generation_sha256": "61883e7699c74790ab29ba7c88aa1e51c675a6df79e26dccd26b8a9649485d0c",
+  "manifest_sha256": "718acfdb12165c52aec2ec83dfd81f075e7d603ff1bcb85dd2c6f603eba73d2f",
+  "native_format_sha256": "d9e0f1f5b0e422f14f348da737f67a4a36cee93c1d93cf8f7db1cf86c0b05693",
+  "outputs": {
+    "HolyStoneReagents.gwo": {
+      "bytes": 76306,
+      "sha256": "79d2ab61119ec5908c5a1f0c55b5a2f9ce888ef386c514b0c8f35504826f7e01"
+    },
+    "copper-evasion-signet-36.png": {
+      "bytes": 2965,
+      "sha256": "c0e30f41eb403048c77a8d77a6f96707f73839764034e1bc55b020d32d88dfaf"
+    },
+    "eclipse-level-1-36.png": {
+      "bytes": 2746,
+      "sha256": "7e8746f2b952cb89082209247674058093966e4fa25b92bbc448207b96fefb6b"
+    },
+    "eclipse-level-2-36.png": {
+      "bytes": 2878,
+      "sha256": "d8b6529fef7abec4b3bc5987aab4379bc6e7430d1c2feb76a0d68cffffba0f0b"
+    },
+    "eclipse-level-3-36.png": {
+      "bytes": 3055,
+      "sha256": "d9627baf79ae2928a9319d2f6d505bbcf320f1c3f57a5be53d7e6646197b16f1"
+    },
+    "goddess-stone-36.png": {
+      "bytes": 3105,
+      "sha256": "fc8eb3065bec390e3abff54e57d0350fd0585d6d94e1bddb04105e22042bd5c1"
+    },
+    "gold-evasion-signet-36.png": {
+      "bytes": 3011,
+      "sha256": "20f1574a4332180f644479efc70d96c5d3e541900b4ae4665710393bf3edbd57"
+    },
+    "icons-native.png": {
+      "bytes": 22890,
+      "sha256": "2852699f9b7abf4d77535eb673908e2038f789bfc1aa60e3f42b0de08c2e70e9"
+    },
+    "platinum-evasion-signet-36.png": {
+      "bytes": 3338,
+      "sha256": "25d3a2624aed084ab9eda12658d3bcd49754777e28785b05aae3b2eacc436cd3"
+    },
+    "preview.png": {
+      "bytes": 73225,
+      "sha256": "780bd9cb1f753079bf5dade3f918db11d0a7b755af245890ccaa58f114007b18"
+    },
+    "silver-evasion-signet-36.png": {
+      "bytes": 3123,
+      "sha256": "ad23f6a02f0fd848d320e9d0887df7cc2ce48f63949cb5af08d675dea90fa3f0"
+    }
+  },
+  "pillow_version": "12.0.0",
+  "resampling": "whole square, premultiplied-alpha Lanczos to 36px; no added padding",
+  "schema_version": 1,
+  "sources": [
+    {
+      "icon_sha256": "7e8746f2b952cb89082209247674058093966e4fa25b92bbc448207b96fefb6b",
+      "slug": "eclipse-level-1",
+      "source_sha256": "52d93c32bee1a912527319eed838fcff1b8c485740124a9a202dc4da2b4ef282"
+    },
+    {
+      "icon_sha256": "d8b6529fef7abec4b3bc5987aab4379bc6e7430d1c2feb76a0d68cffffba0f0b",
+      "slug": "eclipse-level-2",
+      "source_sha256": "67f1c6b435808642797ff8de3c27d330e25993072862761ac6e0abf3f9800b4b"
+    },
+    {
+      "icon_sha256": "d9627baf79ae2928a9319d2f6d505bbcf320f1c3f57a5be53d7e6646197b16f1",
+      "slug": "eclipse-level-3",
+      "source_sha256": "5fe5a4456d4f58d4f98d70368fcda2aba5272a43ee8aaea6e9594fb636397ac5"
+    },
+    {
+      "icon_sha256": "fc8eb3065bec390e3abff54e57d0350fd0585d6d94e1bddb04105e22042bd5c1",
+      "slug": "goddess-stone",
+      "source_sha256": "2754b314e06870d2bb4c203f455f13aff623d12dcb94e8ad6a841eb2ab80ea33"
+    },
+    {
+      "icon_sha256": "c0e30f41eb403048c77a8d77a6f96707f73839764034e1bc55b020d32d88dfaf",
+      "slug": "copper-evasion-signet",
+      "source_sha256": "bb2d2b178120e5e69d99ce5c11eb8433d68b979146fad43cef197aaa53bfef80"
+    },
+    {
+      "icon_sha256": "ad23f6a02f0fd848d320e9d0887df7cc2ce48f63949cb5af08d675dea90fa3f0",
+      "slug": "silver-evasion-signet",
+      "source_sha256": "c9374b238815d68518d7640c6238ee7473b0cfe5ab332c894cabbed3d851df1e"
+    },
+    {
+      "icon_sha256": "20f1574a4332180f644479efc70d96c5d3e541900b4ae4665710393bf3edbd57",
+      "slug": "gold-evasion-signet",
+      "source_sha256": "182b99faaa312ee9577da1a8da2e4cf9c4685f0bdfa2343b4ea5e9308dcdbc0d"
+    },
+    {
+      "icon_sha256": "25d3a2624aed084ab9eda12658d3bcd49754777e28785b05aae3b2eacc436cd3",
+      "slug": "platinum-evasion-signet",
+      "source_sha256": "55bcc71c0e1509a3a0a757ab3e27b436f3ed9c53417b2ed2dce9213213fbea8c"
+    }
+  ]
+}

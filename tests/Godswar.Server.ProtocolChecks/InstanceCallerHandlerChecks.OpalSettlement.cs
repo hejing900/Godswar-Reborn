@@ -120,7 +120,7 @@ internal static partial class InstanceCallerHandlerChecks
             CreateActionPacket(
                 InstanceCallerProtocol.AtlantisRootSubId,
                 InstanceCallerProtocol.AtlantisOpalSubId));
-        var emitted = fixture.Leader.ReadPackets().Skip(before).ToArray();
+        var emitted = ReadAdmissionPackets(fixture.Leader.ReadPackets().Skip(before));
 
         Check.True(
             daily.Claims.Count == 1 &&

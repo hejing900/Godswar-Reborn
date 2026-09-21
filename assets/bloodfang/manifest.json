@@ -1,0 +1,47 @@
+{
+  "release": "reborn.bloodfang-species46.v6",
+  "files": [
+    {
+      "path": "native/Bloodfang_male_001.jcs",
+      "bytes": 338672,
+      "sha256": "2a9276ed42b191a70b554a304afe89195add643fde3f2d8d4f35ff526eb7b7df",
+      "role": "release"
+    },
+    {
+      "path": "native/Bloodfang_male_001.gwo",
+      "bytes": 16512,
+      "sha256": "afa6e9b228320db15c780aa20531b88ecb2e2306ef7e7abf1724b0823f3fe292",
+      "role": "release"
+    },
+    {
+      "path": "native/bloodfang-portrait.png",
+      "bytes": 3538,
+      "sha256": "dd7ad9cf14863cd63318130be8a4d1023a99137a6aff23685a275b9e7f5daf4c",
+      "role": "release"
+    },
+    {
+      "path": "fixtures/v2/Bloodfang_male_001.jcs",
+      "bytes": 233525,
+      "sha256": "20fb274b45e8c10b28778f7f57ff04c417b8cfea648735b860d4d8b6308baafc",
+      "role": "upgrade-test-predecessor"
+    },
+    {
+      "path": "fixtures/v2/Bloodfang_male_001.gwo",
+      "bytes": 4018,
+      "sha256": "985ff33b98d644bea6bd1a9501f5c2e57340f3c0650b5eff01035d9eafbd15a8",
+      "role": "upgrade-test-predecessor"
+    },
+    {
+      "path": "fixtures/v3/Bloodfang_male_001.jcs",
+      "bytes": 279422,
+      "sha256": "023d46de812a4f1c1f1cc396c664106331fec1608953adcaa635f55172006091",
+      "role": "upgrade-test-predecessor"
+    },
+    {
+      "path": "fixtures/v3/Bloodfang_male_001.gwo",
+      "bytes": 2573203,
+      "sha256": "2522183ad17de949a816fe97e40289885c8de3dfcd5528883c30f9b2cf3184af",
+      "role": "upgrade-test-predecessor"
+    }
+  ]
+}

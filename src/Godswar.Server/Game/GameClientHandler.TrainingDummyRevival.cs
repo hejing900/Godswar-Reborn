@@ -10,11 +10,8 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
         ReviveTrace.Log($"RESTORE-ENTRY map={_character.CurrentMap} hp={_character.CurrentHp}/{_character.MaxHp}");
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (!_registry.TryRestoreTrainingDummyEntryState(_character))
         {
             if (_character.CurrentHp <= 0)

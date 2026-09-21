@@ -6,7 +6,7 @@ using Npgsql;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class PostgresPetLearnedSkillContentPublicationIntegrationChecks
+internal static partial class PostgresPetLearnedSkillContentPublicationIntegrationChecks
 {
     public const string CheckName =
         "PostgreSQL learned pet-skill content publication integration";

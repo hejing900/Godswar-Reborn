@@ -30,6 +30,9 @@ internal static partial class PetDurablePersistenceCodec
             (CommandFamily.BagItemActivation,
                 PreviousBagItemActivationContractVersionV3) =>
                 EncodeBagItemActivationV3(receipt),
+            (CommandFamily.BagItemActivation,
+                PreviousBagItemActivationContractVersionV4) =>
+                EncodeBagItemActivationV4(receipt),
             (CommandFamily.PetGrowthReset,
                 PreviousPetGrowthResetContractVersion) =>
                 EncodePetGrowthV4(receipt),

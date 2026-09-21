@@ -56,6 +56,15 @@ internal sealed record MonsterRuntimeSnapshot(
 
     public bool IsStunned => StunnedUntil is not null;
 
+    public MonsterControlState Controls { get; init; } = MonsterControlState.Empty;
+
+    public long CastInterruptionRevision => Controls.CastInterruptionRevision;
+
+    public long AttackInterruptionRevision => Controls.AttackInterruptionRevision;
+
+    public Godswar.Server.State.HostileStatusControlFlags ControlsAt(DateTimeOffset now) =>
+        Controls.At(now) | (StunnedUntil > now ? MonsterControlState.FullControl : 0);
+
     public MonsterAppearanceVersion AppearanceVersion => new(
         SpawnGeneration,
         HealthRevision);
@@ -116,7 +125,12 @@ internal sealed record MonsterRuntimeUpdate(
     WorldInstanceId? TargetWorldInstanceId = null,
     long? TargetWorldRevision = null,
     long? TargetWorldMembershipEpoch = null,
-    ulong AttackEventId = 0);
+    ulong AttackEventId = 0,
+    Godswar.Server.Application.WorldInstances.WonderlandBossAbility? WonderlandAbility = null,
+    bool WonderlandDeathBlast = false,
+    bool WonderlandGroundFire = false,
+    uint? WonderlandReflectedDamage = null,
+    float WonderlandNativeAreaRadius = 0);
 
 internal sealed record MonsterRuntimeTick(
     bool PositionsChanged,

@@ -62,7 +62,25 @@ internal static partial class PostgresPetLearnedSkillContentBootstrapper
                 connection,
                 transaction,
                 baseline,
+                null,
                 cancellationToken);
+            publishedRevision = baseline.Revision.Sha256;
+        }
+        else if (publishedRevision.Equals(
+                     PetLearnedSkillContentBaseline.InstalledRevision,
+                     StringComparison.Ordinal))
+        {
+            // Validate the immutable predecessor before advancing its pointer.
+            // Existing processes keep their pinned copy of the old revision.
+            var installed = await ReadRevisionAsync(
+                connection, transaction, publishedRevision, cancellationToken);
+            if (installed.Revision.Source != PetLearnedSkillContentBaseline.InstalledSource ||
+                installed.Revision.SourceSha256 != PetLearnedSkillContentBaseline.InstalledSourceSha256)
+            {
+                throw new InvalidDataException("The installed pet-skill predecessor has unexpected provenance.");
+            }
+            await InsertBaselineAsync(connection, transaction, baseline,
+                publishedRevision, cancellationToken);
             publishedRevision = baseline.Revision.Sha256;
         }
         else if (!publishedRevision.Equals(
@@ -70,7 +88,7 @@ internal static partial class PostgresPetLearnedSkillContentBootstrapper
                      StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                "Published learned pet-skill content is not the reviewed installed-client revision.");
+                "Published learned pet-skill content is not a reviewed revision.");
         }
 
         var result = await ReadRevisionAsync(
@@ -86,6 +104,7 @@ internal static partial class PostgresPetLearnedSkillContentBootstrapper
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         PinnedPetLearnedSkillContentCatalog baseline,
+        string? previousRevision,
         CancellationToken cancellationToken)
     {
         await using (var revision = new NpgsqlCommand(
@@ -153,16 +172,22 @@ internal static partial class PostgresPetLearnedSkillContentBootstrapper
             """
             INSERT INTO public.pet_skill_content_publication (
                 singleton, revision
-            ) VALUES (true, @revision);
+            ) VALUES (true, @revision)
+            ON CONFLICT (singleton) DO UPDATE
+            SET revision = EXCLUDED.revision,
+                published_at = transaction_timestamp()
+            WHERE public.pet_skill_content_publication.revision = @previousRevision;
             """,
             connection,
             transaction);
         publish.Parameters.AddWithValue(
             "revision", baseline.Revision.Sha256);
+        publish.Parameters.AddWithValue("previousRevision", NpgsqlTypes.NpgsqlDbType.Varchar,
+            (object?)previousRevision ?? DBNull.Value);
         if (await publish.ExecuteNonQueryAsync(cancellationToken) != 1)
         {
             throw new InvalidDataException(
-                "Learned pet-skill publication pointer was not inserted.");
+                "Learned pet-skill publication pointer was not advanced exactly once.");
         }
     }
 

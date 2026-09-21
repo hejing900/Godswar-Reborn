@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "generator": "built-in image_gen",
+  "status": "selected",
+  "purpose": "Distinct native 36-pixel Holy Stone reagents: Eclipse 1\u20133, Goddess, and Copper through Platinum Evasion Signets.",
+  "shared_prompt": "Use case: stylized-concept. Asset type: a single inventory sprite for a 2000s hand-painted fantasy MMORPG, displayed at only 36 by 36 pixels. Paint one compact, bold, jewel-like game item with chunky readable planes, strong dark outlines, saturated controlled highlights and little fine detail. One centered object fills 86 percent of the square; a dark nearly black navy background fills the canvas edge to edge. Orthographic three-quarter item illustration with light from upper left. Rich painterly pixel-friendly finish, neither photorealistic nor a modern flat app icon. No lettering, numbers, labels, UI border, external frame, scenery, hands, or extra props. Keep a clean unmistakable silhouette and high contrast at tiny scale.",
+  "entries": [
+    {
+      "item_id": 9040,
+      "slug": "eclipse-level-1",
+      "display_name": "Level 1 Eclipse Stone",
+      "prompt": "A Level 1 ECLIPSE STONE. One broad roughly oval irregular hexagonal mineral boulder, slightly tilted, with six large angular faces and blunt top, solid and substantial, not a tall crystal. Dark indigo obsidian body with cool blue violet facets. Its central face has one very large clearly visible SILVER CRESCENT MOON vein, bright but restrained. Fine cracks around the crescent carry soft lavender light. This is the simplest first level of a three-level sacred eclipse rock family. The broad stone mass dominates. No gold corona, no jewelry setting, no wings.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-380cdba9-16ea-4ea8-ba8f-61651781c096.png",
+      "source_sha256": "52d93c32bee1a912527319eed838fcff1b8c485740124a9a202dc4da2b4ef282",
+      "source": "source/eclipse-level-1.png"
+    },
+    {
+      "item_id": 9041,
+      "slug": "eclipse-level-2",
+      "display_name": "Level 2 Eclipse Stone",
+      "prompt": "A Level 2 ECLIPSE STONE. One broad roughly oval irregular hexagonal mineral boulder, slightly tilted, with six large angular faces and blunt top, solid and substantial, not a tall crystal. Rich amethyst and magenta obsidian body. Its central face has one very large PARTIAL SOLAR ECLIPSE vein: a dark circular center partially surrounded by a thick brilliant ORANGE GOLD crescent, leaving a clearly dark open side. Warm amber cracks travel through purple facets. This middle tier is visually stronger and warmer than a silver-crescent first tier, but has no complete circular corona. Broad stone mass dominates. No jewelry setting, no wings.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-c24361a8-286f-4850-aff7-fd91f72d6e60.png",
+      "source_sha256": "67f1c6b435808642797ff8de3c27d330e25993072862761ac6e0abf3f9800b4b",
+      "source": "source/eclipse-level-2.png"
+    },
+    {
+      "item_id": 9042,
+      "slug": "eclipse-level-3",
+      "display_name": "Level 3 Eclipse Stone",
+      "prompt": "A Level 3 ECLIPSE STONE. One broad roughly oval irregular hexagonal mineral boulder, slightly tilted, with six large angular faces and blunt top, solid and substantial, not a tall crystal. Deep royal violet and midnight obsidian body with rich broad purple facets. Its central face has one very large TOTAL SOLAR ECLIPSE vein: perfectly dark circular core surrounded by a COMPLETE THICK RADIANT GOLD CORONA with a few short powerful golden rays, easy to read as a full eclipse at 36 pixels. Bright white-gold cracks enter the mineral planes. This is the strongest final tier of the eclipse family. Broad stone mass dominates. No jewelry setting, no wings.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-f06586ab-8f10-40a6-85f2-bed2cc9d0d16.png",
+      "source_sha256": "5fe5a4456d4f58d4f98d70368fcda2aba5272a43ee8aaea6e9594fb636397ac5",
+      "source": "source/eclipse-level-3.png"
+    },
+    {
+      "item_id": 9050,
+      "slug": "goddess-stone",
+      "display_name": "Goddess' Stone",
+      "prompt": "A GODDESS' STONE. One substantial sacred mineral boulder, broad roughly oval irregular hexagonal shape, slightly tilted, six large angular faces and blunt top. Pearlescent IVORY and pale champagne body with clear cool blue-gray shadow facets. A single large GOLD FOUR-POINT DIVINE STAR glows as a natural vein through its central face. Two simple ancient laurel-shaped gold veins follow the lower side facets. Soft contained ivory halo. Solid physically mountable holy rock, recognizable as stone and clearly distinct from the dark purple eclipse stones. Broad stone mass dominates, no tall crystal spike, no human face, no coin, no pendant, no jewelry frame.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-8f5b9132-0de8-44f2-87e3-91607c459ad7.png",
+      "source_sha256": "2754b314e06870d2bb4c203f455f13aff623d12dcb94e8ad6a841eb2ab80ea33",
+      "source": "source/goddess-stone.png"
+    },
+    {
+      "item_id": 9051,
+      "slug": "copper-evasion-signet",
+      "display_name": "Copper Evasion Signet",
+      "prompt": "A COPPER EVASION SIGNET, an actual thick ancient Greek signet ring shown in three-quarter view. One compact broad ring with a large beveled HEXAGONAL flat seal face tilted toward the viewer at the upper right; a thick curved band visibly forms a dark hole beneath and to the lower left. The seal bears ONE simple embossed SHIELD-shaped protective glyph, without text. All metal is warm REDDISH COPPER and deep russet bronze, strong orange edge highlights, subtle teal patina in recesses. No gemstone. Chunky generously sized ring fills the canvas; silhouette and shield glyph readable at 36 pixels. First tier of matching Copper Silver Gold Platinum signet rings.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-c4b1e56a-0c3d-4315-b6aa-812ec93e633a.png",
+      "source_sha256": "bb2d2b178120e5e69d99ce5c11eb8433d68b979146fad43cef197aaa53bfef80",
+      "source": "source/copper-evasion-signet.png"
+    },
+    {
+      "item_id": 9052,
+      "slug": "silver-evasion-signet",
+      "display_name": "Silver Evasion Signet",
+      "prompt": "A SILVER EVASION SIGNET, an actual thick ancient Greek signet ring shown in three-quarter view. One compact broad ring with a large beveled HEXAGONAL flat seal face tilted toward the viewer at the upper right; a thick curved band visibly forms a dark hole beneath and to the lower left. The seal bears ONE simple embossed SHIELD-shaped protective glyph, without text. All metal is cool MOON SILVER with medium steel-gray shadows and pale blue-white edge highlights; no yellow or gold. No gemstone. Chunky generously sized ring fills the canvas; silhouette and shield glyph readable at 36 pixels. Second tier of matching Copper Silver Gold Platinum signet rings.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-0fc5826e-857a-45a0-b35a-05893d568ccc.png",
+      "source_sha256": "c9374b238815d68518d7640c6238ee7473b0cfe5ab332c894cabbed3d851df1e",
+      "source": "source/silver-evasion-signet.png"
+    },
+    {
+      "item_id": 9053,
+      "slug": "gold-evasion-signet",
+      "display_name": "Gold Evasion Signet",
+      "prompt": "A GOLD EVASION SIGNET, an actual thick ancient Greek signet ring shown in three-quarter view. One compact broad ring with a large beveled HEXAGONAL flat seal face tilted toward the viewer at the upper right; a thick curved band visibly forms a dark hole beneath and to the lower left. The seal bears ONE simple embossed SHIELD-shaped protective glyph, without text. All metal is rich saturated YELLOW GOLD with deep ocher shadows and brilliant warm golden edge highlights. No gemstone. Chunky generously sized ring fills the canvas; silhouette and shield glyph readable at 36 pixels. Third tier of matching Copper Silver Gold Platinum signet rings.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-8b70478f-0d75-4943-8a12-dc347225b70b.png",
+      "source_sha256": "182b99faaa312ee9577da1a8da2e4cf9c4685f0bdfa2343b4ea5e9308dcdbc0d",
+      "source": "source/gold-evasion-signet.png"
+    },
+    {
+      "item_id": 9054,
+      "slug": "platinum-evasion-signet",
+      "display_name": "Platinum Evasion Signet",
+      "prompt": "A PLATINUM EVASION SIGNET, an actual thick ancient Greek signet ring shown in three-quarter view. One compact broad ring with a large beveled HEXAGONAL flat seal face tilted toward the viewer at the upper right; a thick curved band visibly forms a dark hole beneath and to the lower left. The seal bears ONE prominent SHIELD-shaped protective glyph INLAID WITH A BRIGHT CYAN FACETED GEM. All metal is luminous WHITE PLATINUM with cold violet-gray shadows and brilliant white edge highlights. A thin contained electric cyan aura traces the seal. Absolutely no yellow, orange or gold metal. Chunky generously sized ring fills canvas; silhouette and cyan shield readable at36pixels. Highest fourth tier of matching Copper Silver Gold Platinum signet rings, visually distinguished from plain silver by its cyan shield gem.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-1bf16b64-063f-4217-a29d-cba63d58cf9c.png",
+      "source_sha256": "55bcc71c0e1509a3a0a757ab3e27b436f3ed9c53417b2ed2dce9213213fbea8c",
+      "source": "source/platinum-evasion-signet.png"
+    }
+  ]
+}

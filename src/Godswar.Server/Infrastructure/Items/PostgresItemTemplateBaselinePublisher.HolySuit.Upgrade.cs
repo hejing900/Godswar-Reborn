@@ -159,9 +159,24 @@ internal static partial class PostgresItemTemplateBaselinePublisher
         ReadCanonicalReviewedHolySuitItemsAsync(
             NpgsqlConnection connection,
             NpgsqlTransaction transaction,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool legacy = false) =>
+        await ReadCanonicalReviewedHolySuitItemsAsync(
+            connection,
+            transaction,
+            cancellationToken,
+            legacy
+                ? HolySuitContentBaselineV1.ItemTemplates
+                : HolySuitContentBaseline.ItemTemplates);
+
+    private static async Task<IReadOnlyList<ItemTemplateDefinition>>
+        ReadCanonicalReviewedHolySuitItemsAsync(
+            NpgsqlConnection connection,
+            NpgsqlTransaction transaction,
+            CancellationToken cancellationToken,
+            IReadOnlyList<ItemTemplateSeed> reviewedSeeds)
     {
-        var seeds = HolySuitContentBaseline.ItemTemplates
+        var seeds = reviewedSeeds
             .OrderBy(static value => value.Id)
             .ToArray();
         await using var command = new NpgsqlCommand("""

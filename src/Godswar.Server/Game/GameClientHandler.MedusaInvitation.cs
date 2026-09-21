@@ -12,6 +12,14 @@ internal sealed partial class GameClientHandler
         GamePacket packet,
         CancellationToken cancellationToken)
     {
+        // Instance-entry countdown acknowledgements share opcode 10217 with
+        // Medusa member invitations, so the countdown window claims its own
+        // zero-token traffic before the invitation reader sees it.
+        if (await TryHandleInstanceEntryResponseAsync(packet, cancellationToken))
+        {
+            return;
+        }
+
         if (packet.Opcode == Opcodes.RepetitionResponse &&
             packet.Length == 16 &&
             packet.Buffer.Length == 16 &&

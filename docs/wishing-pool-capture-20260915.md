@@ -22,6 +22,10 @@ NPC：`Athens_074`（"Wishing Pool"），对象 ID **5212**。
 
 **关键发现：+12 是"客户端要显示的 NPC 功能页号"列表**，按千进制打包、最低位在前
 （我们服务端 `PacketBuilder.PackNpcDialogIndices` 已实现同一规则）。
+
+> 用词更正：这里的 16/24/50 语义是**功能 id**（= 客户端 `NPC_FLAG_SYS_*` 常量），
+> 不是消息页序号；客户端脚本收到的 `Index` 是它们在列表里的**位置**。
+> 完整机制见 `docs/npc-function-dialog-mechanism.md`。
 参考服给许愿池发的是 **50,024,016 = 数字 [16, 24, 50]**：
 
 ```

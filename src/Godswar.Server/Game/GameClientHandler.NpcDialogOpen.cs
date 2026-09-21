@@ -1,12 +1,11 @@
 using System.Buffers.Binary;
-<<<<<<< HEAD
 using Godswar.Server.Application.World;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Networking;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Packets;
 using Godswar.Server.Protocol;
+using Godswar.Server.State;
+using Godswar.Server.Infrastructure.WishingPool;
 using Godswar.Server.Domain.World.Content;
 
 namespace Godswar.Server.Game;
@@ -34,29 +33,23 @@ internal sealed partial class GameClientHandler
         if (!TryResolveMapNpc(npcId, out var npc))
         {
             _warehouseAccessContext = null;
-<<<<<<< HEAD
             QuestFrameTrace.Append(
                 $"[npc] dialog open ignored: unknown npc={npcId} " +
                 $"map={_character?.CurrentMap.ToString() ?? "<none>"} " +
                 $"len={packet.Length}",
                 []);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Console.WriteLine(
                 $"[npc] dialog open ignored: unknown npc={npcId} " +
                 $"map={_character?.CurrentMap.ToString() ?? "<none>"}");
             return;
         }
 
-<<<<<<< HEAD
         QuestFrameTrace.Append(
             $"[npc] dialog open received npc={npcId} key={npc.NpcKey} " +
             $"map={npc.MapId} len={packet.Length} buffer={packet.Buffer.Length} " +
             $"carried={_character?.Quests.Count ?? 0}",
             []);
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         // The stock client can leave normal storage open while the related
         // manager dialogue is used. Preserve only an access lease that was
         // already issued by the normal Warehouse NPC; the manager never
@@ -68,7 +61,6 @@ internal sealed partial class GameClientHandler
             _warehouseAccessContext = null;
         }
 
-<<<<<<< HEAD
         // The flags word is a bitmask, so an npc whose normal page is something
         // else keeps it and gains the quest page. Computed once here because every
         // branch below needs the same answer.
@@ -76,8 +68,6 @@ internal sealed partial class GameClientHandler
             ? QuestContentBaseline.QuestOpenFlags
             : 0;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (WarehouseNpcProtocol.IsWarehouseEndpoint(
                 npc.NpcKey,
                 npc.InteractionId))
@@ -89,12 +79,8 @@ internal sealed partial class GameClientHandler
                     PacketBuilder.WarehouseDialogOpenAck(
                         npc.InteractionId,
                         WarehouseNpcProtocol.ClientScriptKey(
-<<<<<<< HEAD
                             npc.NpcKey, npc.InteractionId),
                         questFlags),
-=======
-                            npc.NpcKey, npc.InteractionId)),
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     cancellationToken,
                     "WarehouseDialogOpenAck");
             }
@@ -107,7 +93,6 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
         if (QuestContentBaseline.IsNewbieGuide(npc.InteractionId))
         {
             // Replayed from the reference capture: the guide opens with the 10067
@@ -155,6 +140,24 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+        if (IsWishingPool(npc))
+        {
+            await SendWishingPoolMenuAsync(npc, cancellationToken);
+            return;
+        }
+
+        // The scripted NPCs own their whole window in one client script each, so
+        // they are answered before route resolution and leave the versioned
+        // dialogue baseline untouched.
+        if (ResolveScriptedNpcDialogue(npc) is { } scriptedDialogue)
+        {
+            await SendScriptedNpcDialogueMenuAsync(
+                npc,
+                scriptedDialogue,
+                cancellationToken);
+            return;
+        }
+
         if (await TryHandleDuelArenaNpcDialogOpenAsync(
                 packet, npc, cancellationToken))
         {
@@ -162,17 +165,11 @@ internal sealed partial class GameClientHandler
                 $"[npc] dialog open branch=duel-arena npc={npc.InteractionId} " +
                 $"key={npc.NpcKey}",
                 []);
-=======
-        if (await TryHandleDuelArenaNpcDialogOpenAsync(
-                packet, npc, cancellationToken))
-        {
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             return;
         }
 
         if (await TryHandleCapitalNpcDialogOpenAsync(
                 npc,
-<<<<<<< HEAD
                 questFlags,
                 cancellationToken))
         {
@@ -184,19 +181,10 @@ internal sealed partial class GameClientHandler
         }
 
         var (routes, text) = await ResolveNpcDialogueRoutesAsync(
-=======
-                cancellationToken))
-        {
-            return;
-        }
-
-        var routes = await ResolveNpcDialogueRoutesAsync(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             npc,
             cancellationToken);
         if (routes.Count == 0)
         {
-<<<<<<< HEAD
             // A published NPC may carry dialogue text without any extended
             // function: the Wishing Pool is one, and the captured Duel Arena
             // Vendor and capital Teaching Manager are others. Advertise the
@@ -204,6 +192,12 @@ internal sealed partial class GameClientHandler
             // description page, exactly as those captured endpoints do. The
             // client resolves the visible text from the script key in its own
             // NPCDescription.dat, so no text travels in this packet.
+            if (IsZeusGiftEndpoint(npc))
+            {
+                await SendZeusGiftFunctionMenuAsync(npc, cancellationToken);
+                return;
+            }
+
             if (text is { } description &&
                 !string.IsNullOrWhiteSpace(description.Description))
             {
@@ -221,8 +215,6 @@ internal sealed partial class GameClientHandler
                 $"text={(text is null ? "none" : "empty")} " +
                 $"capital={CapitalNpcServiceProtocol.TryResolve(npc, out _)}",
                 []);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             return;
         }
 
@@ -279,14 +271,11 @@ internal sealed partial class GameClientHandler
                 $"behavior={route.Behavior} dialog={route.DialogIndex} " +
                 $"order={route.RouteOrder}");
         }
-<<<<<<< HEAD
 
         QuestFrameTrace.Append(
             $"[npc] dialog open branch=routes npc={npc.InteractionId} " +
             $"key={npc.NpcKey} script={clientScriptKey} routes={routes.Count}",
             []);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     private async Task HandleNpcDialogPageRequestAsync(
@@ -353,7 +342,6 @@ internal sealed partial class GameClientHandler
         Console.WriteLine(
             $"[npc] page request npc={npcId} key={npc.NpcKey}");
     }
-<<<<<<< HEAD
 
     /// <summary>
     /// Opens the stock client's plain description window for a published NPC
@@ -369,6 +357,491 @@ internal sealed partial class GameClientHandler
     /// to opcode 10090: no quest page is sent, and the quest refresh routine is
     /// never entered.
     /// </remarks>
+    /// <summary>
+    /// The dialog acknowledgement flags word that advertises the extended function
+    /// list. It is what the captured Arena and mall acknowledgements carry together
+    /// with the function number.
+    /// </summary>
+    private const int FunctionListOpenFlags = 0x200;
+
+    /// <summary>
+    /// Whether the NPC is one of the two endpoints of the Zeus gift event. Both
+    /// are answered by the installed client's own <c>NpcFunZeus.lua</c> under the
+    /// same function number, so both open the same function menu and differ only
+    /// in which dialogue set they answer with.
+    /// </summary>
+    private static bool IsZeusGiftEndpoint(NpcSpawnDefinition npc) =>
+        IsZeusLoyalBeliever(npc) || IsZeusPrayingSaint(npc);
+
+    private static bool IsZeusLoyalBeliever(NpcSpawnDefinition npc) =>
+        npc.NpcKey is "Athens_113" or "Sparta_113";
+
+    /// <summary>
+    /// The praying saint, the endpoint a gift is handed to. The client names him
+    /// "[Event]Praying Saint" and he stands beside the believer in both capitals.
+    /// </summary>
+    private static bool IsZeusPrayingSaint(NpcSpawnDefinition npc) =>
+        npc.NpcKey is "Athens_114" or "Sparta_114";
+
+    /// <summary>
+    /// Opens the guide's function menu, which is the entry to the whole Zeus gift
+    /// dialogue.
+    /// </summary>
+    private async Task SendZeusGiftFunctionMenuAsync(
+        NpcSpawnDefinition npc,
+        CancellationToken cancellationToken)
+    {
+        await _session.SendAsync(
+            PacketBuilder.NpcDialogOpenAck(
+                npc.InteractionId,
+                ZeusGiftFunctionList,
+                npc.NpcKey),
+            cancellationToken,
+            "ZeusGiftFunctionMenu");
+        Console.WriteLine(
+            $"[npc] zeus gift menu open npc={npc.InteractionId} " +
+            $"key={npc.NpcKey} list=[{string.Join(',', ZeusGiftFunctionList)}]");
+    }
+
+    /// <summary>
+    /// Answers a Zeus gift endpoint's function traffic by the number the client
+    /// sent. The set is chosen by which of the two endpoints is speaking: they
+    /// share one client script, and its first page holds both of their entry
+    /// groups on the same rows.
+    /// </summary>
+    /// <remarks>
+    /// The number the client sends is the whole of what it reports: the function
+    /// number it was opened with comes back untouched in every reply, so a reply
+    /// cannot name a page, and the page a number draws on is decided for it. The
+    /// dispatch is therefore a lookup on the clicked number, and each entry of the
+    /// set's step table answers with the numbers of the step the click leads to. A
+    /// number with no entry repeats the opening menu rather than drawing a line
+    /// the script has no branch for.
+    ///
+    /// The installed client's <c>NpcFunZeus.lua</c> owns the whole function: every
+    /// branch of it only sets a label, a position or a line of text. The server
+    /// therefore answers numbers and never grants anything here, which is why the
+    /// event's own economy stays unimplemented.
+    /// </remarks>
+    private async Task HandleZeusGiftDialogueAsync(
+        NpcSpawnDefinition npc,
+        int dialogIndex,
+        int subId,
+        CancellationToken cancellationToken)
+    {
+        var dialogue = IsZeusPrayingSaint(npc)
+            ? ZeusGiftSaintDialogue
+            : ZeusGiftBelieverDialogue;
+        IReadOnlyList<ZeusDialogueEntry> reply;
+        string reason;
+        if (subId == ZeusGiftOpeningRequest)
+        {
+            if (_character is { } character &&
+                character.Level < ZeusGiftMinimumLevel)
+            {
+                reply = ZeusGiftLevelReply;
+                reason = "ZeusGiftLevelReply";
+            }
+            else
+            {
+                reply = dialogue.OpeningMenu;
+                reason = "ZeusGiftOpeningMenu";
+            }
+        }
+        else if (dialogue.Steps.TryGetValue(subId, out var opened))
+        {
+            reply = opened;
+            reason = "ZeusGiftStep";
+        }
+        else
+        {
+            // Every button this endpoint's window draws is registered, so a number
+            // outside the table is not one of them and is left unanswered.
+            Console.WriteLine(
+                $"[npc] zeus gift unregistered npc={npc.InteractionId} " +
+                $"key={npc.NpcKey} dialog={dialogIndex} subId={subId}");
+            return;
+        }
+
+        await SendZeusGiftReplyAsync(
+            npc,
+            dialogIndex,
+            [.. reply.Select(static entry => entry.SubId)],
+            reason,
+            cancellationToken);
+    }
+
+    private async Task SendZeusGiftReplyAsync(
+        NpcSpawnDefinition npc,
+        int dialogIndex,
+        int[] reply,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        await _session.SendAsync(
+            PacketBuilder.NpcFunctionActionResponse(
+                npc.InteractionId,
+                dialogIndex,
+                reply),
+            cancellationToken,
+            reason);
+        Console.WriteLine(
+            $"[npc] zeus gift reply npc={npc.InteractionId} " +
+            $"dialog={dialogIndex} reason={reason} " +
+            $"sent=[{string.Join(',', reply)}]");
+    }
+
+    /// <summary>
+    /// The installed client's function advertisement for the Wishing Pool
+    /// (<c>Athens_074</c>, "Wishing Pool"). The reference server sent this exact
+    /// frame: <c>flags 0x200</c> with the packed page list <c>[16, 24, 50]</c>.
+    /// </summary>
+    private static readonly int[] WishingPoolPages = [16, 24, 50];
+
+    private static bool IsWishingPool(uint npcId) => npcId is 5071u or 5213u;
+
+    /// <summary>
+    /// The client's own gate for the free wish: <c>NF_L0_JN100</c> reports that
+    /// "players below level 30 cannot make wishes in the wishing pool".
+    /// </summary>
+    private const int WishingPoolMinimumLevel = 30;
+
+    /// <summary>
+    /// What the paid entry costs. The client script's own <c>JN103</c> offers to
+    /// "spend 230 Gold in making another wish".
+    /// </summary>
+    private const int WishingPoolPaidWishGoldCost = 230;
+
+    /// <summary>
+    /// The client's two draw-result texts: <c>JN103</c> for an ordinary book
+    /// ("it's only a common skill book") and <c>JN203</c> for an advanced one
+    /// ("you are lucky to have obtained an advanced skill book").
+    /// </summary>
+    private const int WishingPoolOrdinaryResultSubId = 103;
+    private const int WishingPoolAdvancedResultSubId = 203;
+
+    private static bool IsWishingPool(NpcSpawnDefinition npc) =>
+        npc.NpcKey is "Athens_074" or "Sparta_074";
+
+    /// <summary>
+    /// Opens the Wishing Pool with its three advertised pages.
+    /// </summary>
+    private async Task SendWishingPoolMenuAsync(
+        NpcSpawnDefinition npc,
+        CancellationToken cancellationToken)
+    {
+        await _session.SendAsync(
+            PacketBuilder.NpcDialogOpenAck(
+                npc.InteractionId,
+                WishingPoolPages,
+                npc.NpcKey),
+            cancellationToken,
+            "WishingPoolMenu");
+        Console.WriteLine(
+            $"[npc] wishing pool open npc={npc.InteractionId} key={npc.NpcKey}");
+    }
+
+    /// <summary>
+    /// Replays the reference server's answer for the Wishing Pool. The captured
+    /// exchange is page-keyed: the client sends the page it is on as the dialog
+    /// field, and the server answers each page's selection with that page's own
+    /// message numbers.
+    /// </summary>
+    /// <remarks>
+    /// Transcribed from <c>docs/wishing-pool-capture-20260915.md</c> section 2:
+    /// <c>10069 {5212, 16, 16, -1}</c> is answered <c>10070 {5212, 16, 101, 201}</c>
+    /// and <c>10069 {5212, 24, 24, -1}</c> is answered <c>10070 {5212, 24, 101, 1, 2}</c>.
+    /// Pages 16 and 50 are menu pages, so their answer lists that page's buttons;
+    /// page 24 is an instruction page, whose <c>-1</c> answer opens its two
+    /// choices. Only the dialogue is modelled - the wishing economy (level gate,
+    /// cooldown, streak and exp reward) is not implemented.
+    /// </remarks>
+    private async Task HandleWishingPoolActionAsync(
+        uint npcId,
+        int page,
+        int selection,
+        CancellationToken cancellationToken)
+    {
+        // Page 16 is the wish page. Its two entries are the script's tail-1
+        // buttons: 101 "Make wishes for free" (NF_L0_JN101) and 201 "Throw Gold
+        // into the Wishing pool" (NF_L0_JN201). A class then runs the free wish.
+        if (page == 16)
+        {
+            if (selection is 101 or 201)
+            {
+                // Both entries - 101 "Make wishes for free" and 201 "Throw Gold into
+                // the Wishing pool" - ask which skill book to wish for. The class
+                // choices are the script's own buttons 301 Warrior, 401 Champion, 501
+                // Mage and 601 Priest.
+                //
+                // The tail-0 family (100/200/300/400/500) is deliberately absent.
+                // Those are the script's result texts and each one ends with
+                // NPCFUN:EndMessage(true); sending one alongside the class buttons
+                // made the client treat the whole answer as a result and close the
+                // window, so the class buttons could never be clicked.
+                //
+                // The class click that follows cannot tell the two entries apart -
+                // both send the same 301-601 - so the paid entry is remembered until
+                // that click arrives.
+                _wishingPoolPaidWishPending = selection == 201;
+                await SendWishingPoolPageAsync(
+                    npcId, page, [301, 401, 501, 601],
+                    "WishingPoolClasses",
+                    cancellationToken);
+                return;
+            }
+
+            if (selection is 301 or 401 or 501 or 601)
+            {
+                var paid = _wishingPoolPaidWishPending;
+                _wishingPoolPaidWishPending = false;
+                if (!WishingPoolCatalog.TryResolveClassButton(
+                        selection,
+                        out var characterClass))
+                {
+                    return;
+                }
+
+                await HandleWishingPoolWishAsync(
+                    npcId,
+                    page,
+                    characterClass,
+                    paid,
+                    cancellationToken);
+                return;
+            }
+
+            _wishingPoolPaidWishPending = false;
+            await SendWishingPoolPageAsync(
+                npcId, page, [101, 201], "WishingPoolWishPage",
+                cancellationToken);
+            return;
+        }
+
+        if (page == WishingPoolLostBookPage)
+        {
+            // The reference server's answer to this page is captured: it replies
+            // [101, 1, 2]. Either of the two book buttons leads to the wish itself,
+            // which this server does not run, so the answer is the script's own
+            // missing-book line instead.
+            var lostBookReply = selection is 1 or 2
+                ? WishingPoolLostBookNoBook
+                : WishingPoolLostBookMenu;
+            await SendWishingPoolPageAsync(
+                npcId,
+                page,
+                lostBookReply,
+                selection is 1 or 2
+                    ? "WishingPoolLostBookNoBook"
+                    : "WishingPoolLostBookMenu",
+                cancellationToken);
+            return;
+        }
+
+        if (page == WishingPoolLuckyGodsPage)
+        {
+            // The divine wish. Its first page holds the rules and the two gods,
+            // and no later page holds a branch for either of them, so every later
+            // answer comes from one of the script's number families.
+            var luckyReply = selection switch
+            {
+                1000 => WishingPoolLuckyNoPrize,
+                100 or 101 => WishingPoolLuckyNoWish,
+                _ => _character is { } character &&
+                     character.Level < WishingPoolLuckyGodsMinimumLevel
+                        ? WishingPoolLuckyLevelReply
+                        : WishingPoolLuckyMenu
+            };
+            await SendWishingPoolPageAsync(
+                npcId,
+                page,
+                luckyReply,
+                "WishingPoolLuckyGods",
+                cancellationToken);
+            return;
+        }
+
+        await SendWishingPoolPageAsync(
+            npcId, page, [101, 1, 2], "WishingPoolPage", cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs one wish end to end: gate, tier, skill book, cost, dialog.
+    /// </summary>
+    /// <remarks>
+    /// The outcome numbers are the client script's own: <c>JN100</c> is reported
+    /// as <c>100</c> ("players below level 30 cannot make wishes"), <c>JN500</c> as
+    /// <c>500</c> ("you have used up your free chances"), a wait is
+    /// <c>minutes * 100 + seconds</c> with tail <c>2</c>, and the three results are
+    /// <c>103</c> / <c>203</c> / <c>303</c> for common, advanced and ultimate.
+    /// <para>
+    /// The paid entry charges <see cref="WishingPoolPaidWishGoldCost"/> gold and does
+    /// not consume the free allowance, matching the script's own wording: <c>JN103</c>
+    /// offers "spend 230 Gold in making another wish" and <c>JN300</c> reports
+    /// "you don't have enough Gold to throw into the wishing pool".
+    /// </para>
+    /// </remarks>
+    private async Task HandleWishingPoolWishAsync(
+        uint npcId,
+        int page,
+        byte characterClass,
+        bool paid,
+        CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            return;
+        }
+
+        if (!paid && _wishingPoolUsage is null)
+        {
+            Console.WriteLine("[wishing-pool] free wish unavailable: no usage store");
+            return;
+        }
+
+        if (_character.Level < WishingPoolMinimumLevel)
+        {
+            await SendWishingPoolPageAsync(
+                npcId, page, [100], "WishingPoolLevelGate", cancellationToken);
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        WishingPoolUsage usage = default;
+        if (!paid)
+        {
+            usage = await _wishingPoolUsage!.ReadAsync(
+                _character.Id,
+                _realmCalendar,
+                now,
+                cancellationToken);
+            if (usage.Remaining <= 0)
+            {
+                await SendWishingPoolPageAsync(
+                    npcId, page, [500], "WishingPoolExhausted", cancellationToken);
+                return;
+            }
+
+            if (usage.LastUsedAt is { } lastUsedAt)
+            {
+                var readyAt = lastUsedAt + WishingPoolUsage.Interval;
+                if (readyAt > now)
+                {
+                    var wait = readyAt - now;
+                    var encoded = checked(
+                        (int)wait.TotalMinutes * 100 + wait.Seconds);
+                    await SendWishingPoolPageAsync(
+                        npcId, page, [encoded * 100 + 2], "WishingPoolWait",
+                        cancellationToken);
+                    return;
+                }
+            }
+        }
+        // The paid entry's balance is checked and charged inside the grant
+        // transaction, against the locked database row. There is deliberately no
+        // check on the cached _character.Gold here: a stale cache would refuse a
+        // wish the account can pay for, and the script's "not enough Gold" text is
+        // reported when the store rejects the charge.
+
+        var grant = await TryGrantWishingPoolSkillBookAsync(
+            characterClass,
+            paid ? WishingPoolPaidWishGoldCost : 0,
+            cancellationToken);
+        switch (grant.Outcome)
+        {
+            case WishingPoolGrantOutcome.InsufficientGold:
+                // JN300 "you don't have enough Gold to throw into the wishing pool".
+                await SendWishingPoolPageAsync(
+                    npcId, page, [300], "WishingPoolGoldGate", cancellationToken);
+                return;
+            case WishingPoolGrantOutcome.InsufficientCapacity:
+                // JN400's full-bag text.
+                await SendWishingPoolPageAsync(
+                    npcId, page, [400], "WishingPoolBagFull", cancellationToken);
+                return;
+            case WishingPoolGrantOutcome.Failed:
+                Console.WriteLine(
+                    $"[wishing-pool] wish failed class={characterClass} " +
+                    $"paid={paid}");
+                return;
+            default:
+                break;
+        }
+
+
+        if (!paid)
+        {
+            await _wishingPoolUsage!.RecordAsync(
+                _character.Id,
+                _realmCalendar,
+                now,
+                grant.ItemId,
+                cancellationToken);
+        }
+
+        var advanced = WishingPoolCatalog.IsAdvancedTier(grant.SkillLevel);
+        await SendWishingPoolPageAsync(
+            npcId,
+            page,
+            [advanced
+                ? WishingPoolAdvancedResultSubId
+                : WishingPoolOrdinaryResultSubId],
+            "WishingPoolResult",
+            cancellationToken);
+        // Only the advanced tier (levels 3-4) is announced; ordinary books
+        // stay private. The tier is the draw's own split, not a second
+        // threshold that could drift away from it.
+        if (advanced)
+        {
+            await BroadcastWishingPoolGrantAsync(
+                grant.DisplayName,
+                cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Announces an ultimate skill book to the realm through the client's centred
+    /// announcement channel.
+    /// </summary>
+    private async Task BroadcastWishingPoolGrantAsync(
+        string bookName,
+        CancellationToken cancellationToken)
+    {
+        if (_character is null)
+        {
+            return;
+        }
+
+        var text =
+            $"{_character.Name} got {bookName} from the Wishing Pool!";
+        // Realm-wide, not map-wide: every session this process serves receives it,
+        // whichever map the recipient is on. The personal channel is deliberately
+        // not used - that one is a scrolling log line, not a centred banner.
+        await _registry.BroadcastToAllSessionsAsync(
+            PacketBuilder.CenteredGreenAnnouncement(text),
+            cancellationToken,
+            label: "WishingPoolBroadcast");
+    }
+
+    private async Task SendWishingPoolPageAsync(
+        uint npcId,
+        int page,
+        int[] reply,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        await _session.SendAsync(
+            PacketBuilder.NpcFunctionActionResponse(
+                npcId,
+                page,
+                reply),
+            cancellationToken,
+            reason);
+        Console.WriteLine(
+            $"[npc] wishing pool npc={npcId} page={page} " +
+            $"{reason}={string.Join(',', reply)}");
+    }
+
     private async ValueTask SendNpcDescriptionOpenAsync(
         NpcSpawnDefinition npc,
         CancellationToken cancellationToken)
@@ -383,6 +856,4 @@ internal sealed partial class GameClientHandler
             $"[npc] description open npc={npc.InteractionId} " +
             $"key={npc.NpcKey}");
     }
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

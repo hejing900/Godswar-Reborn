@@ -74,5 +74,7 @@ internal sealed partial class MonsterMapRuntime
         public DateTimeOffset NextAttackAt { get; set; }
         public DateTimeOffset? StunnedUntil { get; set; }
         public int MovementSpeedBasisPoints { get; set; } = 10_000;
+        public MonsterControlState Controls { get; set; } = MonsterControlState.Empty;
+        public MonsterNavigation? Navigation { get; set; }
     }
 }

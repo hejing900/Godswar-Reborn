@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "sprite_size": 36,
+  "baseline_sha256": {
+    "Icon2.gwo": "3f7699ada1be4ded4e70c7dea8e29dff345eb9e7bec9d9dd14748ee3b790c94a",
+    "Icon5.gwo": "35fe7c805cc6eef1ef326c43a5ce765bfd8e958bfa96b023900b1c5524ee8f1f"
+  },
+  "entries": [
+    {
+      "item_id": 9030,
+      "slug": "heated-holy-stone",
+      "name": "Heated Holy Stone",
+      "atlas": "Icon2.gwo",
+      "x": 252,
+      "y": 0
+    },
+    {
+      "item_id": 9031,
+      "slug": "cooled-holy-stone",
+      "name": "Cooled Holy Stone",
+      "atlas": "Icon2.gwo",
+      "x": 288,
+      "y": 0
+    },
+    {
+      "item_id": 9032,
+      "slug": "zephyr-holy-stone",
+      "name": "Zephyr Holy Stone",
+      "atlas": "Icon5.gwo",
+      "x": 612,
+      "y": 0
+    },
+    {
+      "item_id": 9060,
+      "slug": "fire-destruction",
+      "name": "Fire Spirit of Destruction",
+      "atlas": "Icon2.gwo",
+      "x": 360,
+      "y": 0
+    },
+    {
+      "item_id": 9061,
+      "slug": "fire-penetration",
+      "name": "Fire Spirit of Penetration",
+      "atlas": "Icon2.gwo",
+      "x": 396,
+      "y": 0
+    },
+    {
+      "item_id": 9062,
+      "slug": "fire-fist",
+      "name": "Fire Spirit of Fist",
+      "atlas": "Icon2.gwo",
+      "x": 432,
+      "y": 0
+    },
+    {
+      "item_id": 9063,
+      "slug": "fire-fiery",
+      "name": "Fire Spirit of Fiery",
+      "atlas": "Icon2.gwo",
+      "x": 468,
+      "y": 0
+    },
+    {
+      "item_id": 9064,
+      "slug": "fire-blood",
+      "name": "Fire Spirit of Blood",
+      "atlas": "Icon2.gwo",
+      "x": 504,
+      "y": 0
+    },
+    {
+      "item_id": 9065,
+      "slug": "fire-pressure",
+      "name": "Fire Spirit of Pressure",
+      "atlas": "Icon2.gwo",
+      "x": 540,
+      "y": 0
+    },
+    {
+      "item_id": 9066,
+      "slug": "fire-assail",
+      "name": "Fire Spirit of Assail",
+      "atlas": "Icon2.gwo",
+      "x": 864,
+      "y": 0
+    },
+    {
+      "item_id": 9067,
+      "slug": "fire-lightning",
+      "name": "Fire Spirit of Lightning",
+      "atlas": "Icon2.gwo",
+      "x": 900,
+      "y": 0
+    },
+    {
+      "item_id": 9088,
+      "slug": "fire-flow",
+      "name": "Fire Spirit of Flow",
+      "atlas": "Icon2.gwo",
+      "x": 828,
+      "y": 36
+    },
+    {
+      "item_id": 9089,
+      "slug": "fire-tranquility",
+      "name": "Fire Spirit of Tranquility",
+      "atlas": "Icon2.gwo",
+      "x": 864,
+      "y": 36
+    },
+    {
+      "item_id": 9080,
+      "slug": "water-darkness",
+      "name": "Water Spirit of Darkness",
+      "atlas": "Icon2.gwo",
+      "x": 576,
+      "y": 0
+    },
+    {
+      "item_id": 9081,
+      "slug": "water-mist",
+      "name": "Water Spirit of Mist",
+      "atlas": "Icon2.gwo",
+      "x": 612,
+      "y": 0
+    },
+    {
+      "item_id": 9082,
+      "slug": "water-silence",
+      "name": "Water Spirit of Silence",
+      "atlas": "Icon2.gwo",
+      "x": 648,
+      "y": 0
+    },
+    {
+      "item_id": 9083,
+      "slug": "water-chillness",
+      "name": "Water Spirit of Chillness",
+      "atlas": "Icon2.gwo",
+      "x": 684,
+      "y": 0
+    },
+    {
+      "item_id": 9084,
+      "slug": "water-ice",
+      "name": "Water Spirit of Ice",
+      "atlas": "Icon2.gwo",
+      "x": 720,
+      "y": 0
+    },
+    {
+      "item_id": 9085,
+      "slug": "water-frost",
+      "name": "Water Spirit of Frost",
+      "atlas": "Icon2.gwo",
+      "x": 756,
+      "y": 0
+    },
+    {
+      "item_id": 9086,
+      "slug": "water-intent",
+      "name": "Water Spirit of Intent",
+      "atlas": "Icon2.gwo",
+      "x": 792,
+      "y": 0
+    },
+    {
+      "item_id": 9087,
+      "slug": "water-resilience",
+      "name": "Water Spirit of Resilience",
+      "atlas": "Icon2.gwo",
+      "x": 828,
+      "y": 0
+    },
+    {
+      "item_id": 9068,
+      "slug": "water-renewal",
+      "name": "Water Spirit of Renewal",
+      "atlas": "Icon2.gwo",
+      "x": 756,
+      "y": 36
+    },
+    {
+      "item_id": 9069,
+      "slug": "water-vitality",
+      "name": "Water Spirit of Vitality",
+      "atlas": "Icon2.gwo",
+      "x": 792,
+      "y": 36
+    },
+    {
+      "item_id": 9090,
+      "slug": "daedalus-attunement",
+      "name": "Daedalus Spirit of Attunement",
+      "atlas": "Icon5.gwo",
+      "x": 648,
+      "y": 0
+    },
+    {
+      "item_id": 9091,
+      "slug": "hephaestus-tempering",
+      "name": "Hephaestus Spirit of Tempering",
+      "atlas": "Icon5.gwo",
+      "x": 684,
+      "y": 0
+    },
+    {
+      "item_id": 9092,
+      "slug": "mnemosyne-preservation",
+      "name": "Mnemosyne Spirit of Preservation",
+      "atlas": "Icon5.gwo",
+      "x": 720,
+      "y": 0
+    },
+    {
+      "item_id": 9093,
+      "slug": "themis-continuity",
+      "name": "Themis Spirit of Continuity",
+      "atlas": "Icon5.gwo",
+      "x": 756,
+      "y": 0
+    }
+  ]
+}

@@ -105,7 +105,6 @@ internal sealed class GameCharacter
 
     public int MedusaHonorPoints { get; set; }
 
-<<<<<<< HEAD
     // Point Exchanger balances. These are in-memory only for now: the vendor
     // charges them, but no acquisition path exists yet, so they reset on
     // restart by design.
@@ -125,8 +124,6 @@ internal sealed class GameCharacter
     /// <summary>Quests the character has already handed in.</summary>
     public uint[] QuestCompletedIds { get; set; } = [];
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public long MedusaRewardRevision { get; set; }
 
     public uint SelectedTitleId { get; set; }

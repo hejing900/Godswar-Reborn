@@ -117,6 +117,7 @@ internal readonly record struct PlayerCombatTargetComponent(
     ulong HealthRevision,
     float BasicAttackRange)
 {
+    public bool UsesDirectRatingAccuracy { get; init; }
     public int Level { get; init; } = 1;
     public int PhysicalDefense { get; init; }
     public int MagicDefense { get; init; }
@@ -144,7 +145,14 @@ internal readonly record struct PlayerCombatSkillSnapshot(
     int ManaCost,
     int Property,
     decimal Power1,
-    decimal Power2);
+    decimal Power2,
+    decimal ZodiacFlatPower = 0m,
+    int ZodiacFlatRank = 0,
+    decimal ZodiacPowerAdjustment = 0m)
+{
+    public decimal AuthoredPower2 => Power2 - ZodiacFlatPower;
+    public decimal AuthoredPower1 => Power1 - ZodiacPowerAdjustment;
+}
 
 internal readonly record struct PlayerCombatIntentComponent(
     ulong IntentId,

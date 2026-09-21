@@ -4,7 +4,7 @@ using Godswar.Server.State;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class PetLearnedSkillContentChecks
+internal static partial class PetLearnedSkillContentChecks
 {
     public const string CheckName =
         "Database-owned learned pet-skill rank curves";
@@ -17,11 +17,12 @@ internal static class PetLearnedSkillContentChecks
                 PetLearnedSkillContentBaseline.ExpectedRevision &&
             content.Revision.SourceSha256 ==
                 PetLearnedSkillContentBaseline.SourceSha256 &&
-            content.Curves.Count == 384 &&
-            content.Curves.Sum(static curve => curve.Steps.Count) == 1655 &&
+            content.Curves.Count == 390 &&
+            content.Curves.Sum(static curve => curve.Steps.Count) == 1661 &&
             content.Curves.Select(static curve => curve.FamilyType)
-                .Distinct().Count() == 67,
-            "normalized baseline pins the reviewed 384 curves and 1,655 rank steps");
+                .Distinct().Count() == 68,
+            "current baseline pins 390 curves and 1,661 rank steps including Vampiric");
+        CheckVampiricContent(content);
 
         Check.True(
             content.TryGetCurve(0, 1, out var vitalOne) &&

@@ -9,7 +9,7 @@ using Npgsql;
 
 namespace Godswar.Server.ProtocolChecks;
 
-internal static class PostgresCapitalShopPurchaseIntegrationChecks
+internal static partial class PostgresCapitalShopPurchaseIntegrationChecks
 {
     public const string CheckName =
         "PostgreSQL Silver capital-shop purchase persistence";
@@ -289,7 +289,8 @@ internal static class PostgresCapitalShopPurchaseIntegrationChecks
 
     private static async Task<CapitalShopDurableState> ReadStateAsync(
         NpgsqlDataSource dataSource,
-        CapitalShopFixture fixture)
+        CapitalShopFixture fixture,
+        int itemId = 3100)
     {
         await using var command = dataSource.CreateCommand(
             """
@@ -340,7 +341,7 @@ internal static class PostgresCapitalShopPurchaseIntegrationChecks
         command.Parameters.AddWithValue(
             "aggregateKey",
             $"character:{fixture.CharacterId}");
-        command.Parameters.AddWithValue("itemId", 3100);
+        command.Parameters.AddWithValue("itemId", itemId);
 
         await using var reader = await command.ExecuteReaderAsync();
         if (!await reader.ReadAsync())

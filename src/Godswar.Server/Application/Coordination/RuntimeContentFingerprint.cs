@@ -10,7 +10,7 @@ namespace Godswar.Server.Application.Coordination;
 /// Spirit balance, Faction Crier balance, realm-calendar catalog, or monster
 /// reward-policy revision.
 /// </summary>
-internal static class RuntimeContentFingerprint
+internal static partial class RuntimeContentFingerprint
 {
     public static string Create(
         string worldRevision,

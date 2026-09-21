@@ -45,6 +45,8 @@ internal readonly record struct CombatAttackerStats
 /// </summary>
 internal readonly record struct CombatTargetStats
 {
+    // An encounter must opt in explicitly; ordinary PvE and PvP keep their versioned rating policy.
+    public bool UsesDirectRatingAccuracy { get; init; }
     public int Level { get; init; }
     public int PhysicalDefense { get; init; }
     public int MagicDefense { get; init; }

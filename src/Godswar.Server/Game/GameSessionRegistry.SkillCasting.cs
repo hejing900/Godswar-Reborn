@@ -89,6 +89,12 @@ internal sealed partial class GameSessionRegistry
         DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(session);
+        var wonderland = GetWonderlandPlayerControl(session, now);
+        if (wonderland == PlayerSkillCastControl.Stunned)
+        {
+            return wonderland;
+        }
+
         if (HasActiveElementalShock(session, now))
         {
             return PlayerSkillCastControl.Stunned;
@@ -96,10 +102,10 @@ internal sealed partial class GameSessionRegistry
 
         if (!_playerStatusStates.TryGetValue(session, out var state))
         {
-            return PlayerSkillCastControl.None;
+            return wonderland;
         }
 
-        var resolved = PlayerSkillCastControl.None;
+        var resolved = wonderland;
         foreach (var status in Volatile.Read(
                      ref state.SkillCastControlStatuses))
         {
@@ -123,6 +129,25 @@ internal sealed partial class GameSessionRegistry
         }
 
         return resolved;
+    }
+
+    public bool IsPlayerStatusMovementAllowed(
+        ClientSession session,
+        DateTimeOffset now)
+    {
+        if (GetPlayerSkillCastControl(session, now) ==
+            PlayerSkillCastControl.Stunned)
+        {
+            return false;
+        }
+
+        // Read the immutable control snapshot without taking the status
+        // semaphore. Status publication can await a pending cast while a
+        // movement handler is finishing its interruption.
+        return !_playerStatusStates.TryGetValue(session, out var state) ||
+            !Volatile.Read(ref state.SkillCastControlStatuses).Any(status =>
+                status.ExpiresAt > now &&
+                PlayerSkillCastControlCatalog.BlocksMovement(status.StatusId));
     }
 
     private bool HasActiveElementalShock(
@@ -167,7 +192,9 @@ internal sealed partial class GameSessionRegistry
                 .Where(status =>
                     PlayerSkillCastControlCatalog.ResolveActiveBlock(
                         status.StatusId) !=
-                    PlayerSkillCastControl.None)
+                    PlayerSkillCastControl.None ||
+                    PlayerSkillCastControlCatalog.BlocksMovement(
+                        status.StatusId))
                 .ToArray());
     }
 }

@@ -19,13 +19,9 @@ internal static partial class PacketBuilder
     private const int PlayerStatusSilverOffset = 120;
     private const int PlayerStatusGoldOffset = 124;
     private const int PlayerStatusMedusaHonorOffset = 128;
-<<<<<<< HEAD
     private const int PlayerStatusExchangePointOffset = 132;
     private const int PlayerStatusBindingGoldOffset = 136;
     private const int PlayerStatusExchangeMedalOffset = 140;
-=======
-    private const int PlayerStatusBindingGoldOffset = 136;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private const int PlayerStatusPhysicalDefenseOffset = 164;
     private const int PlayerStatusMagicDefenseOffset = 172;
     private const int PlayerStatusHitOffset = 176;
@@ -215,7 +211,6 @@ internal static partial class PacketBuilder
             BinaryPrimitives.WriteInt32LittleEndian(
                 packet.AsSpan(PlayerStatusMedusaHonorOffset, 4),
                 Math.Max(0, character.MedusaHonorPoints));
-<<<<<<< HEAD
             // The Point Exchanger's sibling balances sit in the same GameData
             // block as honor, so the panel only repaints them when this packet
             // carries them too.
@@ -228,11 +223,6 @@ internal static partial class PacketBuilder
             BinaryPrimitives.WriteInt32LittleEndian(
                 packet.AsSpan(PlayerStatusExchangeMedalOffset, 4),
                 Math.Max(0, character.ExchangeMedal));
-=======
-            BinaryPrimitives.WriteInt32LittleEndian(
-                packet.AsSpan(PlayerStatusBindingGoldOffset, 4),
-                Math.Max(0, character.BindingGold));
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         if (packet.Length >= PlayerStatusTalentPointsOffset + 4)

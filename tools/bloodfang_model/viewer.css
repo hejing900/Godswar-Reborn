@@ -1,0 +1,13 @@
+:root{color-scheme:dark;--ink:#101a28;--storm:#243748;--ivory:#e8dcc8;--garnet:#b3293c;--brass:#b39664}
+*{box-sizing:border-box}body{margin:0;background:var(--ink);color:var(--ivory);font:14px "Segoe UI",sans-serif}
+main{height:100svh;min-height:530px;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#304250 0,#182635 46%,#101a28 83%)}
+header{position:absolute;left:5%;top:5%;z-index:2;pointer-events:none}.eyebrow{font-size:11px;letter-spacing:.22em;color:var(--brass);margin:0 0 12px}
+h1{font:normal clamp(32px,4vw,56px) Georgia,serif;letter-spacing:-.03em;margin:0}.subtitle{font-size:14px;letter-spacing:.08em;color:#adb7be;margin:9px 0}
+#model{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}#model:active{cursor:grabbing}.halo{position:absolute;left:30%;right:30%;top:67%;height:9%;border-radius:50%;background:#080d17;filter:blur(16px);opacity:.6}
+.guide{position:absolute;right:5%;top:6%;display:flex;align-items:flex-end;flex-direction:column;gap:6px;font-size:12px;color:#a9b8c2;z-index:3}.guide button{margin-top:8px;background:transparent;border:none;border-bottom:1px solid #647887;border-radius:0;padding:4px 0}
+footer{position:absolute;bottom:3.8%;left:5%;right:5%;z-index:4;padding-top:15px;border-top:1px solid #677b884d;background:linear-gradient(0deg,#101a2888,transparent)}
+.controls{display:flex;align-items:center;gap:25px}button,select{font:inherit;color:var(--ivory);border:1px solid #536575;background:#142434;border-radius:5px;padding:9px 16px;cursor:pointer}button:hover,select:hover{border-color:var(--brass)}
+#play{width:86px;background:#6f2736;border-color:#a35461}label{display:flex;align-items:center;gap:10px;font-size:12px;color:#b3c0c8}select{font-size:13px;padding:8px 30px 8px 12px}#frame{margin-left:auto;font:12px Consolas,monospace;color:#c5bdac}
+input[type=range]{width:100%;margin:17px 0 7px;accent-color:#ce7780;cursor:pointer;height:4px}.note{margin:7px 0 0;font-size:11px;letter-spacing:.025em;color:#91a1ae}button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--brass);outline-offset:5px}
+#error{position:absolute;left:15%;right:15%;top:42%;background:#162a3b;padding:24px;z-index:6;line-height:1.6}
+@media(max-width:650px){header{top:4%;left:6%}.guide{top:5%;right:6%;font-size:10px}.guide span{display:none}h1{font-size:34px}.eyebrow{font-size:9px;letter-spacing:.15em}.controls{gap:10px;flex-wrap:wrap}label{gap:6px;font-size:11px}select{padding:8px 16px 8px 8px}#frame{display:none}footer{bottom:4%;left:6%;right:6%}.subtitle{font-size:12px}.note{font-size:10px}}

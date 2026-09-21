@@ -1,0 +1,72 @@
+{
+  "atlas_size": 1024,
+  "entries": [
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9040,
+      "name": "Level 1 Eclipse Stone",
+      "slug": "eclipse-level-1",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9041,
+      "name": "Level 2 Eclipse Stone",
+      "slug": "eclipse-level-2",
+      "x": 36,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9042,
+      "name": "Level 3 Eclipse Stone",
+      "slug": "eclipse-level-3",
+      "x": 72,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9050,
+      "name": "Goddess' Stone",
+      "slug": "goddess-stone",
+      "x": 108,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9051,
+      "name": "Copper Evasion Signet",
+      "slug": "copper-evasion-signet",
+      "x": 144,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9052,
+      "name": "Silver Evasion Signet",
+      "slug": "silver-evasion-signet",
+      "x": 180,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9053,
+      "name": "Gold Evasion Signet",
+      "slug": "gold-evasion-signet",
+      "x": 216,
+      "y": 0
+    },
+    {
+      "atlas": "HolyStoneReagents.gwo",
+      "item_id": 9054,
+      "name": "Platinum Evasion Signet",
+      "slug": "platinum-evasion-signet",
+      "x": 252,
+      "y": 0
+    }
+  ],
+  "schema_version": 1,
+  "sprite_size": 36,
+  "texture": "./Localization/en_us/UI/Texture/HolyStoneReagents.gwo"
+}

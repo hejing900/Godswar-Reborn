@@ -16,7 +16,6 @@ internal enum CapitalNpcServiceKind
     PetMerchant,
     SkillVendor,
     PropsVendor,
-<<<<<<< HEAD
     PointExchanger,
     PrizeChest,
     LevelSealer,
@@ -31,17 +30,12 @@ internal enum CapitalNpcServiceKind
     /// The second service on the same npc is dialog index 24.
     /// </remarks>
     Mall
-=======
-    PrizeChest,
-    LevelSealer
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }
 
 internal enum CapitalNpcShopCurrency
 {
     Gold,
     BindingGold,
-<<<<<<< HEAD
     Silver,
 
     // Point Exchanger currencies. The stock client resolves a record's cost from
@@ -51,22 +45,15 @@ internal enum CapitalNpcShopCurrency
     Honor,
     Point,
     Medal
-=======
-    Silver
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }
 
 internal readonly record struct CapitalNpcShopBalances(
     int Silver,
     int Gold,
-<<<<<<< HEAD
     int BindingGold,
     int Honor = 0,
     int Point = 0,
     int Medal = 0)
-=======
-    int BindingGold)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 {
     public int Get(CapitalNpcShopCurrency currency) =>
         currency switch
@@ -74,12 +61,9 @@ internal readonly record struct CapitalNpcShopBalances(
             CapitalNpcShopCurrency.Silver => Silver,
             CapitalNpcShopCurrency.Gold => Gold,
             CapitalNpcShopCurrency.BindingGold => BindingGold,
-<<<<<<< HEAD
             CapitalNpcShopCurrency.Honor => Honor,
             CapitalNpcShopCurrency.Point => Point,
             CapitalNpcShopCurrency.Medal => Medal,
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _ => throw new ArgumentOutOfRangeException(
                 nameof(currency),
                 currency,
@@ -120,7 +104,6 @@ internal static class CapitalNpcServiceProtocol
     {
         var resolved = (npcKey, interactionId) switch
         {
-<<<<<<< HEAD
             ("Sparta_052", 5049u) or ("Athens_052", 5190u) =>
                 (CapitalNpcServiceKind?)CapitalNpcServiceKind.ExchangeMentor,
             ("Sparta_069", 5066u) or ("Athens_069", 5207u) =>
@@ -142,31 +125,11 @@ internal static class CapitalNpcServiceProtocol
             ("Sparta_053", 5050u) or ("Athens_053", 5191u) =>
                 CapitalNpcServiceKind.HalloweenEnvoy,
             ("Sparta_089", 5086u) or ("Athens_089", 5227u) =>
-=======
-            ("Sparta_052", 5049u) or ("Athens_052", 5191u) =>
-                (CapitalNpcServiceKind?)CapitalNpcServiceKind.ExchangeMentor,
-            ("Sparta_069", 5066u) or ("Athens_069", 5208u) =>
-                CapitalNpcServiceKind.TeachingManager,
-            ("Sparta_087", 5084u) or ("Athens_087", 5226u) =>
-                CapitalNpcServiceKind.BoundGoldVendor,
-            ("Sparta_068", 5065u) or ("Athens_068", 5207u) =>
-                CapitalNpcServiceKind.BindingGoldShop,
-            ("Sparta_084", 5081u) or ("Athens_084", 5223u) =>
-                CapitalNpcServiceKind.FestivalEnvoy,
-            ("Sparta_130", 5127u) or ("Athens_130", 5269u) =>
-                CapitalNpcServiceKind.SacredSealer,
-            ("Sparta_131", 5128u) or ("Athens_131", 5270u) =>
-                CapitalNpcServiceKind.HolyStoneRedeemer,
-            ("Sparta_053", 5050u) or ("Athens_053", 5192u) =>
-                CapitalNpcServiceKind.HalloweenEnvoy,
-            ("Sparta_089", 5086u) or ("Athens_089", 5228u) =>
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 CapitalNpcServiceKind.PetMerchant,
             ("Sparta_034", 44345u) or ("Athens_036", 5175u) or
             ("Sparta_Newbie_004", 46565u) or
             ("Athens_Newbie_004", 54453u) =>
                 CapitalNpcServiceKind.SkillVendor,
-<<<<<<< HEAD
             ("Sparta_036", 5033u) or ("Athens_021", 5161u) =>
                 CapitalNpcServiceKind.PropsVendor,
             ("Sparta_077", 5074u) or ("Athens_077", 5215u) =>
@@ -177,14 +140,6 @@ internal static class CapitalNpcServiceProtocol
                 CapitalNpcServiceKind.LevelSealer,
             ("Sparta_074", 5071u) or ("Athens_074", 5212u) =>
                 CapitalNpcServiceKind.Mall,
-=======
-            ("Sparta_036", 5033u) or ("Athens_021", 5160u) =>
-                CapitalNpcServiceKind.PropsVendor,
-            ("Sparta_123", 5120u) or ("Athens_123", 5262u) =>
-                CapitalNpcServiceKind.PrizeChest,
-            ("Sparta_142", 5139u) or ("Athens_142", 5281u) =>
-                CapitalNpcServiceKind.LevelSealer,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _ => null
         };
 
@@ -192,7 +147,6 @@ internal static class CapitalNpcServiceProtocol
         return resolved.HasValue;
     }
 
-<<<<<<< HEAD
     /// <summary>The dialog index the mall's own window is opened from.</summary>
     public const int MallDialogIndex = 16;
 
@@ -231,18 +185,13 @@ internal static class CapitalNpcServiceProtocol
     public const CapitalNpcShopCurrency MallCurrency =
         CapitalNpcShopCurrency.Gold;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public static bool IsShop(CapitalNpcServiceKind service) =>
         service is
             CapitalNpcServiceKind.BoundGoldVendor or
             CapitalNpcServiceKind.BindingGoldShop or
             CapitalNpcServiceKind.PetMerchant or
             CapitalNpcServiceKind.SkillVendor or
-<<<<<<< HEAD
             CapitalNpcServiceKind.PointExchanger or
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             CapitalNpcServiceKind.PropsVendor;
 
     public static bool IsSuppressedSpawn(NpcSpawnDefinition npc) =>
@@ -434,12 +383,8 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.BoundGoldVendor =>
                 CapitalNpcShopCurrency.Gold,
             CapitalNpcServiceKind.BindingGoldShop or
-<<<<<<< HEAD
             CapitalNpcServiceKind.SkillVendor or
             CapitalNpcServiceKind.PointExchanger =>
-=======
-            CapitalNpcServiceKind.SkillVendor =>
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 CapitalNpcShopCurrency.BindingGold,
             CapitalNpcServiceKind.PetMerchant =>
                 CapitalNpcShopCurrency.Silver,
@@ -449,28 +394,18 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.BoundGoldVendor or
             CapitalNpcServiceKind.BindingGoldShop or
             CapitalNpcServiceKind.PetMerchant or
-<<<<<<< HEAD
             CapitalNpcServiceKind.SkillVendor or
             CapitalNpcServiceKind.PointExchanger;
-=======
-            CapitalNpcServiceKind.SkillVendor;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     public static bool TryGetShopCurrency(
         byte shopType,
         out CapitalNpcShopCurrency currency)
-<<<<<<< HEAD
     {        currency = shopType switch
-=======
-    {
-        currency = shopType switch
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         {
             2 => CapitalNpcShopCurrency.Gold,
             3 => CapitalNpcShopCurrency.Silver,
             4 => CapitalNpcShopCurrency.BindingGold,
-<<<<<<< HEAD
             // Point Exchanger frames. The captured reference frames carried 0x04
             // for every category, which is why the whole vendor priced in
             // B-Gold; these codes carry the three balances the stock client
@@ -521,11 +456,6 @@ internal static class CapitalNpcServiceProtocol
             _ => default
         };
         return currency != default;
-=======
-            _ => default
-        };
-        return shopType is 2 or 3 or 4;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     public static NpcDialogueRouteDefinition ExchangeRoute(

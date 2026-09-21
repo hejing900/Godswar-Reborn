@@ -1,0 +1,33 @@
+{
+  "generation_sha256": "b94f00baa57715cb36bf0acf5d44b3577d325cbeb9b25aa7932dcc0122a41a0b",
+  "manifest_sha256": "3fff5e34a70fed2c7ce20e6356757c5d1ddb20b419e81c507031d710f9b5b5be",
+  "native_format_sha256": "d9e0f1f5b0e422f14f348da737f67a4a36cee93c1d93cf8f7db1cf86c0b05693",
+  "outputs": {
+    "ExperienceCatalyst.gwo": {
+      "bytes": 44816,
+      "sha256": "f275dae393503de909824c057d4d5759be6fa142b9f627e6821eb1f755203b6c"
+    },
+    "ascension-core-36.png": {
+      "bytes": 2951,
+      "sha256": "01ae12a1d3882994a1c7c5008f7413e06eb0dfa459b1c53e5074c37f5dc7490b"
+    },
+    "icons-native.png": {
+      "bytes": 2951,
+      "sha256": "01ae12a1d3882994a1c7c5008f7413e06eb0dfa459b1c53e5074c37f5dc7490b"
+    },
+    "preview.png": {
+      "bytes": 12874,
+      "sha256": "28d1640a0c7cdd1d7deff00e95afe689fc32fae501b418e765d52d9a5824efb2"
+    }
+  },
+  "pillow_version": "12.0.0",
+  "resampling": "whole square, premultiplied-alpha Lanczos to 36px; no added padding",
+  "schema_version": 1,
+  "sources": [
+    {
+      "icon_sha256": "01ae12a1d3882994a1c7c5008f7413e06eb0dfa459b1c53e5074c37f5dc7490b",
+      "slug": "ascension-core",
+      "source_sha256": "6fd377db66fb44ccae27a61b448ea0e7aa191f1562a985f35f758bae82c5d4b0"
+    }
+  ]
+}

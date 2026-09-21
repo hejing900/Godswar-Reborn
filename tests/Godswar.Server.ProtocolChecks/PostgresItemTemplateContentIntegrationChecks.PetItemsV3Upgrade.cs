@@ -15,14 +15,11 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
     private const string OfficialOpalV1Revision =
         "B757C74890CA130E97CFF44DEBEF4A51D84746FD322E632A861E31261AAF90A1";
 
-<<<<<<< HEAD
     // Measured from the controlled-host fixture: the pets-v2 predecessor plus
     // the reviewed client-catalog family (see ClientCatalogItemContentBaseline).
     private const string ClientCatalogV1Revision =
         "A60B3E609ED22A54FA261329AFEF175A6F2A9433A0730C3D94272017EF438169";
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static async Task AssertOfficialPetItemsV3UpgradeAsync(
         NpgsqlDataSource dataSource,
         string originalRevision)
@@ -36,11 +33,8 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             .Append(WarehouseItemContentBaseline.StorageBoxKeyItemId)
             .Append(CaptureToolItemId)
             .Append(LegacyInstanceOpalItemContentBaseline.ItemId)
-<<<<<<< HEAD
             .Concat(ClientCatalogItemContentBaseline.ItemTemplates
                 .Select(static item => item.Id))
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             .ToArray();
         var definitions = original.All
             .Where(item => !historicalExclusions.Contains(
@@ -96,26 +90,16 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             await using var reader = await command.ExecuteReaderAsync();
             Check.True(
                 await reader.ReadAsync() &&
-<<<<<<< HEAD
                 reader.GetInt32(0) ==
                     1773 + ClientCatalogItemContentBaseline.ShippedItemCount &&
                 reader.GetString(1).EndsWith(
                     "pets-v5+nameplates-v1+warehouse-v1+opal-v1+" +
                     "client-catalog-v1",
-=======
-                reader.GetInt32(0) == 1773 &&
-                reader.GetString(1).EndsWith(
-                    "pets-v5+nameplates-v1+warehouse-v1+opal-v1",
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     StringComparison.Ordinal) &&
                 reader.GetInt32(2) == 6,
                 "exact pets-v3 upgrade publishes all six Focus books");
             Check.True(
-<<<<<<< HEAD
                 upgraded.Revision == ClientCatalogV1Revision &&
-=======
-                upgraded.Revision == OfficialOpalV1Revision &&
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 await ReadCompleteRevisionFingerprintAsync(
                     dataSource,
                     computed) == predecessorFingerprint,

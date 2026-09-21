@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "generator": "built-in image_gen",
+  "status": "selected",
+  "purpose": "Redesign the three Holy Stones and the existing Fire, Water, and Zephyr spirit icons for the native 36-pixel inventory.",
+  "shared_prompt": "Use case: stylized-concept. Asset type: a single inventory sprite for a 2000s hand-painted fantasy MMORPG, displayed at only 36 by 36 pixels. Paint a compact, bold, jewel-like game item with chunky readable planes, strong dark outlines, saturated controlled highlights and very little fine detail. One centered object fills 86 percent of the square; a dark nearly black navy background fills the canvas edge to edge. Orthographic three-quarter item illustration with light from upper left. Rich painterly pixel-friendly finish, neither photorealistic nor a modern flat app icon. No lettering, numbers, labels, UI border, external frame, medallion rim, scenery, hands, or extra props. Keep a clean unmistakable silhouette and high contrast at tiny scale.",
+  "entries": [
+    {
+      "item_id": 9030,
+      "slug": "heated-holy-stone",
+      "display_name": "Heated Holy Stone",
+      "prompt": "Primary request: a HEATED HOLY STONE, a substantial solid enchanted rock, NOT a talisman, pendant or coin. A single broad roughly oval irregular hexagonal gemstone-boulder, slightly tilted, with six large angular mineral faces and a blunt top. Deep garnet and burnt orange mineral body, brilliant ember-gold molten fissures through the rock, and one large simple flame-shaped glowing natural vein in its central face. A small contained fiery halo hugs the stone. The mass of the solid stone dominates; avoid a tall thin crystal spike or a pile of rocks. It should look ancient, sacred, powerful and physically mountable into equipment. Match a sibling set whose other stones share this same broad faceted rock shape.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-a3b41307-d833-4a6d-94fc-d197f7f7c5cb.png",
+      "source_sha256": "d884896be12ad335cd2b4618529db8f865016ccb78e46ad5c08f1edd1be05267",
+      "source": "source/heated-holy-stone.png"
+    },
+    {
+      "item_id": 9031,
+      "slug": "cooled-holy-stone",
+      "display_name": "Cooled Holy Stone",
+      "prompt": "Primary request: a COOLED HOLY STONE, a substantial solid enchanted rock, NOT a talisman, pendant or coin. A single broad roughly oval irregular hexagonal gemstone-boulder, slightly tilted, with six large angular mineral faces and a blunt top. Deep sapphire-blue mineral body, brilliant ice-cyan fissures through the rock, and one large simple three-pronged frost-shaped glowing natural vein in its central face. A small contained icy halo hugs the stone. The mass of the solid stone dominates; avoid a tall thin crystal spike or a pile of rocks. It should look ancient, sacred, powerful and physically mountable into equipment. Match a sibling set whose other stones share this same broad faceted rock shape.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-dd6efbde-bc8c-46d7-a005-5ddfc13f97dc.png",
+      "source_sha256": "70d53e35d4ebebf747230e6dffedc973ea635c08f3930f25a2935d520ed9c4c8",
+      "source": "source/cooled-holy-stone.png"
+    },
+    {
+      "item_id": 9032,
+      "slug": "zephyr-holy-stone",
+      "display_name": "Zephyr Holy Stone",
+      "prompt": "Primary request: a ZEPHYR HOLY STONE, a substantial solid enchanted wind rock, NOT a winged talisman, pendant or coin. A single broad roughly oval irregular hexagonal gemstone-boulder, slightly tilted, with six large angular mineral faces and a blunt top. Pale jade and deep turquoise mineral body, brilliant ivory-mint fissures through the rock, and one large simple spiral-shaped glowing natural vein in its central face. A small contained white wind curl hugs the stone. The mass of the solid stone dominates; avoid a tall thin crystal spike, wings, feathers or a pile of rocks. It should look ancient, sacred, powerful and physically mountable into equipment. Match a sibling set whose other stones share this same broad faceted rock shape.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-38523959-1455-4130-92cb-a9c1b77cbf22.png",
+      "source_sha256": "e6211c467cac6f1345b1a55676c6d904a8486373c2d44de927234b154ac3435f",
+      "source": "source/zephyr-holy-stone.png"
+    },
+    {
+      "slug": "fire-destruction",
+      "item_id": 9060,
+      "display_name": "Fire Spirit of Destruction",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-destruction",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-e55e0221-aef1-4a02-b9e5-bf30e19b7429.png",
+      "source_sha256": "57c9711b87dc34a98260adbd1711d12a05eabcd74a698daedad33d41728be3c3",
+      "source": "source/fire-destruction.png"
+    },
+    {
+      "slug": "fire-penetration",
+      "item_id": 9061,
+      "display_name": "Fire Spirit of Penetration",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-penetration",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-72410cfb-4fee-4be2-b9ad-427f2767c64f.png",
+      "source_sha256": "33505e58d20f5a17f7ae30967b481b37d98eaba6588f4a647130d36e82553e71",
+      "source": "source/fire-penetration.png"
+    },
+    {
+      "slug": "fire-fist",
+      "item_id": 9062,
+      "display_name": "Fire Spirit of Fist",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-fist",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-45e6cfbf-ed20-4328-9560-bc67a269ffdb.png",
+      "source_sha256": "f842bc275743c565d349636491d0db815890c786ff782c29a0076174b21cfbed",
+      "source": "source/fire-fist.png"
+    },
+    {
+      "slug": "fire-fiery",
+      "item_id": 9063,
+      "display_name": "Fire Spirit of Fiery",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-fiery",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-62c033e2-3200-4a5b-bd3f-aeee842ab3a5.png",
+      "source_sha256": "3252198456ff382351c3423af8d343a140db69446937b77d97fb43cbadba545c",
+      "source": "source/fire-fiery.png"
+    },
+    {
+      "slug": "fire-blood",
+      "item_id": 9064,
+      "display_name": "Fire Spirit of Blood",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-blood",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-f90a6101-2b2e-40ca-b717-5dbd049ebc7f.png",
+      "source_sha256": "0006651954bd6c6a8edcfed50440f6272af5976aa6450fc5849c41b9d6cf64cf",
+      "source": "source/fire-blood.png"
+    },
+    {
+      "slug": "fire-pressure",
+      "item_id": 9065,
+      "display_name": "Fire Spirit of Pressure",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-pressure",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-2cccc2a4-cbb2-4668-bb59-995bab8f16cc.png",
+      "source_sha256": "98d9125f7514fc8349b4cc79f370c03351b23a9ff9fb518e5c4c5c1038e11c42",
+      "source": "source/fire-pressure.png"
+    },
+    {
+      "slug": "fire-assail",
+      "item_id": 9066,
+      "display_name": "Fire Spirit of Assail",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-assail",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-0230b516-c256-49b3-b504-d49cfe8b560e.png",
+      "source_sha256": "919fef4efcf85f9cb982778c8da6fd5eb312ed1e90edc0f0bfd8dd094f6076ab",
+      "source": "source/fire-assail.png"
+    },
+    {
+      "slug": "fire-lightning",
+      "item_id": 9067,
+      "display_name": "Fire Spirit of Lightning",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-lightning",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-f6c498b5-9609-4c1f-93de-b6bd457daac0.png",
+      "source_sha256": "d4e8abf8411f232d1425587478fa696b4e3cd205370d775e39ef5b2e145f0def",
+      "source": "source/fire-lightning.png"
+    },
+    {
+      "slug": "fire-flow",
+      "item_id": 9088,
+      "display_name": "Fire Spirit of Flow",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-flow",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-b6c6050e-13b3-43d2-b000-30e0564dc87d.png",
+      "source_sha256": "192470a96e1f2698ce7bab33ff7e7855c3cedfbe9469b77b27caebaea7945605",
+      "source": "source/fire-flow.png"
+    },
+    {
+      "slug": "fire-tranquility",
+      "item_id": 9089,
+      "display_name": "Fire Spirit of Tranquility",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "fire-tranquility",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-98ae30ca-dd81-4d72-a27e-295cd4707e5f.png",
+      "source_sha256": "7c5bc1fe7549a9625f2d511b698412f5107e9dafdc0252143b5756bbf5d418b7",
+      "source": "source/fire-tranquility.png"
+    },
+    {
+      "slug": "water-darkness",
+      "item_id": 9080,
+      "display_name": "Water Spirit of Darkness",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-darkness",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-81370b87-7684-4f43-a07d-184d3eec44ee.png",
+      "source_sha256": "078275b47e24215ad40c6950e2c3bcfa5fa52b5d2ad5b5b74e0bdd54c2e8aa77",
+      "source": "source/water-darkness.png"
+    },
+    {
+      "slug": "water-mist",
+      "item_id": 9081,
+      "display_name": "Water Spirit of Mist",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-mist",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-6812b10c-3bb0-43a4-8ba5-5a678a8488a4.png",
+      "source_sha256": "206c6f8557f6a43972fcdd861dc0499018ee2e3af5a2f61b6018c45356bc52d5",
+      "source": "source/water-mist.png"
+    },
+    {
+      "slug": "water-silence",
+      "item_id": 9082,
+      "display_name": "Water Spirit of Silence",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-silence",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-5697ede4-84ff-40f0-bdff-11a6b882212a.png",
+      "source_sha256": "25a40a05f13c4b125413bf87756508021de57f2206bf162df449b87f1601c32b",
+      "source": "source/water-silence.png"
+    },
+    {
+      "slug": "water-chillness",
+      "item_id": 9083,
+      "display_name": "Water Spirit of Chillness",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-chillness",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-564373b8-3064-4c6e-ae59-b47f91a545ec.png",
+      "source_sha256": "597fc9b6c431c2ee216d02e0f8235711f5852203adeec105959d0a548d6a8701",
+      "source": "source/water-chillness.png"
+    },
+    {
+      "slug": "water-ice",
+      "item_id": 9084,
+      "display_name": "Water Spirit of Ice",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-ice",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-34a020cd-1ad3-42f9-b7f0-458bfece41d5.png",
+      "source_sha256": "4a18ac8021986b9574fba4da727c070fe15679b118a9a6561ccc37b04954cd56",
+      "source": "source/water-ice.png"
+    },
+    {
+      "slug": "water-frost",
+      "item_id": 9085,
+      "display_name": "Water Spirit of Frost",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-frost",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-b674de28-2bfd-4bee-80b5-6f30d6499874.png",
+      "source_sha256": "81c4bb7a7ced02a502a4ec0abbacefab7669f2ac8b10f0f368e04af9d36b7e25",
+      "source": "source/water-frost.png"
+    },
+    {
+      "slug": "water-intent",
+      "item_id": 9086,
+      "display_name": "Water Spirit of Intent",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-intent",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-4bcfe025-ad5b-4254-81d6-db03cc1372af.png",
+      "source_sha256": "2a230cbb0b687a537a7cb893412225fc4a1def06f89e82c95ea511e381aae2f9",
+      "source": "source/water-intent.png"
+    },
+    {
+      "slug": "water-resilience",
+      "item_id": 9087,
+      "display_name": "Water Spirit of Resilience",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-resilience",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-88c6fea0-1b1d-4f82-b6e8-b888c776606c.png",
+      "source_sha256": "b0943d0d427df9a960675558e4f699b79b801cb931669931bd1fbfa467dc7509",
+      "source": "source/water-resilience.png"
+    },
+    {
+      "slug": "water-renewal",
+      "item_id": 9068,
+      "display_name": "Water Spirit of Renewal",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-renewal",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-a7641d4c-2ec9-45b5-aabf-2f32e7288871.png",
+      "source_sha256": "37f15eaa00025b65a4eeef2a9b691e3befe18762245ba78c021a2c1522aac9af",
+      "source": "source/water-renewal.png"
+    },
+    {
+      "slug": "water-vitality",
+      "item_id": 9069,
+      "display_name": "Water Spirit of Vitality",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "water-vitality",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-ee6f6a44-6ac7-4df8-b32b-638d969db926.png",
+      "source_sha256": "eaf50838b9302a95300491b44d52ecd835a57c62e8c3f9310b45d75657165796",
+      "source": "source/water-vitality.png"
+    },
+    {
+      "slug": "daedalus-attunement",
+      "item_id": 9090,
+      "display_name": "Daedalus Spirit of Attunement",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "daedalus-attunement",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-337094c6-0ecc-4cf5-96f2-1205e5dcc24e.png",
+      "source_sha256": "9906257eaabe9616af3fc182bc6bd52d01510648fb13cd728730370ffe4da5df",
+      "source": "source/daedalus-attunement.png"
+    },
+    {
+      "slug": "hephaestus-tempering",
+      "item_id": 9091,
+      "display_name": "Hephaestus Spirit of Tempering",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "hephaestus-tempering",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-5cc5203e-e9ca-42cd-bd0a-b31dcb5a522e.png",
+      "source_sha256": "8c419fbe156aa1d4daa1a2e27e2911a5bd776b137f9f03ddd51b751ac0256e4f",
+      "source": "source/hephaestus-tempering.png"
+    },
+    {
+      "slug": "mnemosyne-preservation",
+      "item_id": 9092,
+      "display_name": "Mnemosyne Spirit of Preservation",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "mnemosyne-preservation",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-87ec1181-15dc-409c-b9a2-1847f59dbd21.png",
+      "source_sha256": "f5f243daafdad48dfe73baa0a41d99e3748fd46207e904f924aac3ff5248c006",
+      "source": "source/mnemosyne-preservation.png"
+    },
+    {
+      "slug": "themis-continuity",
+      "item_id": 9093,
+      "display_name": "Themis Spirit of Continuity",
+      "prompt_file": "prompts/spirits.json",
+      "prompt_key": "themis-continuity",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-f2b13b28-4974-44d3-b9a0-1f97a21673f8.png",
+      "source_sha256": "0d21368bc7730ef962e0153d60bb800ed5c33bfdf4170bfc5399894d8bd6d14d",
+      "source": "source/themis-continuity.png"
+    }
+  ]
+}

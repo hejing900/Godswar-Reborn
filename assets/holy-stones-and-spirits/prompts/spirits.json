@@ -1,0 +1,149 @@
+{
+  "shared_prompt": "Use case: stylized-concept. Asset type: one single 36-by-36-pixel inventory sprite for a hand-painted 2000s fantasy MMORPG. This is an elemental HOLY SPIRIT, an intangible living wisp of magical essence that can be inserted into a Holy Stone. Make one compact rounded teardrop-shaped flowing spirit with a distinctive large central symbol described below. Bold chunky curves and planes, strong dark contours, only 2 or 3 broad wisps, controlled bright highlights, no fine filigree or particle clutter. The whole subject fills 84 to 88 percent of a square canvas with a nearly black navy background extending to all edges. Rich painterly game-asset finish, readable at tiny size, centered with light from upper left. No letters, text, numbers, label, UI border, external frame, metal talisman rim, scenery, characters, faces or extra props. The spirit should feel fluid and ethereal, visually different from a solid Holy Stone. Keep every central symbol large and simple.",
+  "entries": [
+    {
+      "slug": "fire-destruction",
+      "item_id": 9060,
+      "display_name": "Fire Spirit of Destruction",
+      "prompt": "Primary request: FIRE SPIRIT OF DESTRUCTION. A blazing spearhead of molten-white spiritual energy punches through a dark broken shield silhouette. One sharp diagonal piercing slash is the dominant shape, wrapped in a compact crimson and ember-orange flame wisp. The broken shield is a simple subordinate dark crescent; the spear is pure fire, not a physical weapon. Communicates physical armor penetration."
+    },
+    {
+      "slug": "fire-penetration",
+      "item_id": 9061,
+      "display_name": "Fire Spirit of Penetration",
+      "prompt": "Primary request: FIRE SPIRIT OF PENETRATION. A luminous amber flame-shaped spirit with a bright violet lightning lance piercing one broken purple magical halo. The lance is the dominant straight vertical symbol, with two detached dark violet arc fragments. Spiritual flame curls upward around it. Communicates magic-defense penetration, distinct from a physical shield."
+    },
+    {
+      "slug": "fire-fist",
+      "item_id": 9062,
+      "display_name": "Fire Spirit of Fist",
+      "prompt": "Primary request: FIRE SPIRIT OF FIST. A large clenched fist silhouette formed entirely from luminous golden fire, knuckles raised toward the upper-left. A compact crimson and orange flame wisp curls around the wrist and four chunky knuckles. The fist is the clear dominant symbol, not a real hand or metal gauntlet. Communicates a powerful physical blow."
+    },
+    {
+      "slug": "fire-fiery",
+      "item_id": 9063,
+      "display_name": "Fire Spirit of Fiery",
+      "prompt": "Primary request: FIRE SPIRIT OF FIERY. A large brilliant four-point magical star burning inside a compact rounded red-orange spirit flame, with a tiny violet inner core. Two broad curled fire tongues frame the star asymmetrically. The magical star is the clear dominant symbol, not a weapon or rock. Communicates raw magical damage."
+    },
+    {
+      "slug": "fire-blood",
+      "item_id": 9064,
+      "display_name": "Fire Spirit of Blood",
+      "prompt": "Primary request: FIRE SPIRIT OF BLOOD. A single large ruby-red teardrop of spiritual fire with a bright golden sharp starburst glint in its heart. Three broad ember flame tongues sweep around the droplet in a crescent. The red droplet is the clear dominant symbol, clean and jewel-bright, no gore or anatomy. Communicates heightened critical-strike power."
+    },
+    {
+      "slug": "fire-pressure",
+      "item_id": 9065,
+      "display_name": "Fire Spirit of Pressure",
+      "prompt": "Primary request: FIRE SPIRIT OF PRESSURE. A dense molten-gold impact burst with four broad angular rays, squeezed between two inward-curving crimson flame claws. The compact forceful golden burst dominates the center, with a short red-orange wisp curling at the bottom. Pure energy, no hands or mechanical objects. Communicates concentrated critical impact."
+    },
+    {
+      "slug": "fire-assail",
+      "item_id": 9066,
+      "display_name": "Fire Spirit of Assail",
+      "prompt": "Primary request: FIRE SPIRIT OF ASSAIL. Two broad crossed xiphos sword silhouettes formed from golden-white spiritual fire, framed by a compact rising crimson flame wisp. Bold X silhouette, short blade shapes, readable open dark gaps. No physical metal swords and no shield. Communicates amplified physical assault, distinct from the single fist and armor-piercing spear."
+    },
+    {
+      "slug": "fire-lightning",
+      "item_id": 9067,
+      "display_name": "Fire Spirit of Lightning",
+      "prompt": "Primary request: FIRE SPIRIT OF LIGHTNING. One bold forked white-gold lightning bolt inside a compact orange-red flame wisp with violet-hot inner shadows. The jagged bolt runs from upper right to lower left and is the dominant symbol. Only two large lightning branches and two broad rising flame tongues. Communicates amplified magical power."
+    },
+    {
+      "slug": "fire-flow",
+      "item_id": 9088,
+      "display_name": "Fire Spirit of Flow",
+      "prompt": "Primary request: FIRE SPIRIT OF FLOW. A luminous sapphire-blue mana droplet at the heart of a compact orange and golden spiritual flame. One broad continuous orange loop sweeps up around the blue droplet like a flowing replenishment current. The blue droplet remains large and unmistakable against warm fire, no bottle, coin or frame. Communicates steadily renewing mana."
+    },
+    {
+      "slug": "fire-tranquility",
+      "item_id": 9089,
+      "display_name": "Fire Spirit of Tranquility",
+      "prompt": "Primary request: FIRE SPIRIT OF TRANQUILITY. A serene indigo-blue mana pearl resting in a broad upward-cupped golden flame crescent, enclosed by two calm red-orange wisps. One small white protective arc crowns the pearl. The blue pearl and gently cupping fire are the dominant shape, no container, bottle or coin. Communicates receiving and preserving mana under impact."
+    },
+    {
+      "slug": "water-darkness",
+      "item_id": 9080,
+      "display_name": "Water Spirit of Darkness",
+      "prompt": "Primary request: WATER SPIRIT OF DARKNESS. A broad midnight-blue round shield silhouette made entirely from dense water-spirit energy. One pale cyan crescent wave sweeps across its face and a turquoise tail curls beneath it. The deep-blue shield is the clear large dominant shape with one white glint, no metal rim. Communicates physical damage protection."
+    },
+    {
+      "slug": "water-mist",
+      "item_id": 9081,
+      "display_name": "Water Spirit of Mist",
+      "prompt": "Primary request: WATER SPIRIT OF MIST. A large pale-aqua crescent of swirling mist cradling a violet four-point magical star. Two soft but boldly outlined cyan wave wisps close protectively around the star. The crescent mist shield dominates, with the violet star as its clear core, no physical shield or coin. Communicates protection against magical damage."
+    },
+    {
+      "slug": "water-silence",
+      "item_id": 9082,
+      "display_name": "Water Spirit of Silence",
+      "prompt": "Primary request: WATER SPIRIT OF SILENCE. A broad upright icy-blue hexagonal barrier slab formed from compact flowing water-spirit energy, with a single short diagonal white strike visibly stopped at its center. The slab has three large dark-blue facets and one curling turquoise water tail. Not a collectible crystal rock: dissolve its lower edge into fluid spirit. Communicates absorbing a physical hit."
+    },
+    {
+      "slug": "water-chillness",
+      "item_id": 9083,
+      "display_name": "Water Spirit of Chillness",
+      "prompt": "Primary request: WATER SPIRIT OF CHILLNESS. A large six-point icy cyan snowflake silhouette formed from flowing spiritual water, sheltering a tiny violet magical spark at its center. The snowflake has only six thick simple arms and sits inside one compact sapphire wave curl. No solid stone, medallion or snow scenery. Communicates absorbing magical impact."
+    },
+    {
+      "slug": "water-ice",
+      "item_id": 9084,
+      "display_name": "Water Spirit of Ice",
+      "prompt": "Primary request: WATER SPIRIT OF ICE. One broad icy-white hooked return arrow made from a sharply curling aqua wave, turning back around a small midnight-blue impact pearl. The hook is the dominant unmistakable silhouette, with a faceted pointed crest and a dark open center. Pure living water spirit, no printed arrow or UI symbol. Communicates sending damage back toward an attacker."
+    },
+    {
+      "slug": "water-frost",
+      "item_id": 9085,
+      "display_name": "Water Spirit of Frost",
+      "prompt": "Primary request: WATER SPIRIT OF FROST. Two short mirrored icy-white spear-like water crests recoil outward from one bright cyan impact point, wrapped in a compact deep-sapphire spirit curl. The mirrored outward V shape dominates, strongly distinct from a circular return wave. Pure frozen-water energy, no actual weapons or stone. Communicates a sharp burst of retaliatory damage."
+    },
+    {
+      "slug": "water-intent",
+      "item_id": 9086,
+      "display_name": "Water Spirit of Intent",
+      "prompt": "Primary request: WATER SPIRIT OF INTENT. A broad luminous turquoise eye-shaped protective water crescent enclosing a small sharp golden critical-impact star. The upper and lower aqua waves nearly meet at each side, forming a strong horizontal almond silhouette. Not a human eyeball: entirely abstract flowing water spirit, no face. Communicates anticipating and diminishing a critical strike."
+    },
+    {
+      "slug": "water-resilience",
+      "item_id": 9087,
+      "display_name": "Water Spirit of Resilience",
+      "prompt": "Primary request: WATER SPIRIT OF RESILIENCE. A large midnight-blue protective shield dome made from a thick sapphire wave, with a short bright aqua vertical pillar at its center and two blunt gold sparks deflected off the upper sides. One compact white water tail curls beneath. The sturdy dome and pillar dominate. No metal, medallion or scenery. Communicates enduring heavy critical impacts."
+    },
+    {
+      "slug": "water-renewal",
+      "item_id": 9068,
+      "display_name": "Water Spirit of Renewal",
+      "prompt": "Primary request: WATER SPIRIT OF RENEWAL. A single large mint-green life droplet held inside a broad curling sapphire and turquoise water wisp. A small bright ivory leaf-shaped light emerges from its center. The green droplet and the flowing crescent are clean and dominant, no bottle, vessel, lettering or cross. Communicates steady recovery of health."
+    },
+    {
+      "slug": "water-vitality",
+      "item_id": 9069,
+      "display_name": "Water Spirit of Vitality",
+      "prompt": "Primary request: WATER SPIRIT OF VITALITY. A large glowing emerald heart-shaped life mote nestled in a thick upward-cupped cyan wave spirit. One short white pulse streak crosses the emerald core and sapphire wisps wrap its sides protectively. Pure luminous essence, no anatomy, blood, bottle or literal hands. Communicates receiving life and restoring health on impact."
+    },
+    {
+      "slug": "daedalus-attunement",
+      "item_id": 9090,
+      "display_name": "Daedalus Spirit of Attunement",
+      "prompt": "Primary request: DAEDALUS SPIRIT OF ATTUNEMENT. A compact jade-turquoise wind spirit forms one broad S-shaped curling plume around a large luminous ivory eight-point compass star. The star's four main points are thick and dominant with four much shorter secondary points, a tiny antique-gold center, and dark open gaps. No gear rim or medallion. Communicates precision, alignment and attuning equipment quality."
+    },
+    {
+      "slug": "hephaestus-tempering",
+      "item_id": 9091,
+      "display_name": "Hephaestus Spirit of Tempering",
+      "prompt": "Primary request: HEPHAESTUS SPIRIT OF TEMPERING. A compact jade-turquoise wind spirit curls around a large ivory-and-antique-gold hammer silhouette striking one small bright ember. The hammer has one chunky rectangular head and short diagonal handle, both formed from luminous spirit energy, not a physical tool. The airy mint spiral remains prominent. Communicates tempering and improving equipment."
+    },
+    {
+      "slug": "mnemosyne-preservation",
+      "item_id": 9092,
+      "display_name": "Mnemosyne Spirit of Preservation",
+      "prompt": "Primary request: MNEMOSYNE SPIRIT OF PRESERVATION. A compact jade-turquoise wind spirit curls protectively around a large sapphire mana droplet cupped by two broad ivory leaf-like wind strokes. A tiny antique-gold spark seals the upper gap. The blue droplet is clearly enclosed and preserved; no amphora, bottle, medallion or stone. Communicates protecting mana from hostile depletion."
+    },
+    {
+      "slug": "themis-continuity",
+      "item_id": 9093,
+      "display_name": "Themis Spirit of Continuity",
+      "prompt": "Primary request: THEMIS SPIRIT OF CONTINUITY. A compact jade-turquoise wind spirit carries one large unbroken ivory infinity loop with a small antique-gold central crossing. The figure-eight has thick luminous strokes and two clean dark openings. Two broad mint wind tails flow around it, no clock face, numbers, scales or medallion. Communicates uninterrupted continuity and protecting the normal flow of time."
+    }
+  ]
+}

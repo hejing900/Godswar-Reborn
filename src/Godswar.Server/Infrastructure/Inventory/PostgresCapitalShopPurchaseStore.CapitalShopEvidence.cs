@@ -46,7 +46,6 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
             offer.Currency == CapitalNpcShopCurrency.BindingGold
                 ? balanceAfter
                 : before.BindingGold;
-<<<<<<< HEAD
         var honorAfter = offer.Currency == CapitalNpcShopCurrency.Honor
             ? balanceAfter
             : before.Honor;
@@ -56,8 +55,6 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         var medalAfter = offer.Currency == CapitalNpcShopCurrency.Medal
             ? balanceAfter
             : before.Medal;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         var resultPayload = JsonSerializer.Serialize(new
         {
             purchaseId,
@@ -72,15 +69,12 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
             goldAfter,
             bindingGoldBefore = before.BindingGold,
             bindingGoldAfter,
-<<<<<<< HEAD
             honorBefore = before.Honor,
             honorAfter,
             pointBefore = before.Point,
             pointAfter,
             medalBefore = before.Medal,
             medalAfter,
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             walletRevision,
             inventoryRevision,
             items = mutations.Select(static mutation => new
@@ -161,7 +155,6 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
                 "Shop purchase inbox returned no identity.");
     }
 
-<<<<<<< HEAD
     private static string ToCurrencyCode(CapitalNpcShopCurrency currency) =>
         currency switch
         {
@@ -177,25 +170,18 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
                 "Unsupported capital shop currency.")
         };
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static async Task UpdateCapitalShopCharacterAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         int accountId,
         int characterId,
         CapitalShopLockedCharacter before,
-<<<<<<< HEAD
         string currencyCode,
-=======
-        CapitalNpcShopCurrency currency,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         int balanceAfter,
         long walletRevision,
         long inventoryRevision,
         CancellationToken cancellationToken)
     {
-<<<<<<< HEAD
         var silverAfter = currencyCode == "silver"
             ? balanceAfter
             : before.Silver;
@@ -214,30 +200,15 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         var medalAfter = currencyCode == "exchange_medal"
             ? balanceAfter
             : before.Medal;
-=======
-        var silverAfter = currency == CapitalNpcShopCurrency.Silver
-            ? balanceAfter
-            : before.Silver;
-        var goldAfter = currency == CapitalNpcShopCurrency.Gold
-            ? balanceAfter
-            : before.Gold;
-        var bindingGoldAfter =
-            currency == CapitalNpcShopCurrency.BindingGold
-                ? balanceAfter
-                : before.BindingGold;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await using var command = new NpgsqlCommand(
             """
             UPDATE public.character_base
             SET "Money" = @silverAfter,
                 "Stone" = @goldAfter,
                 "BindingGold" = @bindingGoldAfter,
-<<<<<<< HEAD
                 medusa_honor_points = @honorAfter,
                 exchange_point = @pointAfter,
                 exchange_medal = @medalAfter,
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 wallet_revision = @walletRevision,
                 inventory_revision = @inventoryRevision
             WHERE id = @characterId AND account_id = @accountId
@@ -245,12 +216,9 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
               AND "Money" = @silverBefore
               AND "Stone" = @goldBefore
               AND "BindingGold" = @bindingGoldBefore
-<<<<<<< HEAD
               AND COALESCE(medusa_honor_points, 0) = @honorBefore
               AND COALESCE(exchange_point, 0) = @pointBefore
               AND COALESCE(exchange_medal, 0) = @medalBefore
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
               AND wallet_revision = @walletRevisionBefore
               AND inventory_revision = @inventoryRevisionBefore;
             """,
@@ -261,12 +229,9 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         command.Parameters.AddWithValue(
             "bindingGoldAfter",
             bindingGoldAfter);
-<<<<<<< HEAD
         command.Parameters.AddWithValue("honorAfter", honorAfter);
         command.Parameters.AddWithValue("pointAfter", pointAfter);
         command.Parameters.AddWithValue("medalAfter", medalAfter);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         command.Parameters.AddWithValue("walletRevision", walletRevision);
         command.Parameters.AddWithValue(
             "inventoryRevision",
@@ -282,12 +247,9 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         command.Parameters.AddWithValue(
             "bindingGoldBefore",
             before.BindingGold);
-<<<<<<< HEAD
         command.Parameters.AddWithValue("honorBefore", before.Honor);
         command.Parameters.AddWithValue("pointBefore", before.Point);
         command.Parameters.AddWithValue("medalBefore", before.Medal);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         command.Parameters.AddWithValue(
             "walletRevisionBefore",
             before.WalletRevision);
@@ -307,11 +269,7 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
         long inboxId,
         int accountId,
         int characterId,
-<<<<<<< HEAD
         string currencyCode,
-=======
-        CapitalNpcShopCurrency currencyCode,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         int totalCost,
         int balanceBefore,
         int balanceAfter,
@@ -340,22 +298,7 @@ internal sealed partial class PostgresCapitalShopPurchaseStore
             currency.Parameters.AddWithValue(
                 "walletRevision",
                 walletRevision);
-<<<<<<< HEAD
             currency.Parameters.AddWithValue("currencyCode", currencyCode);
-=======
-            currency.Parameters.AddWithValue(
-                "currencyCode",
-                currencyCode switch
-                {
-                    CapitalNpcShopCurrency.Silver => "silver",
-                    CapitalNpcShopCurrency.Gold => "gold",
-                    CapitalNpcShopCurrency.BindingGold => "binding_gold",
-                    _ => throw new ArgumentOutOfRangeException(
-                        nameof(currencyCode),
-                        currencyCode,
-                        "Unsupported capital shop currency.")
-                });
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             currency.Parameters.AddWithValue("delta", -(long)totalCost);
             currency.Parameters.AddWithValue(
                 "balanceBefore",

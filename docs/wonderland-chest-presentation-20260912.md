@@ -1,0 +1,31 @@
+# Wonderland chest presentation and uniform rewards
+
+The large treasure chests are static `use_bx_00_all` scenery in `Fane.hmp`. The small `Fane_008` through `Fane_016` NPCs provide interaction. The external capture's first three NPCs sit within 0.4 units of their large scenery chests; the later authored NPCs previously stood elsewhere. Islands 4-8 now overlay the actual large scenery landmarks, using the same native NPC framing and orientation as islands 1-3. The original first three positions remain exact.
+
+| Island | Interactive chest X, Z | Nearby helper X, Z |
+|---|---|---|
+| 4 | -160.8606262, 37.98228455 | -167, 36 |
+| 5 | -98.79792023, 178.8466034 | -96, 184 (unchanged) |
+| 6 | 154.8988342, 175.7441864 | 154, 182 |
+| 7 | 176.5154266, 17.10499382 | 175, 11 |
+| 8 | 4.128822327, 92.71903229 | 4, 99 |
+
+Island 5 retains one interactive reward chest at the eastern landmark for both party camps, preserving its faction-specific NPC identity. The western static chest remains scenery. No capture proves a faction-to-landmark mapping, so this change does not invent one. There are still exactly eight independent island treasure rewards.
+
+The four moved helpers and matching exit safe zones have at least 3 units of terrain clearance, a chest-to-helper corridor with at least 2 units of clearance, and no monster spawn within their 10-unit safe zones. Their chest distances are 6.28-6.45 units, inside the native 7-unit interaction distance. Island 6 ground-fire scheduling now accounts for its full 5-unit blast radius around the 10-unit travel safe zone. Six of the nine existing terrain candidates remain eligible; the three-fire cadence and damage are unchanged. Player safe-zone checks still apply when damage resolves.
+
+Origin and the external client's `Fane.hmp` are byte-identical, SHA256 `375b51547593b82924c6a6c809316e070b44536a853a8e75080ce5dad49cf292`. Native NPC loading has shared fixed mesh bounds, and Ark001-003 contain identical geometry. `Shadow` only scales a shadow. This fix therefore reproduces island 1's scenery/interaction arrangement without speculative client mesh or executable changes. It does not establish mouse coverage for every pixel of the large scenery silhouette; that still requires an in-game check. Exact scenery bytes, terrain certification, executable evidence and reproducible scripts are retained in `artifacts/wonderland-static-chests-20260912`.
+
+Successful treasure claims, boss-sack pickups and sack openings now use the same native item-acquisition message as Daily/Online Award. The client supplies its localized item text and normal reward formatting. The previous separate Wonderland personal-message format is removed. Fresh committed receipts announce their exact item quantities; replayed claims only restore current inventory.
+
+Native acquisition first merges consumable items into matching stacks on bag page 0, then places any remainder into its first free slot. The projection reserves slot 0 and limits each notification to 99 items, matching these native items' stack capacity. Any remainder therefore fits slot 0 without reaching another page. It sends each acquisition, deletes the temporary slot, then restores the complete authoritative bag, including any stacks changed by the client's merge. Native insertion mutates a copy, so the log retains the full receipt quantity. These packets form one admitted batch, so other writes cannot split notification and cleanup. This works with stacked rewards in a full bag and with a newer inventory snapshot in which the reward has already been consumed. Boss pickups retain the bag-neutral observer acknowledgement that clears the corpse loot panel. Successful rewards do not add confirmation dialogues.
+
+The approved eight Wonderland title colors are installed in both client locales. Their names, ownership, selection and server rarity ordering are preserved. Installation, backups and independent verification are recorded in [the title-color report](wonderland-title-colors-20260912.md). Reopening the client loads the changed names.
+
+Release validation passed with zero compiler warnings or errors. All 29 focused protocol checks passed, with no failures, skips or unmatched filters. This covers literal native chest/scenery coordinates, transporter and final-route placement, actual ground-fire warnings, all three reward handlers, replay suppression, full-bag merges and exact inventory restoration, the daily reward reference path, completion/countdown/title ordering, status controls and existing lock-order regressions. The title patch separately passed all 12 hermetic checks. Native item-definition verification confirms all 18 current sack/reward IDs use the audited consumable stacking path with capacity 99. No manual client playthrough was performed.
+
+The release scripts, build logs, 29-check report, backup and deployment verification are retained under `artifacts/wonderland-chest-presentation-20260912`. The initial 29-check pass is retained separately; a second pass followed the native model's stacking refinement. The final native audit found no remaining projection correctness issue.
+
+Deployed September 12, 2026 at 12:17 NZST (`2026-09-12T00:17:39.988399Z`). Tempest runs image `sha256:1cda5c144a68c96d6b29318bb6a23d1a9dd1c7935666f9f5e297dbdeeb01c44c`, healthy with zero restarts and no OOM. Startup reached ready and both login/game listeners are active. Bindings remain `127.1.1.111:5998` and `:7000`; Dwargon remains stopped. Before/after deployment checks preserve owned inventory fingerprints, schema head 150 and `20260911_149_wonderland_boss_loot_claims`, item revision `A45EA650680C8EA4D5D2FCAA831E97EEEF652BAB55351D860BFB95330FA97EB1`, and catalog policy fingerprints. No attempt counters were reset.
+
+Rollback image: `reborn-server:before-wonderland-chest-presentation-20260912`. The verified stopped database backup remains at `artifacts/wonderland-chest-presentation-20260912/before-deploy-database.dump`, SHA256 `391427a5f9fd5fab47a52e020ae7c98efe3206fccd8bd6530adac869662d6b39`. Host and PostgreSQL copies matched before the task's temporary PostgreSQL dump/SQL files were removed. Client title backups and installed hashes are recorded in the linked title-color report. No commit or push was performed.

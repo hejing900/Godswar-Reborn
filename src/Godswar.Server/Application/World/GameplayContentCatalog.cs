@@ -24,6 +24,11 @@ internal sealed record GameplayContentCatalog(
     public IReadOnlyList<GameplaySkillBookDefinition> SkillBooks
         { get; init; } = [];
 
+    // Mutable database tuning, pinned at startup separately from the sealed
+    // gameplay publication. Included in the runtime coordination fingerprint.
+    public IReadOnlyList<MonsterCombatBalanceDefinition> MonsterCombatBalances
+        { get; init; } = [];
+
     public static GameplayContentCatalog Empty { get; } = new(
         [],
         [],

@@ -48,7 +48,6 @@ internal static partial class PostgresWorldContentReaderIntegrationChecks
             reader.GetInt64(3),
             "official monster release stores the reviewed baseline");
         Check.Equal(
-<<<<<<< HEAD
             MonsterContentBaselineV1.ExpectedEntryCount +
                 PostgresWorldContentReaderLoader.ThermopylaeSpawnCount +
                 PostgresWorldContentReaderLoader.SpartaNewbieSpawnCount +
@@ -58,11 +57,6 @@ internal static partial class PostgresWorldContentReaderIntegrationChecks
             "pinned catalog uses every official monster definition plus the " +
             "authored Thermopylae and Sparta newbie populations and the " +
             "captured Athens populations");
-=======
-            MonsterContentBaselineV1.ExpectedEntryCount,
-            postgres.Manifest.Monsters.EntryCount,
-            "pinned catalog uses every official monster definition");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Check.Equal(
             81,
             postgres.Gameplay.Maps.Count,

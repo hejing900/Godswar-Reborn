@@ -5,11 +5,7 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
-<<<<<<< HEAD
     private const ushort NonDurableMedusaDailyEntryLimit = 100;
-=======
-    private const ushort NonDurableMedusaDailyEntryLimit = 1;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
     private async Task<IReadOnlySet<int>?>
         TryFindUsedMedusaDailyEntryCharactersAsync(

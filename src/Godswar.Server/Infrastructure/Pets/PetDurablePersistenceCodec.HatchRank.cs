@@ -6,7 +6,7 @@ namespace Godswar.Server.Infrastructure.Pets;
 
 internal static partial class PetDurablePersistenceCodec
 {
-    private static byte[] EncodeBagItemActivation(
+    private static byte[] EncodeBagItemActivationV4(
         PetDurableReceipt receipt)
     {
         if (receipt.Status == PetDurableReceiptStatus.EggHatched &&
@@ -18,7 +18,7 @@ internal static partial class PetDurablePersistenceCodec
 
         return JsonSerializer.SerializeToUtf8Bytes(
             new PersistedBagItemActivationReceipt(
-                BagItemActivationContractVersion,
+                PreviousBagItemActivationContractVersionV4,
                 (ushort)receipt.Family,
                 (byte)receipt.Status,
                 receipt.AccountId,
@@ -40,7 +40,7 @@ internal static partial class PetDurablePersistenceCodec
                 receipt.PlayerSkillLearn));
     }
 
-    private static PetDurableReceipt DecodeBagItemActivation(
+    private static PetDurableReceipt DecodeBagItemActivationV4(
         ReadOnlySpan<byte> payload)
     {
         var stored =

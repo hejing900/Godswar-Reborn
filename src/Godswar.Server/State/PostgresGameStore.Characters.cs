@@ -223,7 +223,6 @@ internal sealed partial class PostgresGameStore
                 : new DateTimeOffset(
                     reader.GetDateTime(51).ToUniversalTime()),
             FighterLevelSealed = reader.GetBoolean(52),
-<<<<<<< HEAD
             BindingGold = reader.GetInt32(54),
             MedusaHonorPoints = reader.GetInt32(55),
             ExchangePoint = reader.GetInt32(56),
@@ -261,10 +260,4 @@ internal sealed partial class PostgresGameStore
 
         return quests;
     }
-=======
-            BindingGold = reader.GetInt32(54)
-        };
-    }
-
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

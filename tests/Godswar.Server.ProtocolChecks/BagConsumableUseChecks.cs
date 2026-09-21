@@ -49,6 +49,8 @@ internal static class BagConsumableUseChecks
     {
         CheckTranscribedMagicEffects();
         CheckTranscribedStatusEffects();
+        CheckPetExperienceBoostPotionTiers();
+        CheckEnduringExperiencePotionTiers();
         CheckImplementedFamilies();
         CheckStatusBoostIsVisibleInTheComposedSnapshot();
         CheckDatabaseOwnedClassification();
@@ -110,7 +112,7 @@ internal static class BagConsumableUseChecks
                      3107, 3126, 3127, 3128, 4603,
                      4610, 4611, 4612, 4613, 4614, 4615, 4616, 4617,
                      4640, 4641, 4642, 4643, 4644, 4645,
-                     4720, 4721, 4722, 4736, 4753, 4754, 4755, 4756,
+                     4720, 4721, 4722, 4736,
                      4800, 4801, 4802, 4803, 4804, 4814, 4830, 7002
                  })
         {
@@ -120,37 +122,39 @@ internal static class BagConsumableUseChecks
         }
 
         Check.Equal(
-            25,
+            38,
             BagConsumableEffectCatalog.All.Count,
             "exactly the reviewed bag-consumable skills are transcribed");
     }
 
     /// <summary>
-    /// Status.ini <c>Values</c>/<c>Time</c> for the four StatusMagic skills.
+    /// Status.ini <c>Values</c>/<c>Time</c> for the StatusMagic skills.
     /// Source SHA-256
     /// 3011C349B2DBEF42C73C19E0453F67B6642B566747F0BBC9042EF59888186C97.
-    /// 505 = 0.5, 506 = 1, 507 = 3, 513 = 0.5; all four last 3600 seconds.
+    /// 504 = 0.25, 505 = 0.5, 506 = 1, 507 = 3, 513 = 0.5.
     /// </summary>
     private static void CheckTranscribedStatusEffects()
     {
         var expected = new (int Skill, int Status, int Kind, int BasisPoints)[]
         {
-            (4807, 505, ExperienceBoostKinds.Consumable, 5000),
-            (4808, 506, ExperienceBoostKinds.Consumable, 10000),
-            (4809, 507, ExperienceBoostKinds.Consumable, 30000),
+            (4800, 504, ExperienceBoostKinds.PersistentExperiencePotion, 2500),
+            (4807, 505, ExperienceBoostKinds.PersistentExperiencePotion, 5000),
+            (4808, 506, ExperienceBoostKinds.PersistentExperiencePotion, 10000),
+            (4809, 507, ExperienceBoostKinds.PersistentExperiencePotion, 30000),
             (4752, 513, ExperienceBoostKinds.Pet, 5000)
         };
         foreach (var (skill, status, kind, basisPoints) in expected)
         {
+            var seconds = skill == 4800 ? 900 : 3600;
             Check.True(
                 BagConsumableEffectCatalog.TryResolve(skill, out var effect) &&
                 effect.Kind ==
                     BagConsumableEffectKind.GrantTimedExperienceBoost &&
                 effect.StatusId == status &&
                 effect.StatusKind == kind &&
-                effect.StatusDurationSeconds == 3600 &&
+                effect.StatusDurationSeconds == seconds &&
                 effect.IsValid,
-                $"Status.ini skill {skill} grants status {status} for 3600s");
+                $"Status.ini skill {skill} grants status {status} for {seconds}s");
             Check.True(
                 BagConsumableEffectCatalog.TryResolveTimedBoostBonus(
                     status,
@@ -159,8 +163,11 @@ internal static class BagConsumableUseChecks
                 $"Status.ini status {status} is {basisPoints} basis points");
         }
 
-        // 514-517 and 500-504 are approved-out; they must not resolve.
-        foreach (var status in new[] { 500, 501, 502, 503, 504, 514, 515, 516, 517 })
+        // 500-503 stay approved-out; they must not resolve. Status 504 is the
+        // primary (25%/15min) character grant and is transcribed, while
+        // 514-517 and 508/585/586/590 belong to their own families and are
+        // asserted positively by those checks instead.
+        foreach (var status in new[] { 500, 501, 502, 503 })
         {
             Check.True(
                 !BagConsumableEffectCatalog.TryResolveTimedBoostBonus(
@@ -252,6 +259,312 @@ internal static class BagConsumableUseChecks
             0,
             boosts.TotalBonusBasisPoints,
             "the pet boost does not leak into fighter experience");
+    }
+
+    /// <summary>
+    /// The five reviewed pet-experience potions keep their client-description
+    /// tiers, and the tier rule is: a higher tier replaces the active grant and
+    /// drops its remaining time, the same tier extends the timer up to the
+    /// 24-hour online ceiling, and a lower tier changes nothing.
+    /// </summary>
+    private static void CheckPetExperienceBoostPotionTiers()
+    {
+        var expected = new (uint Item, int Skill, int Status, int BasisPoints, long Ticks)[]
+        {
+            (4529, 4752, 513, 5_000, TimeSpan.TicksPerHour),
+            (4530, 4753, 514, 10_000, TimeSpan.TicksPerHour),
+            (4531, 4754, 515, 30_000, TimeSpan.TicksPerHour),
+            (4532, 4755, 516, 10_000, 8 * TimeSpan.TicksPerHour),
+            (4533, 4756, 517, 30_000, 8 * TimeSpan.TicksPerHour)
+        };
+        Check.Equal(
+            expected.Length,
+            PetExperienceBoostPolicy.All.Count,
+            "exactly the five reviewed pet-experience potions are mapped");
+        var catalog = CreateCatalog(
+            [.. expected.Select(
+                static entry => Consume(
+                    checked((int)entry.Item),
+                    use: 1,
+                    skill: entry.Skill))]);
+        foreach (var (item, skill, status, basisPoints, ticks) in expected)
+        {
+            Check.True(
+                PetExperienceBoostPolicy.TryResolveItem(
+                    catalog,
+                    item,
+                    out var definition) &&
+                definition.ItemId == item &&
+                definition.SkillId == skill &&
+                definition.StatusId == status &&
+                definition.BonusBasisPoints == basisPoints &&
+                definition.OnlineTicks == ticks,
+                $"item {item} keeps skill {skill}, status {status}, " +
+                $"{basisPoints} basis points and {ticks} online ticks");
+            Check.True(
+                BagConsumableEffectCatalog.TryResolve(skill, out var effect) &&
+                effect.StatusId == status &&
+                effect.StatusKind == ExperienceBoostKinds.Pet &&
+                effect.StatusDurationSeconds == ticks / TimeSpan.TicksPerSecond,
+                $"the transcribed table agrees with skill {skill}");
+            Check.True(
+                BagConsumableEffectCatalog.TryResolveTimedBoostBonus(
+                    status,
+                    out var transcribed) &&
+                transcribed == basisPoints,
+                $"status {status} carries {basisPoints} transcribed basis points");
+        }
+
+        // 4533 (+300%/8h) measured against the 4529 grant (+50%/1h) replaces
+        // it outright: the previous hour is dropped, not accumulated.
+        var higher = PetExperienceBoostPolicy.ResolveGrant(
+            5_000,
+            TimeSpan.TicksPerHour,
+            PetExperienceBoostPolicy.All.Single(
+                static definition => definition.ItemId == 4533));
+        Check.True(
+            higher.ReplacesActive &&
+            higher.BonusBasisPoints == 30_000 &&
+            higher.OnlineTicks == 8 * TimeSpan.TicksPerHour,
+            "a higher tier replaces the active grant and resets its duration");
+
+        // A second 4532 (+100%/8h) on top of another leaves it at 16 hours.
+        var extended = PetExperienceBoostPolicy.ResolveGrant(
+            10_000,
+            8 * TimeSpan.TicksPerHour,
+            PetExperienceBoostPolicy.All.Single(
+                static definition => definition.ItemId == 4532));
+        Check.True(
+            extended.ReplacesActive &&
+            extended.BonusBasisPoints == 10_000 &&
+            extended.OnlineTicks == 16 * TimeSpan.TicksPerHour,
+            "the same tier extends the online timer");
+
+        // The ceiling clamps a third 8-hour grant to 24 hours, not 8.
+        var capped = PetExperienceBoostPolicy.ResolveGrant(
+            10_000,
+            16 * TimeSpan.TicksPerHour,
+            PetExperienceBoostPolicy.All.Single(
+                static definition => definition.ItemId == 4532));
+        Check.Equal(
+            PetExperienceBoostPolicy.MaximumOnlineTicks,
+            capped.OnlineTicks,
+            "same-tier reuse stops at the 24-hour online ceiling");
+        Check.Equal(
+            24 * TimeSpan.TicksPerHour,
+            PetExperienceBoostPolicy.MaximumOnlineTicks,
+            "the ceiling is 24 hours of online time");
+
+        // 4529 (+50%/1h) used while the +300% grant is running is inert, and
+        // the active grant keeps both its tier and its whole remaining timer.
+        var lower = PetExperienceBoostPolicy.ResolveGrant(
+            30_000,
+            7 * TimeSpan.TicksPerHour,
+            PetExperienceBoostPolicy.All.Single(
+                static definition => definition.ItemId == 4529));
+        Check.True(
+            !lower.ReplacesActive &&
+            lower.BonusBasisPoints == 30_000 &&
+            lower.OnlineTicks == 7 * TimeSpan.TicksPerHour,
+            "a lower tier neither downgrades nor extends the active grant");
+
+        // The granted tier reaches pet experience and stays out of the
+        // fighter and talent channels.
+        var now = new DateTimeOffset(
+            2026,
+            9,
+            15,
+            12,
+            0,
+            0,
+            TimeSpan.Zero);
+        var state = new ExperienceBoostState(
+        [
+            new ActiveExperienceBoost(
+                517,
+                ExperienceBoostKinds.Pet,
+                30_000,
+                Priority: higher.Priority,
+                now.AddHours(8),
+                "pet-exp-potion:4756")
+        ]);
+        Check.Equal(
+            4 * 530,
+            state.ApplyToPet(530),
+            "a +300% grant quadruples pet experience");
+        Check.True(
+            state.TotalBonusBasisPoints == 0 &&
+            state.TotalTalentBonusBasisPoints == 0,
+            "a pet-only grant joins neither the fighter nor the talent stack");
+        Check.Equal(
+            530,
+            state.ApplyTo(530),
+            "a pet-only grant leaves fighter experience unchanged");
+        Check.Equal(
+            530,
+            state.ApplyToTalent(530),
+            "a pet-only grant leaves talent experience unchanged");
+    }
+
+    /// <summary>
+    /// The eight reviewed experience potions raise the character's own
+    /// experience and the pet's at the same time. The 60-minute and eight-hour
+    /// grants share one channel, so a running pet-experience potion keeps its
+    /// own duration and the bonuses add together.
+    /// </summary>
+    private static void CheckEnduringExperiencePotionTiers()
+    {
+        var expected = new (uint Item, int Skill, int Status, int BasisPoints, long Ticks)[]
+        {
+            (4500, 4800, 504, 2_500, 15 * TimeSpan.TicksPerMinute),
+            (4501, 4807, 505, 5_000, TimeSpan.TicksPerHour),
+            (4502, 4808, 506, 10_000, TimeSpan.TicksPerHour),
+            (4503, 4809, 507, 30_000, TimeSpan.TicksPerHour),
+            (4534, 4759, 585, 5_000, 8 * TimeSpan.TicksPerHour),
+            (4506, 4747, 508, 10_000, 8 * TimeSpan.TicksPerHour),
+            (4535, 4760, 586, 30_000, 8 * TimeSpan.TicksPerHour),
+            (4539, 4764, 590, 40_000, 8 * TimeSpan.TicksPerHour)
+        };
+        Check.Equal(
+            expected.Length,
+            ExperienceBoostPotionPolicy.All.Count,
+            "exactly the eight reviewed experience potions are mapped");
+        Check.Equal(
+            ExperienceBoostKinds.PersistentExperiencePotion,
+            ExperienceBoostPotionPolicy.Kind,
+            "the family applies on its own channel");
+        var catalog = CreateCatalog(
+            [.. expected.Select(
+                static entry => Consume(
+                    checked((int)entry.Item),
+                    use: 1,
+                    skill: entry.Skill))]);
+        foreach (var (item, skill, status, basisPoints, ticks) in expected)
+        {
+            Check.True(
+                ExperienceBoostPotionPolicy.TryResolveItem(
+                    catalog,
+                    item,
+                    out var definition) &&
+                definition.ItemId == item &&
+                definition.SkillId == skill &&
+                definition.StatusId == status &&
+                definition.BonusBasisPoints == basisPoints &&
+                definition.OnlineTicks == ticks,
+                $"item {item} keeps skill {skill}, status {status} and " +
+                $"{basisPoints} basis points over {ticks} online ticks");
+            Check.True(
+                ExperienceBoostPotionPolicy.IsReviewedItem(item),
+                $"item {item} is recognised by the routing classifier");
+            Check.True(
+                BagConsumableEffectCatalog.TryResolve(skill, out var effect) &&
+                effect.StatusId == status &&
+                effect.StatusKind ==
+                    ExperienceBoostKinds.PersistentExperiencePotion &&
+                effect.StatusDurationSeconds ==
+                    ticks / TimeSpan.TicksPerSecond,
+                $"the transcribed table agrees with skill {skill}");
+            Check.True(
+                BagConsumableEffectCatalog.TryResolveTimedBoostBonus(
+                    status,
+                    out var transcribed) &&
+                transcribed == basisPoints,
+                $"status {status} carries {basisPoints} transcribed basis points");
+        }
+
+        // The short and long grants of one tier share a channel, so the second
+        // one extends rather than replacing: +100%/60min then +100%/8h is 9h.
+        var acrossDurations = ExperienceBoostPotionPolicy.ResolveGrant(
+            10_000,
+            TimeSpan.TicksPerHour,
+            ExperienceBoostPotionPolicy.All.Single(
+                static definition => definition.ItemId == 4506));
+        Check.True(
+            acrossDurations.ReplacesActive &&
+            acrossDurations.BonusBasisPoints == 10_000 &&
+            acrossDurations.OnlineTicks == 9 * TimeSpan.TicksPerHour,
+            "the same tier across the two durations extends the timer");
+
+        // The tier rule on this channel matches the pet family's.
+        var higher = ExperienceBoostPotionPolicy.ResolveGrant(
+            5_000,
+            8 * TimeSpan.TicksPerHour,
+            ExperienceBoostPotionPolicy.All.Single(
+                static definition => definition.ItemId == 4535));
+        Check.True(
+            higher.ReplacesActive &&
+            higher.BonusBasisPoints == 30_000 &&
+            higher.OnlineTicks == 8 * TimeSpan.TicksPerHour,
+            "a higher experience tier replaces the grant and resets its duration");
+        var capped = ExperienceBoostPotionPolicy.ResolveGrant(
+            30_000,
+            16 * TimeSpan.TicksPerHour,
+            ExperienceBoostPotionPolicy.All.Single(
+                static definition => definition.ItemId == 4535));
+        Check.Equal(
+            24 * TimeSpan.TicksPerHour,
+            capped.OnlineTicks,
+            "same-tier reuse stops at the 24-hour online ceiling");
+        var lower = ExperienceBoostPotionPolicy.ResolveGrant(
+            40_000,
+            5 * TimeSpan.TicksPerHour,
+            ExperienceBoostPotionPolicy.All.Single(
+                static definition => definition.ItemId == 4534));
+        Check.True(
+            !lower.ReplacesActive &&
+            lower.BonusBasisPoints == 40_000 &&
+            lower.OnlineTicks == 5 * TimeSpan.TicksPerHour,
+            "a lower experience tier neither downgrades nor extends the grant");
+
+        // The two families stack. A running pet potion (+300%, kind 24) plus
+        // one enduring experience potion (+300%, kind 25) is +600% pet EXP and
+        // +300% character EXP.
+        var now = new DateTimeOffset(2026, 9, 15, 12, 0, 0, TimeSpan.Zero);
+        var stacked = new ExperienceBoostState(
+        [
+            new ActiveExperienceBoost(
+                517,
+                ExperienceBoostKinds.Pet,
+                30_000,
+                Priority: 30,
+                now.AddHours(8),
+                "pet-exp-potion:4756"),
+            new ActiveExperienceBoost(
+                586,
+                ExperienceBoostKinds.PersistentExperiencePotion,
+                30_000,
+                Priority: 30,
+                now.AddHours(8),
+                "enduring-exp-potion:4760")
+        ]);
+        Check.Equal(
+            60_000,
+            stacked.TotalPetBonusBasisPoints,
+            "the two families add up to +600% pet experience");
+        Check.Equal(
+            7 * 100,
+            stacked.ApplyToPet(100),
+            "the stacked pet multiplier is x7, not a replacement");
+        Check.Equal(
+            30_000,
+            stacked.TotalBonusBasisPoints,
+            "only the enduring potion feeds the fighter stack");
+        Check.Equal(
+            4 * 100,
+            stacked.ApplyTo(100),
+            "the enduring potion grants +300% character experience");
+        Check.Equal(
+            0,
+            stacked.TotalTalentBonusBasisPoints,
+            "neither family feeds the talent stack");
+
+        // Both statuses reach the composed snapshot, so the client shows two
+        // independent icons.
+        var snapshot = PlayerStatusComposer.Compose(stacked, [], now);
+        Check.True(
+            snapshot.Effects.Any(static entry => entry.StatusId == 517u) &&
+            snapshot.Effects.Any(static entry => entry.StatusId == 586u),
+            "both the pet and the enduring status are published");
     }
 
     /// <summary>

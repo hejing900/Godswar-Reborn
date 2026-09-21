@@ -8,7 +8,8 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         string sourceRevision,
-        string targetRevision)
+        string targetRevision,
+        bool legacyHolySuit = true)
     {
         await using var command = new NpgsqlCommand("""
             INSERT INTO item_attribute_content_definitions
@@ -46,16 +47,19 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             WHERE revision = @sourceRevision ORDER BY item_id;
 
             INSERT INTO holy_suit_tier_content_definitions
-            SELECT @targetRevision, suit_type, display_name, max_level,
+            SELECT @targetRevision, suit_type,
+                   CASE WHEN @legacyHolySuit THEN
+                       CASE suit_type WHEN 5 THEN 'Mithril' WHEN 6 THEN 'Orichalcum' WHEN 7 THEN 'Adamantium' ELSE display_name END
+                       ELSE display_name END, max_level,
                    ware_item_id, source
             FROM holy_suit_tier_content_definitions
-            WHERE revision = @sourceRevision ORDER BY suit_type;
+            WHERE revision = @sourceRevision AND (NOT @legacyHolySuit OR suit_type <= 7) ORDER BY suit_type;
 
             INSERT INTO holy_suit_consumable_content_definitions
             SELECT @targetRevision, item_id, role, suit_type,
                    experience_capacity, stack_cap, granted_bound, source
             FROM holy_suit_consumable_content_definitions
-            WHERE revision = @sourceRevision ORDER BY item_id;
+            WHERE revision = @sourceRevision AND (NOT @legacyHolySuit OR item_id <> 9017) ORDER BY item_id;
 
             INSERT INTO holy_suit_upgrade_content_definitions
             SELECT @targetRevision, current_suit_type, current_level,
@@ -63,7 +67,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
                    required_item_experience, ware_item_id, ware_quantity,
                    required_prisms, source
             FROM holy_suit_upgrade_content_definitions
-            WHERE revision = @sourceRevision
+            WHERE revision = @sourceRevision AND (NOT @legacyHolySuit OR target_suit_type <= 7)
             ORDER BY current_suit_type, current_level;
 
             INSERT INTO holy_suit_operation_policy_content_definitions (
@@ -84,6 +88,7 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             """, connection, transaction);
         command.Parameters.AddWithValue("sourceRevision", sourceRevision);
         command.Parameters.AddWithValue("targetRevision", targetRevision);
+        command.Parameters.AddWithValue("legacyHolySuit", legacyHolySuit);
         await command.ExecuteNonQueryAsync();
     }
 }

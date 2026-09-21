@@ -51,6 +51,17 @@ internal static class CombatEventIdentity
             (ulong)(uint)targetOrder,
             0x504D4F4E534B4C01UL);
 
+    public static ulong ForFlameBlastPulseScope(ulong fieldId, int pulseOrdinal) =>
+        Mix(fieldId, (ulong)(uint)pulseOrdinal, 0, 0, 0x464C414D45534301UL);
+
+    public static ulong ForFlameBlastPulse(
+        int attackerCharacterId, uint targetObjectId, uint spawnGeneration,
+        ulong healthRevision, ulong fieldId, uint skillId, int pulseOrdinal,
+        int targetOrder) =>
+        Mix((ulong)(uint)attackerCharacterId, targetObjectId, spawnGeneration,
+            healthRevision, ForFlameBlastPulseScope(fieldId, pulseOrdinal), skillId,
+            (ulong)(uint)targetOrder, 0x464C414D45505601UL);
+
     public static ulong ForPlayerAttack(
         int attackerCharacterId,
         int targetCharacterId,

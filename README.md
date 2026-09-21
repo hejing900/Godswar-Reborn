@@ -1,3 +1,19 @@
+#本基础项目来自于https://github.com/p5y-Ph3R/Godswar-Reborn
+任务系统以实现（可能存在BUG）
+技能书许愿以实现
+仓库右键存取以实现
+商城以实现
+刷怪技术以实现（待后续添加刷怪）
+怪物掉落以实现（绝大部分未添加）掉落GM工具在tool文件夹内
+NPC对话链路技术文档以总结（后续可添加所有NPC对话链路根据对话详情添加服务器功能）
+经验加成道具技术文档以总结（目前以添加宠物，人物经验，工会总体没做，专长没做）
+荣誉，徽记，奖章以实现，相关NPC以实现
+更多技术路线请阅读docs文件夹
+更多内容请参照https://github.com/p5y-Ph3R/Godswar-Reborn
+如果你愿意赞助我，请添加我的企鹅502890055
+
+
+
 # Godswar .NET Server
 
 Minimal .NET 10 server-side emulator for the Godswar Origin client protocol.

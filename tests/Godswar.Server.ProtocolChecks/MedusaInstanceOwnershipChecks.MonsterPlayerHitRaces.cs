@@ -69,12 +69,8 @@ internal static partial class MedusaInstanceOwnershipChecks
             await MonsterPlayerHitFixture.CreateAsync("First-Normal-01");
         var secondSource = await fixture.ActivateSourceAsync(
             "First-Normal-02");
-        var tick = fixture.Runtime.Owner.Invoke(
-            map => map.AdvanceMonsters(
-                DateTimeOffset.UtcNow.AddMinutes(1),
-                session =>
-                    fixture.Registry.GetPlayerLifeRevision(session)),
-            TimeSpan.FromSeconds(3));
+        var tick = MonsterOwnerCheckSteps.Advance(fixture.Runtime, fixture.Registry,
+            DateTimeOffset.UtcNow.AddMinutes(1));
         var attacks = tick.Updates
             .Where(update =>
                 update.Kind == MonsterRuntimeUpdateKind.Attacked &&

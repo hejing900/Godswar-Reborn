@@ -33,11 +33,7 @@ sealed record Options(
 
             if (i + 1 >= args.Length)
             {
-<<<<<<< HEAD
                 throw new ArgumentException($"参数 --{key} 缺少取值");
-=======
-                throw new ArgumentException($"Missing value for --{key}");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             }
 
             values[key] = args[++i];
@@ -45,11 +41,7 @@ sealed record Options(
 
         if (!values.TryGetValue("login-host", out var loginHost) || string.IsNullOrWhiteSpace(loginHost))
         {
-<<<<<<< HEAD
             throw new ArgumentException("缺少必填参数 --login-host <参考服地址>");
-=======
-            throw new ArgumentException("Required: --login-host <host-or-ip>");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         return new Options(
@@ -104,10 +96,6 @@ sealed record Options(
             return parsed;
         }
 
-<<<<<<< HEAD
         throw new ArgumentException($"参数 --{key} 的取值无效：{value}");
-=======
-        throw new ArgumentException($"Invalid value for --{key}: {value}");
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 }

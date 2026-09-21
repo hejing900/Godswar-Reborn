@@ -38,6 +38,14 @@ internal static partial class PostgresWorldContentReaderLoader
                 connection,
                 transaction,
                 cancellationToken);
+            gameplay = gameplay with
+            {
+                MonsterCombatBalances = await LoadMonsterCombatBalancesAsync(
+                    connection,
+                    transaction,
+                    gameplay,
+                    cancellationToken)
+            };
             var mapIds = gameplay.Maps
                 .Select(static value => value.MapId)
                 .ToArray();
@@ -52,24 +60,17 @@ internal static partial class PostgresWorldContentReaderLoader
                     transaction,
                     npcDefinitions,
                     cancellationToken);
-<<<<<<< HEAD
             var capturedMonsters = await LoadPublishedMonsterSpawnsAsync(
-=======
-            var monsters = await LoadPublishedMonsterSpawnsAsync(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 connection,
                 transaction,
                 mapIds.ToHashSet(),
                 cancellationToken);
-<<<<<<< HEAD
             // Thermopylae and the Sparta outskirts are authored in code rather
             // than captured, so they are appended after the published monster
             // revision above has been validated on its own.
             var monsters = AppendAuthoredSpawns(
                 capturedMonsters,
                 gameplay);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             var enterBootstrap =
                 await LoadPublishedEnterBootstrapPacketsAsync(
                 connection,
@@ -87,6 +88,9 @@ internal static partial class PostgresWorldContentReaderLoader
                 npcTexts: npcDialogues.Texts,
                 npcDialogueRoutes: npcDialogues.Routes,
                 gameplay: gameplay);
+            Console.WriteLine(
+                $"[monster-combat-balance] loaded rows={reader.Gameplay.MonsterCombatBalances.Count} " +
+                $"revision={MonsterCombatBalanceContent.CoordinationRevision(reader.Gameplay.MonsterCombatBalances)}");
             stopwatch.Stop();
             WorldContentMetrics.RecordLoad(
                 PostgresWorldContentSource,

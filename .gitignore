@@ -43,6 +43,9 @@ client/network-shim/diagnostics/
 # Retired standalone Gear Enhancement UI experiment
 assets/gear-enhancement/
 
+# Loot tool build output and machine-local settings (may hold DB credentials)
+tools/Godswar.LootTool/dist/
+
 # Large local research material and restore copies
 backups/
 origin_disasm.txt

@@ -13,7 +13,8 @@ internal readonly record struct ClientStatusAggregate(
     int Dodge = 0,
     int CriticalResistance = 0,
     float EquippedRidingSpeedBonus = 0f,
-    HostileStatusControlFlags Control = HostileStatusControlFlags.None)
+    HostileStatusControlFlags Control = HostileStatusControlFlags.None,
+    int AttackMultiplier = 1)
 {
     public static ClientStatusAggregate Empty { get; } = new(0, 0, 0f, 1f, false);
 }

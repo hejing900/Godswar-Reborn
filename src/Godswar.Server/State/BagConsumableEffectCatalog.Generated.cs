@@ -50,11 +50,15 @@ internal readonly record struct BagConsumableEffect(
 /// below is one reviewed client entry; nothing is inferred from a range.
 /// </para>
 /// <para>
-/// Skills such as 3107, 3126, 4603, 4610-4617, 4640-4645, 4720-4721,
-/// 4753-4756 and 4800-4804 are deliberately absent: their amounts are zero,
-/// they are a different mechanic (status application for a status we have no
-/// numbers for), or they have no reviewed client entry at all. An item whose
-/// skill is absent here keeps the pre-existing behaviour of being ignored.
+/// Skills such as 3107, 3126, 4603, 4610-4617, 4640-4645, 4720-4721 and
+/// 4800-4804 are deliberately absent: their amounts are zero, they are a
+/// different mechanic (status application for a status we have no numbers
+/// for), or they have no reviewed client entry at all. An item whose skill is
+/// absent here keeps the pre-existing behaviour of being ignored. The eleven
+/// <c>StatusMagic</c> boosts that are transcribed — 4807-4809 for the fighter
+/// channel and 4752-4756 for the pet channel — resolve here, but the pet
+/// potions are also carried by <see cref="PetExperienceBoostPolicy"/>, which
+/// owns their tier-replacement rule.
 /// </para>
 /// </remarks>
 internal static class BagConsumableEffectCatalog
@@ -99,26 +103,39 @@ internal static class BagConsumableEffectCatalog
 
         // ScriptID=StatusMagic. Magic.ini carries no value for these; the
         // numbers below are Status.ini's Values/Time for the granted status.
+        //
+        // 4800 and 4807-4809 are the character-experience grants. They are
+        // transcribed on the family's own kind because that is the channel the
+        // server applies them on: the 60-minute and the eight-hour grants share
+        // it so one tier rule sees both, and it keeps them from competing with
+        // the mooncake and Passion Rose consumables on kind 14.
+        new(
+            4800,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 504,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
+            StatusDurationSeconds: 900),
         new(
             4807,
             BagConsumableEffectKind.GrantTimedExperienceBoost,
             1,
             StatusId: 505,
-            StatusKind: ExperienceBoostKinds.Consumable,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
             StatusDurationSeconds: 3_600),
         new(
             4808,
             BagConsumableEffectKind.GrantTimedExperienceBoost,
             1,
             StatusId: 506,
-            StatusKind: ExperienceBoostKinds.Consumable,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
             StatusDurationSeconds: 3_600),
         new(
             4809,
             BagConsumableEffectKind.GrantTimedExperienceBoost,
             1,
             StatusId: 507,
-            StatusKind: ExperienceBoostKinds.Consumable,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
             StatusDurationSeconds: 3_600),
         new(
             4752,
@@ -126,13 +143,80 @@ internal static class BagConsumableEffectCatalog
             1,
             StatusId: 513,
             StatusKind: ExperienceBoostKinds.Pet,
-            StatusDurationSeconds: 3_600)
+            StatusDurationSeconds: 3_600),
+        new(
+            4753,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 514,
+            StatusKind: ExperienceBoostKinds.Pet,
+            StatusDurationSeconds: 3_600),
+        new(
+            4754,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 515,
+            StatusKind: ExperienceBoostKinds.Pet,
+            StatusDurationSeconds: 3_600),
+        new(
+            4755,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 516,
+            StatusKind: ExperienceBoostKinds.Pet,
+            StatusDurationSeconds: 28_800),
+        new(
+            4756,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 517,
+            StatusKind: ExperienceBoostKinds.Pet,
+            StatusDurationSeconds: 28_800),
+        new(
+            4765,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 591,
+            StatusKind: ExperienceBoostKinds.Pet,
+            StatusDurationSeconds: 28_800),
+        new(
+            4747,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 508,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
+            StatusDurationSeconds: 28_800),
+        new(
+            4759,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 585,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
+            StatusDurationSeconds: 28_800),
+        new(
+            4760,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 586,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
+            StatusDurationSeconds: 28_800),
+        new(
+            4764,
+            BagConsumableEffectKind.GrantTimedExperienceBoost,
+            1,
+            StatusId: 590,
+            StatusKind: ExperienceBoostKinds.PersistentExperiencePotion,
+            StatusDurationSeconds: 28_800)
     ];
 
     /// <summary>
     /// Status.ini <c>Values</c> expressed as basis points. Status 505 is 0.5,
     /// 506 is 1, 507 is 3 and 513 is 0.5; the <c>ExperienceBoostState</c>
-    /// model works in basis points, so 50% is 5000.
+    /// model works in basis points, so 50% is 5000. The 514-517 pet-experience
+    /// tiers are 1, 3, 1 and 3, and their durations are the 60-minute and
+    /// 8-hour variants the item descriptions name. The enduring
+    /// experience-potion tiers are 0.5, 1, 3 and 4 for statuses 585, 508, 586
+    /// and 590.
     /// </summary>
     private static readonly FrozenDictionary<int, int> StatusBonusBasisPoints =
         new Dictionary<int, int>
@@ -140,7 +224,16 @@ internal static class BagConsumableEffectCatalog
             [505] = 5_000,
             [506] = 10_000,
             [507] = 30_000,
-            [513] = 5_000
+            [504] = 2_500,
+            [508] = 10_000,
+            [513] = 5_000,            [514] = 10_000,
+            [515] = 30_000,
+            [516] = 10_000,
+            [517] = 30_000,
+            [591] = 5_000,
+            [585] = 5_000,
+            [586] = 30_000,
+            [590] = 40_000
         }.ToFrozenDictionary();
 
     /// <summary>

@@ -1,0 +1,16 @@
+{
+  "atlas_size": 1024,
+  "entries": [
+    {
+      "atlas": "ExperienceCatalyst.gwo",
+      "item_id": 9025,
+      "name": "Ascension Core",
+      "slug": "ascension-core",
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "schema_version": 1,
+  "sprite_size": 36,
+  "texture": "./Localization/en_us/UI/Texture/ExperienceCatalyst.gwo"
+}

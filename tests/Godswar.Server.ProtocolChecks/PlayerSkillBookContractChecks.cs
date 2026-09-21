@@ -1,4 +1,6 @@
 using System.Buffers.Binary;
+using System.Text;
+using System.Text.Json.Nodes;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Infrastructure.Pets;
@@ -53,9 +55,17 @@ internal static class PlayerSkillBookContractChecks
         Check.True(
             PetDurablePersistenceCodec.ReadContractVersion(payload) ==
                 PetDurablePersistenceCodec.BagItemActivationContractVersion &&
-            PetDurablePersistenceCodec.BagItemActivationContractVersion == 4 &&
+            PetDurablePersistenceCodec.BagItemActivationContractVersion == 5 &&
             PetDurablePersistenceCodec.Decode(payload) == receipt,
-            "v4 activation round-trips evidence");
+            "v5 activation round-trips player skill-book evidence");
+        var historical = JsonNode.Parse(payload)!.AsObject();
+        historical["ContractVersion"] = 4;
+        historical.Remove("WonderlandSack");
+        historical.Remove("PlayerExperience");
+        var legacyPayload = Encoding.UTF8.GetBytes(historical.ToJsonString());
+        Check.True(PetDurablePersistenceCodec.DecodeAndVerify(Encoding.UTF8.GetString(legacyPayload),
+            PetDurablePersistenceCodec.Hash(legacyPayload)) == receipt,
+            "historical v4 activation retains player skill-book evidence");
 
         Check.Throws<InvalidDataException>(
             () => (receipt with

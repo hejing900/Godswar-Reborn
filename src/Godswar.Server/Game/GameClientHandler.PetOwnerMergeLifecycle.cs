@@ -46,76 +46,11 @@ internal sealed partial class GameClientHandler
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                await _characterStateGate.WaitAsync(cancellationToken);
-                try
+                if (!await AdvancePetOwnerMergeEnergyOnceAsync(
+                        generation,
+                        cancellationToken))
                 {
-                    if (generation != Volatile.Read(
-                            ref _petOwnerMergeLifecycleGeneration))
-                    {
-                        return;
-                    }
-                    if (!TryGetOwnerMergeLifecycleContext(
-                            out var subject,
-                            out var ownership) ||
-                        PetOwnerMergeLifecycle is not { } lifecycle)
-                    {
-                        return;
-                    }
-                    if (_registry.IsSessionInMedusaInstance(_session))
-                    {
-                        continue;
-                    }
-
-                    var result = await lifecycle.DrainEnergyAsync(
-                        subject,
-                        ownership,
-                        energyPoints: 1,
-                        cancellationToken);
-                    if (result.Status ==
-                        PetOwnerMergeLifecycleStatus.NoActiveMerge)
-                    {
-                        return;
-                    }
-                    if (result.Status ==
-                        PetOwnerMergeLifecycleStatus.EnergyChanged)
-                    {
-                        await _session.SendAsync(
-                            PacketBuilder.PetEnergy(
-                                result.CurrentEnergy,
-                                result.MaximumEnergy),
-                            cancellationToken,
-                            "PetOwnerMergeEnergyTick");
-                        continue;
-                    }
-
-                    if (!await RefreshCharacterSnapshotAsync(
-                            "pet_owner_merge_expired",
-                            cancellationToken) ||
-                        _character is null)
-                    {
-                        _session.Disconnect();
-                        return;
-                    }
-                    _registry.UpdateCharacter(
-                        _session,
-                        _character,
-                        advanceWorldRevision: false);
-                    var pet = _characterLoadSnapshot?.Pets.SingleOrDefault(
-                        candidate => candidate.PetId == result.PetId);
-                    if (pet is null || pet.ContributesToCharacter)
-                    {
-                        _session.Disconnect();
-                        return;
-                    }
-                    await PublishPetOwnerMergeEndedAsync(
-                        pet,
-                        restoreCompanion: true,
-                        cancellationToken);
                     return;
-                }
-                finally
-                {
-                    _characterStateGate.Release();
                 }
             }
         }
@@ -132,6 +67,83 @@ internal sealed partial class GameClientHandler
             Console.WriteLine(
                 $"[pet] owner-Merge energy settlement failed: {ex.Message}");
             _session.Disconnect();
+        }
+    }
+
+    internal async Task<bool> AdvancePetOwnerMergeEnergyOnceAsync(
+        long generation,
+        CancellationToken cancellationToken)
+    {
+        await _characterStateGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (generation != Volatile.Read(
+                    ref _petOwnerMergeLifecycleGeneration))
+            {
+                return false;
+            }
+            if (!TryGetOwnerMergeLifecycleContext(
+                    out var subject,
+                    out var ownership) ||
+                PetOwnerMergeLifecycle is not { } lifecycle)
+            {
+                return false;
+            }
+            if (_registry.IsSessionInMedusaInstance(_session))
+            {
+                return true;
+            }
+
+            var result = await lifecycle.DrainEnergyAsync(
+                subject,
+                ownership,
+                energyPoints: 1,
+                cancellationToken);
+            if (result.Status ==
+                PetOwnerMergeLifecycleStatus.NoActiveMerge)
+            {
+                return false;
+            }
+            if (result.Status ==
+                PetOwnerMergeLifecycleStatus.EnergyChanged)
+            {
+                await _session.SendAsync(
+                    PacketBuilder.PetEnergy(
+                        result.CurrentEnergy,
+                        result.MaximumEnergy),
+                    cancellationToken,
+                    "PetOwnerMergeEnergyTick");
+                return true;
+            }
+
+            if (!await RefreshCharacterSnapshotAsync(
+                    "pet_owner_merge_expired",
+                    cancellationToken) ||
+                _character is null)
+            {
+                _session.Disconnect();
+                return false;
+            }
+            _registry.UpdateCharacter(
+                _session,
+                _character,
+                advanceWorldRevision: false);
+            var pet = _characterLoadSnapshot?.Pets.SingleOrDefault(
+                candidate => candidate.PetId == result.PetId);
+            if (pet is null || pet.ContributesToCharacter)
+            {
+                _session.Disconnect();
+                return false;
+            }
+            await PublishPetOwnerMergeEndedAsync(
+                pet,
+                restoreCompanion: true,
+                cancellationToken);
+            return false;
+        }
+        finally
+        {
+            _characterStateGate.Release();
         }
     }
 

@@ -1,4 +1,4 @@
-using Godswar.Server.Packets;
+using System.Collections.Immutable;
 using Godswar.Server.State;
 using Godswar.Server.World.Systems.Combat;
 
@@ -9,6 +9,12 @@ internal readonly record struct PveCommittedMonsterDamage(
     uint MonsterObjectId,
     uint MonsterSpawnGeneration,
     uint AppliedDamage);
+
+internal readonly record struct PveLifeAbsorptionHit(
+    ulong CombatEventId,
+    uint MonsterObjectId,
+    uint MonsterSpawnGeneration,
+    int AppliedHealing);
 
 internal readonly record struct PveLifeAbsorptionCommit(
     int ClaimedHitCount,
@@ -21,6 +27,10 @@ internal readonly record struct PveLifeAbsorptionCommit(
     long AfterVitalsRevision)
 {
     public bool Applied => AppliedHealing > 0;
+
+    public GameSessionContext? SourceContext { get; init; }
+    public long SourceLifeRevision { get; init; }
+    public ImmutableArray<PveLifeAbsorptionHit> HitHealing { get; init; } = [];
 }
 
 internal sealed class PveLifeAbsorptionCommitter
@@ -57,6 +67,7 @@ internal sealed class PveLifeAbsorptionCommitter
         var claimedHitCount = 0;
         ulong requestedHealing = 0;
         ulong adjustedRequestedHealing = 0;
+        var requestedHits = new List<(PveCommittedMonsterDamage Hit, uint Healing)>();
         foreach (var hit in committedHits)
         {
             if (hit.AppliedDamage == 0)
@@ -84,12 +95,14 @@ internal sealed class PveLifeAbsorptionCommitter
             requestedHealing = Math.Min(
                 uint.MaxValue,
                 requestedHealing + hitHealing);
+            var adjustedHealing = checked((uint)ElementalBasisPointMath.Portion(
+                hitHealing, boundedHealingReceived));
             adjustedRequestedHealing = Math.Min(
-                uint.MaxValue,
-                adjustedRequestedHealing + checked((uint)
-                    ElementalBasisPointMath.Portion(
-                        hitHealing,
-                        boundedHealingReceived)));
+                uint.MaxValue, adjustedRequestedHealing + adjustedHealing);
+            if (adjustedHealing > 0)
+            {
+                requestedHits.Add((hit, adjustedHealing));
+            }
         }
 
         lock (character.VitalsSync)
@@ -117,6 +130,27 @@ internal sealed class PveLifeAbsorptionCommitter
                         (uint)adjustedRequestedHealing,
                         beforeHealth,
                         character.MaxHp);
+            // Retain each damaged monster's contribution instead of turning
+            // an area attack into one displayed heal. Allocate missing HP in
+            // committed-hit order so the final tick may be partially capped.
+            var hitHealing = ImmutableArray.CreateBuilder<PveLifeAbsorptionHit>();
+            var remainingHealing = appliedHealing;
+            foreach (var requested in requestedHits)
+            {
+                if (remainingHealing == 0)
+                {
+                    break;
+                }
+
+                var applied = checked((int)Math.Min(
+                    requested.Healing, (uint)remainingHealing));
+                hitHealing.Add(new PveLifeAbsorptionHit(
+                    requested.Hit.CombatEventId,
+                    requested.Hit.MonsterObjectId,
+                    requested.Hit.MonsterSpawnGeneration,
+                    applied));
+                remainingHealing -= applied;
+            }
             if (appliedHealing > 0)
             {
                 character.CurrentHp = checked(
@@ -132,7 +166,10 @@ internal sealed class PveLifeAbsorptionCommitter
                 beforeHealth,
                 character.CurrentHp,
                 beforeRevision,
-                character.VitalsRevision);
+                character.VitalsRevision)
+            {
+                HitHealing = hitHealing.ToImmutable()
+            };
         }
     }
 }
@@ -154,8 +191,10 @@ internal sealed partial class GameClientHandler
                 ElementalBasisPointMath.Denominator),
             0,
             ElementalBasisPointMath.Denominator));
-        return _pveLifeAbsorptionCommitter.Commit(
+        return _registry.CommitPveLifeAbsorption(
+            _session,
             character,
+            _pveLifeAbsorptionCommitter,
             committedHits,
             healingReceivedBasisPoints);
     }
@@ -223,7 +262,7 @@ internal sealed partial class GameClientHandler
         CancellationToken cancellationToken,
         bool persistVitals = true)
     {
-        if (!commit.Applied)
+        if (!commit.Applied || !_registry.IsCurrentPveLifeAbsorption(commit))
         {
             return;
         }
@@ -256,39 +295,7 @@ internal sealed partial class GameClientHandler
             }
         }
 
-        int currentHp;
-        int currentMp;
-        lock (character.VitalsSync)
-        {
-            currentHp = character.CurrentHp;
-            currentMp = character.CurrentMp;
-        }
-
-        try
-        {
-            await _session.SendAsync(
-                PacketBuilder.PlayerVitalsUpdate(
-                    LocalPlayerObjectId,
-                    currentHp,
-                    currentMp),
-                cancellationToken,
-                "PveLifeAbsorptionSelf");
-        }
-        catch (Exception ex) when (
-            ex is IOException or ObjectDisposedException)
-        {
-            _registry.Remove(_session);
-        }
-
-        await _registry.BroadcastToMapAsync(
-            character.CurrentMap,
-            PacketBuilder.PlayerVitalsUpdate(
-                CurrentPlayerObjectId,
-                currentHp,
-                currentMp),
-            cancellationToken,
-            _session,
-            "PveLifeAbsorptionWorld");
+        _registry.PublishPveLifeAbsorption(commit, cancellationToken);
     }
 
     private async Task<PreparedPveMonsterKillReward?>

@@ -1,0 +1,15 @@
+# Wonderland elemental damage and recovery deadlock
+
+The live server stopped processing gameplay around 18:57 on 11 September 2026 while remaining running with no restart. Two independent managed stack captures showed the same blocked calls. The captures are `artifacts/wonderland-mobs-visual-20260911/live-server-stacks.txt` and `live-server-stacks-confirmation.txt`.
+
+The basic-attack thread retained the PvE elemental transaction gate, the player's `VitalsSync` monitor, and the source elemental-state gate. Its derived damage then entered `TryApplyWonderlandMonsterDamage`, which waited for the registry gate. Concurrent periodic player recovery retained the registry gate while waiting for the same player's vitals/elemental state in `CommitDuePlayerElementalBurns`. These are unbounded monitor waits. The held registry gate also blocked monster advancement, movement/ownership checks, login, and disconnected-session cleanup.
+
+`CommitPveElementalHits` now acquires the registry gate before its existing PvE, player-vitals, and elemental-state locks. The Wonderland damage call can then reenter the already-held registry gate. Captured source entitlement, exact monster identity/health guards, event replay, and damage formulas are unchanged. Snapshot capture still finishes its owner command before taking the registry lock.
+
+The other related entry points were audited: player burns and their recovery already use registry-before-vitals/state; monster burns release their PvE/monster-state locks before source recovery acquires the registry; Gaia reflection starts only after the incoming transaction releases its player locks, then takes the registry gate first. They require no behavioral changes.
+
+The regression `Wonderland derived elemental damage preserves registry-first locking and remains usable with recovery` triggers actual first-island fourth-hit Zeus damage. At the real vitals transaction boundary, a competing probe follows the periodic player's registry-to-vitals order. Only this test probe uses bounded monitor waits, so the failing version releases both transactions instead of hanging the test runner. Before the fix it observed `commit-held-registry=False`, `probe-acquired-registry=True`, and `probe-blocked-vitals=True`; evidence is `artifacts/wonderland-elemental-deadlock-20260911/protocol-red.json`.
+
+The test also verifies that the real derived mutation commits once, replay cannot duplicate it, and subsequent recovery, monster advancement, and session removal remain usable. It covers both monster engines with the live ECS player path. The previous owner/vitals race test now targets the actual projection/advance stage directly; registry-serialized full-world preflight is intentionally outside that barrier.
+
+Release validation passed all 48 selected protocol checks with no failures or skips, including the new registry-order regression, the adapted owner/vitals regression, prepared-target authority, Elemental Class Suit runtime behavior, and Medusa ownership. The solution built with zero warnings and errors. Reports are `artifacts/wonderland-elemental-deadlock-20260911/protocol-release.json` and `build-release.log`.

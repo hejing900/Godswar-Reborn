@@ -26,13 +26,20 @@ internal static partial class IntonedCombatSkillHandlerChecks
             var damage = await fixture.Socket.ReadPacketAsync(32);
             var impact = await fixture.Socket.ReadPacketAsync(24);
             var mana = await fixture.Socket.ReadPacketAsync(12);
+            var healing = await fixture.Socket.ReadPacketAsync(32);
             var vitals = await fixture.Socket.ReadPacketAsync(16);
             Check.True(
                 ReadOpcode(damage) == 10045 &&
                 ReadOpcode(impact) == 10046 &&
                 ReadOpcode(mana) == 10135 &&
+                ReadOpcode(healing) == 10045 &&
                 ReadOpcode(vitals) == 0x2771,
-                $"{name} skill publishes damage, impact, mana, then life absorption");
+                $"{name} skill publishes damage, impact, mana, then healing text and authoritative vitals");
+            AssertLifeAbsorptionHealingPacket(healing, 100,
+                fixture.Character.PositionX, fixture.Character.PositionZ,
+                $"{name} capped life absorption");
+            Check.Equal(500, ApplyNativeLifeAbsorptionFeedback(400, healing, vitals),
+                $"{name} native optimistic healing is followed by exact HP without doubling the heal");
             Check.Equal(
                 500,
                 BinaryPrimitives.ReadInt32LittleEndian(

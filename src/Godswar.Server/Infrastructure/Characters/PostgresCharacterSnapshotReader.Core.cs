@@ -56,14 +56,10 @@ internal sealed partial class PostgresCharacterSnapshotReader
         {
             RealmId = new RealmId(reader.GetInt32(53)),
             FactionCrierRevision = reader.GetInt64(55),
-<<<<<<< HEAD
             OnlineAwardRevision = reader.GetInt64(56),
             Quests = ReadQuestSnapshots(reader, 63, 64),
             QuestCompletedIds = ImmutableArray.CreateRange(
                 reader.GetFieldValue<int[]>(65).Select(static id => (uint)id))
-=======
-            OnlineAwardRevision = reader.GetInt64(56)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         };
         return new CharacterCoreRow(
             identity,
@@ -104,13 +100,9 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 reader.GetInt32(42),
                 reader.GetInt32(54),
                 reader.GetInt32(57),
-<<<<<<< HEAD
                 reader.GetInt64(58),
                 reader.GetInt32(61),
                 reader.GetInt32(62)),
-=======
-                reader.GetInt64(58)),
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             new CharacterLoadoutSnapshot(
                 reader.GetString(18),
                 reader.GetString(19),
@@ -149,7 +141,6 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 reader.GetInt64(52)));
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Reads the carried quests from the parallel id and progress arrays.
     /// </summary>
@@ -177,10 +168,6 @@ internal sealed partial class PostgresCharacterSnapshotReader
     }
 
     private static byte ToByte(short value, string field)    {
-=======
-    private static byte ToByte(short value, string field)
-    {
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (value is < byte.MinValue or > byte.MaxValue)
         {
             throw new InvalidDataException(
@@ -309,7 +296,6 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 FROM atlantis_character_title_ownership ownership
                 WHERE ownership.character_id = cb.id
                 ORDER BY title_id
-<<<<<<< HEAD
             ),
             COALESCE(cb.exchange_point, 0),
             COALESCE(cb.exchange_medal, 0),
@@ -330,8 +316,6 @@ internal sealed partial class PostgresCharacterSnapshotReader
                 FROM character_quests quest
                 WHERE quest.character_id = cb.id AND quest.state = 1
                 ORDER BY quest.quest_id
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             )
         FROM character_base cb
         {PostgresCharacterItemProjectionSql.FullJoinForCharacterAlias}

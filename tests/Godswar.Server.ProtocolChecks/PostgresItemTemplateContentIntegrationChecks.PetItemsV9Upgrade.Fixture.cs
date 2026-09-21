@@ -69,8 +69,49 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
         string source,
         int entryCount,
         int[] excludedItemIds,
-        ItemTemplateDefinition[] additions)
+        ItemTemplateDefinition[] additions,
+        bool legacyHolySuit = true,
+        bool legacyHolySuitMaterials = true,
+        bool legacyHolyStoneReagents = true,
+        bool legacySocketSpells = true,
+        bool legacyAscensionCore = true)
     {
+        var reviewedHolyItems = await BuildCanonicalHolySuitItemsAsync(
+            dataSource,
+            legacyHolySuit
+                ? HolySuitContentBaselineV1.ItemTemplates
+                : legacyHolySuitMaterials
+                    ? HolySuitContentBaselineV2.ItemTemplates
+                    : legacyAscensionCore
+                        ? HolySuitContentBaselineV3.ItemTemplates
+                        : HolySuitContentBaseline.ItemTemplates);
+        excludedItemIds = excludedItemIds
+            .Concat(HolySuitContentBaseline.ItemTemplates.Select(item => item.Id))
+            .Distinct()
+            .ToArray();
+        additions = additions
+            .Where(item => !HolySuitContentBaseline.ItemTemplates.Any(
+                holy => holy.Id == item.Id))
+            .Concat(reviewedHolyItems)
+            .OrderBy(item => item.Id)
+            .ToArray();
+        var oldReagents = await BuildCanonicalHolySuitItemsAsync(
+            dataSource,
+            (legacyHolyStoneReagents
+                    ? HolyStoneMaterialItemContentBaseline.ItemTemplates
+                    : HolyStoneMaterialItemContentV3.ItemTemplates)
+                .Where(item => HolyStoneMaterialItemContentV3.ReagentIds.Contains(item.Id))
+                .Concat(legacySocketSpells
+                    ? SocketSpellItemContentBaseline.ItemTemplates
+                    : SocketSpellItemContentV2.ItemTemplates)
+                .ToArray());
+        var oldReagentIds = oldReagents.Select(item => checked((int)item.Id)).ToArray();
+        excludedItemIds = excludedItemIds.Concat(oldReagentIds).Distinct().ToArray();
+        additions = additions
+            .Where(item => !oldReagentIds.Contains(checked((int)item.Id)))
+            .Concat(oldReagents)
+            .OrderBy(item => item.Id)
+            .ToArray();
         await using var connection = await dataSource.OpenConnectionAsync();
         await using var transaction = await connection.BeginTransactionAsync();
         await using (var create = new NpgsqlCommand("""
@@ -84,8 +125,8 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             SELECT @targetRevision, @entryCount, @source, 9,
                    attribute_count, equipment_rank_count,
                    holy_suit_effect_count, material_policy_count,
-                   material_recipe_count, holy_suit_tier_count,
-                   holy_suit_upgrade_count, holy_suit_consumable_count,
+                   material_recipe_count, @holyTierCount,
+                   @holyUpgradeCount, @holyConsumableCount,
                    holy_suit_policy_count
             FROM item_template_content_revisions
             WHERE revision = @sourceRevision
@@ -97,6 +138,11 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
             create.Parameters.AddWithValue("entryCount", entryCount);
             create.Parameters.AddWithValue("source", source);
             create.Parameters.AddWithValue("sourceRevision", sourceRevision);
+            create.Parameters.AddWithValue("holyTierCount", legacyHolySuit ? 8 : 9);
+            create.Parameters.AddWithValue("holyUpgradeCount", legacyHolySuit ? 70 : 80);
+            create.Parameters.AddWithValue(
+                "holyConsumableCount",
+                legacyHolySuit ? 13 : 14);
             if (await create.ExecuteScalarAsync() is not null)
             {
                 await CopyV9FixtureDefinitionsAsync(
@@ -110,7 +156,8 @@ internal static partial class PostgresItemTemplateContentIntegrationChecks
                     connection,
                     transaction,
                     sourceRevision,
-                    targetRevision);
+                    targetRevision,
+                    legacyHolySuit);
             }
         }
 

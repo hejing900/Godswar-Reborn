@@ -16,13 +16,10 @@ internal sealed partial class GameClientHandler
             return null;
         }
 
-<<<<<<< HEAD
         // Quest objectives are credited before the reward settlement: whether the
         // reward lands is the reward path's business, but the kill happened.
         await RecordQuestKillAsync(damageResult, CancellationToken.None);
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         var rewardPolicy = _gameplayCatalogs.MonsterRewards;
         var rewardEligible = MonsterRewardCatalog.IsEligible(
             damageResult.Monster,
@@ -119,7 +116,6 @@ internal sealed partial class GameClientHandler
                 damageResult,
                 settlement.DeathEventId,
                 rewardTime);
-<<<<<<< HEAD
             // A field or dungeon monster resolves its drops from the captured
             // template-key table instead of an instance rule.
             monsterLoot ??= _registry.PrepareMonsterLoot(
@@ -127,8 +123,6 @@ internal sealed partial class GameClientHandler
                 damageResult,
                 settlement.DeathEventId,
                 rewardTime);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -324,10 +318,7 @@ internal sealed partial class GameClientHandler
             await _session.SendAsync(
                 PacketBuilder.MonsterLoot(
                     loot.MonsterObjectId,
-<<<<<<< HEAD
                     loot.DeathEventId,
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     loot.Entries),
                 cancellationToken,
                 "MonsterLootAvailable");
@@ -452,48 +443,6 @@ internal sealed partial class GameClientHandler
             Console.WriteLine(
                 $"[world-boss] status refresh deferred map={control.MapId} boss={control.BossTemplateKey}: {ex.Message}");
         }
-    }
-
-    private async Task SendMonsterDeathProgressionAsync(
-        uint monsterObjectId,
-        uint monsterSpawnGeneration,
-        long currentExperience,
-        int currentTalentExperience,
-        int currentTalentPoints,
-        CancellationToken cancellationToken)
-    {
-        if (_character is null)
-        {
-            return;
-        }
-
-        await _registry.DeliverMonsterPacketToViewerAsync(
-            _session,
-            _character.CurrentMap,
-            monsterObjectId,
-            PacketBuilder.MonsterDeathReward(
-                monsterObjectId,
-                LocalPlayerObjectId,
-                currentExperience,
-                currentTalentExperience,
-                currentTalentPoints),
-            monsterSpawnGeneration,
-            cancellationToken,
-            "MonsterKillProgressionRefresh");
-
-        await _registry.BroadcastToMonsterViewersAsync(
-            _character.CurrentMap,
-            monsterObjectId,
-            PacketBuilder.MonsterDeathReward(
-                monsterObjectId,
-                CurrentPlayerObjectId,
-                currentExperience,
-                currentTalentExperience,
-                currentTalentPoints),
-            cancellationToken,
-            _session,
-            "MonsterKillProgressionRefreshWorld",
-            expectedSpawnGeneration: monsterSpawnGeneration);
     }
 
     private async Task<bool> IsSkillLearnedAsync(uint skillId, CancellationToken cancellationToken)

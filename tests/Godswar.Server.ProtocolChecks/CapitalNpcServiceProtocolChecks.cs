@@ -1,9 +1,6 @@
 using System.Buffers.Binary;
 using Godswar.Server.Domain.World.Content;
-<<<<<<< HEAD
 using Godswar.Server.Game;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Infrastructure.WorldContent;
 using Godswar.Server.Packets;
 using Godswar.Server.Protocol;
@@ -20,10 +17,7 @@ internal static partial class CapitalNpcServiceProtocolChecks
     {
         CheckEndpointsAndExchangePages();
         CheckOpenPackets();
-<<<<<<< HEAD
         CheckDescriptionOnlyNpcOpen();
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         CheckShopCatalogs();
         CheckCapturedDialogRoutes();
         CheckSuppressedSpawns();
@@ -33,7 +27,6 @@ internal static partial class CapitalNpcServiceProtocolChecks
         return Task.CompletedTask;
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// The Wishing Pool and the other published dialogue-only NPCs own text but
     /// no extended function, so the dialog-open handler answers them with the
@@ -81,14 +74,11 @@ internal static partial class CapitalNpcServiceProtocolChecks
             "the description-only window advertises no extended function");
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static void CheckEndpointsAndExchangePages()
     {
         (string Key, uint Id, CapitalNpcServiceKind Service)[] endpoints =
         [
             ("Sparta_052", 5049, CapitalNpcServiceKind.ExchangeMentor),
-<<<<<<< HEAD
             ("Athens_052", 5190, CapitalNpcServiceKind.ExchangeMentor),
             ("Sparta_069", 5066, CapitalNpcServiceKind.TeachingManager),
             ("Athens_069", 5207, CapitalNpcServiceKind.TeachingManager),
@@ -119,40 +109,12 @@ internal static partial class CapitalNpcServiceProtocolChecks
             ("Athens_123", 5261, CapitalNpcServiceKind.PrizeChest),
             ("Sparta_142", 5139, CapitalNpcServiceKind.LevelSealer),
             ("Athens_142", 5280, CapitalNpcServiceKind.LevelSealer)
-=======
-            ("Athens_052", 5191, CapitalNpcServiceKind.ExchangeMentor),
-            ("Sparta_069", 5066, CapitalNpcServiceKind.TeachingManager),
-            ("Athens_069", 5208, CapitalNpcServiceKind.TeachingManager),
-            ("Sparta_087", 5084, CapitalNpcServiceKind.BoundGoldVendor),
-            ("Athens_087", 5226, CapitalNpcServiceKind.BoundGoldVendor),
-            ("Sparta_068", 5065, CapitalNpcServiceKind.BindingGoldShop),
-            ("Athens_068", 5207, CapitalNpcServiceKind.BindingGoldShop),
-            ("Sparta_084", 5081, CapitalNpcServiceKind.FestivalEnvoy),
-            ("Athens_084", 5223, CapitalNpcServiceKind.FestivalEnvoy),
-            ("Sparta_130", 5127, CapitalNpcServiceKind.SacredSealer),
-            ("Athens_130", 5269, CapitalNpcServiceKind.SacredSealer),
-            ("Sparta_131", 5128, CapitalNpcServiceKind.HolyStoneRedeemer),
-            ("Athens_131", 5270, CapitalNpcServiceKind.HolyStoneRedeemer),
-            ("Sparta_053", 5050, CapitalNpcServiceKind.HalloweenEnvoy),
-            ("Athens_053", 5192, CapitalNpcServiceKind.HalloweenEnvoy),
-            ("Sparta_089", 5086, CapitalNpcServiceKind.PetMerchant),
-            ("Athens_089", 5228, CapitalNpcServiceKind.PetMerchant),
-            ("Sparta_034", 44345, CapitalNpcServiceKind.SkillVendor),
-            ("Athens_036", 5175, CapitalNpcServiceKind.SkillVendor),
-            ("Sparta_036", 5033, CapitalNpcServiceKind.PropsVendor),
-            ("Athens_021", 5160, CapitalNpcServiceKind.PropsVendor),
-            ("Sparta_123", 5120, CapitalNpcServiceKind.PrizeChest),
-            ("Athens_123", 5262, CapitalNpcServiceKind.PrizeChest),
-            ("Sparta_142", 5139, CapitalNpcServiceKind.LevelSealer),
-            ("Athens_142", 5281, CapitalNpcServiceKind.LevelSealer)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         ];
 
         var published = NpcContentBaselineV1.LoadDefinitions();
 
         foreach (var (key, id, expected) in endpoints)
         {
-<<<<<<< HEAD
             // The captured maps' published ids are the client ini ones; the server
             // rewrites them to the reference's own as it publishes the map, and the
             // map normalizer moves any uncaptured npc whose published id the capture
@@ -166,14 +128,6 @@ internal static partial class CapitalNpcServiceProtocolChecks
                 effective.InteractionId == id &&
                 CapitalNpcServiceProtocol.TryResolve(
                     effective,
-=======
-            var npc = published.Single(candidate =>
-                candidate.NpcKey == key);
-            Check.True(
-                npc.InteractionId == id &&
-                CapitalNpcServiceProtocol.TryResolve(
-                    npc,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     out var actual) &&
                 actual == expected,
                 $"published capital endpoint {key}/{id} resolves to {expected}");
@@ -315,7 +269,6 @@ internal static partial class CapitalNpcServiceProtocolChecks
             ReadItemId(props[0], 0) == 3100 &&
             props.SelectMany(ReadItemIds).All(static id => id != 14085),
             "Pet, Skill, and Props catalogs reproduce compatible captured stock");
-<<<<<<< HEAD
 
         var points = ReadCatalogFrames(PacketBuilder.CapitalNpcShopCatalog(
             5074,
@@ -373,8 +326,6 @@ internal static partial class CapitalNpcServiceProtocolChecks
             wireMedal == CapitalNpcShopCurrency.Medal &&
             !CapitalNpcServiceProtocol.TryGetShopCurrency((byte)8, out _),
             "Point Exchanger wire currency codes map to its three balances");
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     private static void CheckSuppressedSpawns()
@@ -561,7 +512,6 @@ internal static partial class CapitalNpcServiceProtocolChecks
                 (byte)4,
                 out var wireBindingGold) &&
             wireBindingGold == CapitalNpcShopCurrency.BindingGold &&
-<<<<<<< HEAD
             CapitalNpcServiceProtocol.TryGetShopCurrency(
                 (byte)5,
                 out var wireHonor) &&
@@ -575,20 +525,14 @@ internal static partial class CapitalNpcServiceProtocolChecks
                 out var wireMedal) &&
             wireMedal == CapitalNpcShopCurrency.Medal &&
             !CapitalNpcServiceProtocol.TryGetShopCurrency((byte)8, out _) &&
-=======
-            !CapitalNpcServiceProtocol.TryGetShopCurrency((byte)5, out _) &&
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             CapitalNpcServiceProtocol.IsShop(
                 CapitalNpcServiceKind.PetMerchant) &&
             CapitalNpcServiceProtocol.IsShop(
                 CapitalNpcServiceKind.SkillVendor) &&
             CapitalNpcServiceProtocol.IsShop(
                 CapitalNpcServiceKind.PropsVendor) &&
-<<<<<<< HEAD
             CapitalNpcServiceProtocol.IsShop(
                 CapitalNpcServiceKind.PointExchanger) &&
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             !CapitalNpcServiceProtocol.IsShop(
                 CapitalNpcServiceKind.TeachingManager),
             "catalog wire types and all purchase-capable services are " +

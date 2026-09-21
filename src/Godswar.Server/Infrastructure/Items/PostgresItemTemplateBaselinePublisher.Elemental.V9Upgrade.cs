@@ -114,14 +114,11 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             transaction,
             definitions,
             cancellationToken);
-<<<<<<< HEAD
         definitions = await ReconcileReviewedClientCatalogItemsAsync(
             connection,
             transaction,
             definitions,
             cancellationToken);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         definitions = await ReplaceReviewedMountDefinitionsAsync(
             connection,
             transaction,
@@ -181,7 +178,6 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             release.Source.Equals(
                 OfficialPetItemsV5Source,
                 StringComparison.Ordinal);
-<<<<<<< HEAD
         // This publisher's own earlier lineages are always safe predecessors:
         // they already carry every reviewed family that the reconciliation
         // steps below re-apply, so re-applying them is a no-op. Each new
@@ -196,10 +192,6 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                 StringComparison.Ordinal);
         if (!isV2 && !isV3 && !isV4 && !isNameplatesV1 &&
             !isWarehouseV1 && !isPetItemsV5 && !isCurrentLineage)
-=======
-        if (!isV2 && !isV3 && !isV4 && !isNameplatesV1 &&
-            !isWarehouseV1 && !isPetItemsV5)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         {
             throw new InvalidOperationException(
                 $"Manifest-v9 item revision {release.Revision} is not the " +

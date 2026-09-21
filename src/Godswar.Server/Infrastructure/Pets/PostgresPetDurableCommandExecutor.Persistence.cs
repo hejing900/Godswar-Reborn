@@ -23,7 +23,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 fighter_job_lv,
                 inventory_revision,
                 pet_shed_capacity,
-<<<<<<< HEAD
                 pet_shed_revision,
                 wallet_revision,
                 "Money",
@@ -31,9 +30,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 "MaxHP",
                 "curMP",
                 "MaxMP"
-=======
-                pet_shed_revision
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             FROM public.character_base
             WHERE id = @characterId
               AND account_id = @accountId
@@ -54,7 +50,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 reader.GetInt32(1),
                 reader.GetInt64(2),
                 reader.GetInt16(3),
-<<<<<<< HEAD
                 reader.GetInt64(4),
                 reader.GetInt64(5),
                 reader.GetInt32(6),
@@ -62,9 +57,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 reader.GetInt32(8),
                 reader.GetInt32(9),
                 reader.GetInt32(10))
-=======
-                reader.GetInt64(4))
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             : null;
     }
 

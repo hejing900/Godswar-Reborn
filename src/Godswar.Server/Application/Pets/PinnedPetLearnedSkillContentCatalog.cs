@@ -5,9 +5,12 @@ namespace Godswar.Server.Application.Pets;
 internal sealed class PinnedPetLearnedSkillContentCatalog :
     IPetLearnedSkillContentCatalog
 {
-    public const int ExpectedFamilyCount = 67;
-    public const int ExpectedCurveCount = 384;
-    public const int ExpectedStepCount = 1655;
+    // Counts include the family-428 Vampiric extension published alongside the
+    // installed curve data, so they must track PetLearnedSkillContentBaseline.
+    public const int ExpectedFamilyCount = 68;
+    public const int ExpectedCurveCount = 390;
+    public const int ExpectedStepCount = 1661;
+    private const int VampiricFamilyType = 428;
 
     private readonly FrozenDictionary<
         (int FamilyType, short Priority),
@@ -99,12 +102,21 @@ internal sealed class PinnedPetLearnedSkillContentCatalog :
     private static void Validate(
         PetLearnedSkillCurveContentDefinition[] curves)
     {
-        if (curves.Length != ExpectedCurveCount ||
+        // The installed-only projection predates the Vampiric extension, so the
+        // pinned counts follow whichever baseline produced this snapshot.
+        var hasVampiric = curves.Any(static curve =>
+            curve.FamilyType == VampiricFamilyType);
+        var expectedFamilies = hasVampiric ? ExpectedFamilyCount : 67;
+        var expectedCurves = hasVampiric ? ExpectedCurveCount : 384;
+        var expectedSteps = hasVampiric ? ExpectedStepCount : 1655;
+        if (curves.Length != expectedCurves ||
             curves.Select(static value => value.FamilyType)
-                .Distinct().Count() != ExpectedFamilyCount ||
+                .Distinct().Count() != expectedFamilies ||
             curves.Select(static value => (value.FamilyType, value.Priority))
                 .Distinct().Count() != curves.Length ||
-            curves.Sum(static value => value.Steps.Count) != ExpectedStepCount)
+            curves.Sum(static value => value.Steps.Count) != expectedSteps ||
+            (hasVampiric && curves.Count(static curve =>
+                curve.FamilyType == VampiricFamilyType) != 6))
         {
             throw new InvalidDataException(
                 "Learned pet-skill curves are incomplete or ambiguous.");
@@ -130,7 +142,10 @@ internal sealed class PinnedPetLearnedSkillContentCatalog :
                 curve.OpaqueAdd < 0 || curve.OpaqueFlag < 0 ||
                 curve.FirstRuntimeSkillId <= 0 ||
                 !curve.LearnTraitRequirement.IsValid ||
-                curve.Steps.Count is < 3 or > 5)
+                (curve.FamilyType == VampiricFamilyType
+                    ? curve.Steps.Count != 1 || curve.Effect != 34 ||
+                      curve.Genre != 34 || curve.Steps[0].AbsoluteValue > 1m
+                    : curve.Steps.Count is < 3 or > 5))
             {
                 throw new InvalidDataException(
                     "A learned pet-skill curve is invalid.");

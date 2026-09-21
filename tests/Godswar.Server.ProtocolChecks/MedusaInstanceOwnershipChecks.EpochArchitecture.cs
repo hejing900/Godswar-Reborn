@@ -197,12 +197,16 @@ internal static partial class MedusaInstanceOwnershipChecks
 
     private static string FindMedusaEpochRepositoryRoot()
     {
+        // This checkout's solution file is GodswarServer.sln, and the tree is
+        // not a git working copy, so neither legacy marker alone locates the
+        // source root the epoch ratchet has to scan.
         for (var current = new DirectoryInfo(
                  Directory.GetCurrentDirectory());
              current is not null;
              current = current.Parent)
         {
-            if (File.Exists(Path.Combine(current.FullName, "Reborn.sln")) ||
+            if (File.Exists(Path.Combine(current.FullName, "GodswarServer.sln")) ||
+                File.Exists(Path.Combine(current.FullName, "Reborn.sln")) ||
                 Directory.Exists(Path.Combine(current.FullName, ".git")) &&
                 Directory.Exists(Path.Combine(current.FullName, "src")))
             {

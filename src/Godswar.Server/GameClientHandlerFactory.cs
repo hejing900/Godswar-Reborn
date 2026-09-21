@@ -153,6 +153,8 @@ internal sealed class GameClientHandlerFactory(
             legacyInstanceDailyEntries:
                 postgresRuntime?.LegacyInstanceDailyEntries,
             legacyInstanceOpalPayments:
-                postgresRuntime?.LegacyInstanceOpalPayments);
+                postgresRuntime?.LegacyInstanceOpalPayments,
+            wishingPoolUsage:
+                postgresRuntime?.WishingPoolUsage);
     }
 }

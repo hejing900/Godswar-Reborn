@@ -1,4 +1,5 @@
 using Godswar.Server.Application.Commands;
+using Godswar.Server.Application.WorldInstances;
 
 namespace Godswar.Server.Application.Pets;
 
@@ -125,7 +126,12 @@ internal enum PetDurableReceiptStatus : byte
     PlayerSkillBookLevelRestricted = 109,
     PlayerSkillBookAlreadyLearned = 110,
     PlayerSkillBookPriorTierRequired = 111,
-    PlayerSkillBookInvalidState = 112
+    PlayerSkillBookInvalidState = 112,
+    WonderlandSackOpened = 113,
+    WonderlandSackBagFull = 114,
+    PlayerExperienceAdded = 115,
+    PlayerExperienceMaximumReached = 116,
+    PetExperienceBoostActivated = 117
 }
 
 internal sealed partial record PetDurableReceipt(
@@ -155,10 +161,15 @@ internal sealed partial record PetDurableReceipt(
     PetManagerUtilityEvidence? PetManagerUtility = null,
     PetRebirthGrowthEvidence? RebirthGrowth = null,
     PetSkillLearnEvidence? SkillLearn = null,
-    PlayerSkillLearnEvidence? PlayerSkillLearn = null)
+    PlayerSkillLearnEvidence? PlayerSkillLearn = null,
+    WonderlandSackOpenEvidence? WonderlandSack = null,
+    PlayerExperienceItemEvidence? PlayerExperience = null)
 {
     public bool Succeeded =>
-        Status is PetDurableReceiptStatus.PetCaptured or
+        Status is PetDurableReceiptStatus.PlayerExperienceAdded or
+            PetDurableReceiptStatus.PetExperienceBoostActivated or
+            PetDurableReceiptStatus.WonderlandSackOpened or
+            PetDurableReceiptStatus.PetCaptured or
             PetDurableReceiptStatus.EggHatched or
             PetDurableReceiptStatus.EquipmentEquipped or
             PetDurableReceiptStatus.PetLevelUpgraded or
@@ -225,6 +236,8 @@ internal sealed partial record PetDurableReceipt(
                 "Pet durable receipt evidence is inconsistent.");
         }
         if (!StatusMatchesFamily() ||
+            !MatchesWonderlandSackEvidence() ||
+            !MatchesPlayerExperienceEvidence() ||
             (Family == CommandFamily.PetPresenceTransition) !=
                 (PresenceOperation is >= 1 and <= 3) ||
             Status == PetDurableReceiptStatus.EggHatched &&

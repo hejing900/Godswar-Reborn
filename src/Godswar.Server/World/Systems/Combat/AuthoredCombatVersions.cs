@@ -92,6 +92,8 @@ internal static class AuthoredCombatV1
 internal static class AuthoredCombatV2
 {
     public const int Version = 2;
+    internal static readonly AuthoredCriticalChancePolicy CriticalChancePolicy =
+        AuthoredCriticalChancePolicy.ContestedRatio(maximumChanceBasisPoints: 9_000);
 
     private static readonly AuthoredCombatFormula Formula = new(
         Version,
@@ -101,8 +103,7 @@ internal static class AuthoredCombatV2
             initialPressureRatings: 500,
             tailPenaltyNumerator: 5,
             tailPenaltyDenominator: 3),
-        AuthoredCriticalChancePolicy.ContestedRatio(
-            maximumChanceBasisPoints: 9_000));
+        CriticalChancePolicy);
 
     public static CombatResolution ResolveBasicAttack(
         in CombatAttackerStats attacker,

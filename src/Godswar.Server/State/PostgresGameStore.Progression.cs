@@ -165,7 +165,6 @@ internal sealed partial class PostgresGameStore
         _capitalShopPurchases.PurchaseCapitalShopItemAsync(accountId, characterId,
             purchaseId, offer, quantity, cancellationToken);
 
-<<<<<<< HEAD
     // Without this forward the interface default silently answers
     // UnsupportedItem, so every shop sale looks unimplemented.
     public Task<CapitalShopSaleResult> SellCapitalShopItemAsync(
@@ -174,8 +173,6 @@ internal sealed partial class PostgresGameStore
         _capitalShopPurchases.SellCapitalShopItemAsync(accountId, characterId,
             saleId, sourceSlot, cancellationToken);
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public Task<MonsterLootPickupResult> PickupMonsterLootAsync(
         int accountId, int characterId, Guid deathEventId, int lootIndex,
         uint itemId, int quantity, CancellationToken cancellationToken = default) =>

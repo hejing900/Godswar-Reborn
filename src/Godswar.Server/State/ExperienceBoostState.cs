@@ -26,6 +26,16 @@ internal static class ExperienceStatusIds
     public const int TalentExperience400Percent = 584;
     public const int MaxTalentPotion400Percent = 590;
     public const int GuildDoubleExperience16Hours = 1007;
+
+    /// <summary>
+    /// The enduring experience-potion statuses. <c>508</c> is
+    /// <c>持久经验药剂</c> (Enduring Medium, +100%), <c>585</c> is the weak
+    /// +50% grant, and <c>590</c> is the +400% grant.
+    /// </summary>
+    public const int EnduringExperiencePotion = 508;
+    public const int EnduringWeakExperiencePotion = 585;
+    public const int EnduringHolyExperiencePotion = 590;
+
     public const int KijinPatron = 1500;
     public const int OniPatron = 1501;
     public const int DemonLordSeed = 1502;
@@ -42,6 +52,16 @@ internal static class ExperienceBoostKinds
     public const int Weekend = 22;
     public const int TrickOrTreat = 23;
     public const int Pet = 24;
+
+    /// <summary>
+    /// The enduring experience-potion family (items 4534/4535/4539). It is a
+    /// channel of its own so its online duration is tracked independently of
+    /// both the fighter <see cref="Consumable"/> grant and the pet
+    /// <see cref="Pet"/> grant, and it feeds the fighter and pet stacks at the
+    /// same time.
+    /// </summary>
+    public const int PersistentExperiencePotion = 25;
+
     public const int Guild = 100;
     public const int GuildTalent = 101;
     public const int Donator = 1008;
@@ -58,7 +78,8 @@ internal static class ExperienceBoostKinds
         kind is Talent or GuildTalent or FactionArea or BattlePass;
 
     public static bool AffectsPet(int kind) => kind is
-        Consumable or Weekend or Pet or Guild or FactionArea or BattlePass;
+        Consumable or Weekend or Pet or Guild or FactionArea or BattlePass or
+        PersistentExperiencePotion;
 }
 
 internal static class DonatorBenefits

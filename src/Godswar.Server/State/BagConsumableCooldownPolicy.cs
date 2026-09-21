@@ -77,15 +77,10 @@ internal static class BagConsumableCooldownPolicy
 
         using var document = JsonDocument.Parse(template.StatsJson);
         var root = document.RootElement;
-<<<<<<< HEAD
         if (!BagConsumableItemStats.TryRead(root, "Use", out var use) ||
             use != 1 ||
             !BagConsumableItemStats.TryRead(root, "Skill", out var group) ||
             group <= 0)
-=======
-        if (!TryReadInt32(root, "Use", out var use) || use != 1 ||
-            !TryReadInt32(root, "Skill", out var group) || group <= 0)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         {
             return false;
         }
@@ -105,8 +100,6 @@ internal static class BagConsumableCooldownPolicy
         rule = new(group, TimeSpan.FromSeconds(seconds));
         return true;
     }
-<<<<<<< HEAD
-=======
 
     private static bool TryReadInt32(
         JsonElement root,
@@ -130,5 +123,4 @@ internal static class BagConsumableCooldownPolicy
             _ => false
         };
     }
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

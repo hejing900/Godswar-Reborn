@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Godswar.Server.Application.Characters;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Pets;
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Infrastructure.Characters;
 using Godswar.Server.Infrastructure.Database;
 using Godswar.Server.Infrastructure.Inventory;
@@ -29,6 +30,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
     private readonly string? _gameplayContentRevision;
     private readonly IPetHatchRankRollSource _petHatchRankRollSource;
     private readonly IPetCaptureRarityRollSource _petCaptureRarityRollSource;
+    private readonly IWonderlandSackRollSource _wonderlandSackRollSource;
 
     public PostgresPetDurableCommandExecutor(
         NpgsqlDataSource dataSource,
@@ -39,7 +41,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         IPetLearnedSkillContentCatalog learnedSkillContent,
         IPetHatchRankRollSource? petHatchRankRollSource = null,
         IPetCaptureRarityRollSource? petCaptureRarityRollSource = null,
-        string? gameplayContentRevision = null)
+        string? gameplayContentRevision = null,
+        IWonderlandSackRollSource? wonderlandSackRollSource = null)
     {
         _dataSource = dataSource ??
             throw new ArgumentNullException(nameof(dataSource));
@@ -59,6 +62,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
             CryptographicPetHatchRankRollSource.Instance;
         _petCaptureRarityRollSource = petCaptureRarityRollSource ??
             CryptographicPetCaptureRarityRollSource.Instance;
+        _wonderlandSackRollSource = wonderlandSackRollSource ??
+            CryptographicWonderlandSackRollSource.Instance;
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         _commandTimeoutSeconds = Math.Max(
@@ -403,7 +408,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         int Level,
         long InventoryRevision,
         short PetShedCapacity,
-<<<<<<< HEAD
         long PetShedRevision,
         long WalletRevision,
         int Silver,
@@ -411,9 +415,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         int MaximumHp,
         int CurrentMp,
         int MaximumMp);
-=======
-        long PetShedRevision);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
     private sealed record StoredInbox(
         long InboxId,
@@ -446,10 +447,14 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         PetManagerUtilityEvidence? PetManagerUtility = null,
         PetRebirthGrowthEvidence? RebirthGrowth = null,
         PetSkillLearnEvidence? SkillLearn = null,
-        PlayerSkillLearnEvidence? PlayerSkillLearn = null)
+        PlayerSkillLearnEvidence? PlayerSkillLearn = null,
+        WonderlandSackOpenEvidence? WonderlandSack = null,
+        PlayerExperienceItemEvidence? PlayerExperience = null)
     {
         public bool Succeeded =>
-            Status is PetDurableReceiptStatus.PetCaptured or
+            Status is PetDurableReceiptStatus.PlayerExperienceAdded or
+                PetDurableReceiptStatus.WonderlandSackOpened or
+                PetDurableReceiptStatus.PetCaptured or
                 PetDurableReceiptStatus.EggHatched or
                 PetDurableReceiptStatus.EquipmentEquipped or
                 PetDurableReceiptStatus.PetLevelUpgraded or
@@ -464,6 +469,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
                 PetDurableReceiptStatus.PetBasicSavvyPreviewed or
                 PetDurableReceiptStatus.PetBasicSavvyAccepted or
                 PetDurableReceiptStatus.PetExperienceAdded or
+                PetDurableReceiptStatus.PetExperienceBoostActivated or
                 PetDurableReceiptStatus.PetToPetMerged or
                 PetDurableReceiptStatus.PetReborn or
                 PetDurableReceiptStatus.PetSoulContractSigned or
@@ -481,7 +487,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
                 PetDurableReceiptStatus.OwnerUnmerged;
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// A committed silver grant whose wallet columns were already advanced on
     /// <c>character_base</c>. Only the append-only ledger row is outstanding.
@@ -494,8 +499,6 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         long WalletRevision,
         string ReasonCode);
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private sealed record InventoryMutation(
         long ItemInstanceId,
         string MutationKind,

@@ -175,6 +175,17 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
+    internal bool IsMedusaPartySnapshotCurrent(
+        MedusaInstancePartySnapshot snapshot,
+        ClientSession leaderSession)
+    {
+        lock (_gate)
+        {
+            return ValidateMedusaPartyLocked(snapshot, leaderSession) ==
+                MedusaPartyEntryStatus.Ready;
+        }
+    }
+
     private MedusaPartyEntryStatus ValidateMedusaPartyLocked(
         MedusaInstancePartySnapshot snapshot,
         ClientSession leaderSession)

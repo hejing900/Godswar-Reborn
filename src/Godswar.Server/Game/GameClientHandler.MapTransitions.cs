@@ -408,12 +408,9 @@ internal sealed partial class GameClientHandler
             throw;
         }
 
-<<<<<<< HEAD
         // A shop window cannot survive a map transfer, so a stale open shop
         // must never keep authorizing sales on the destination map.
         _openCapitalShopService = null;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Console.WriteLine(
             $"[map] transition complete character={_character.Name} " +
             $"map={transition.SourceMapId}->{transition.TargetMapId} " +

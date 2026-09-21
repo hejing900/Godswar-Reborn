@@ -68,6 +68,7 @@ internal struct MonsterMovementComponent
     public DateTimeOffset NextMovementAt;
     public DateTimeOffset NextMovementStepAt;
     public int MovementSpeedBasisPoints;
+    public MonsterNavigation? Navigation;
 }
 
 internal struct MonsterCombatComponent
@@ -79,6 +80,7 @@ internal struct MonsterCombatComponent
     public bool HasSentInitialChase;
     public DateTimeOffset NextAttackAt;
     public DateTimeOffset? StunnedUntil;
+    public MonsterControlState? Controls;
 }
 
 internal struct MonsterLifecycleComponent

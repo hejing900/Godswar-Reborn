@@ -123,7 +123,7 @@ internal sealed partial class GameClientHandler
                 return;
             }
 
-            await HandleLegacyInstanceEntryAsync(
+            await BeginLegacyInstanceEntryCountdownAsync(
                 npcId,
                 dialogIndex,
                 destination,

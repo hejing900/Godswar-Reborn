@@ -323,15 +323,27 @@ internal sealed partial class PinnedDeveloperItemGrantCatalog :
             4 => "Socket Spell IV",
             _ => throw new ArgumentOutOfRangeException(nameof(ordinal))
         };
+        // The dedicated SocketSpells atlas carries one 36px cell per tier; a
+        // database published from the pre-artwork revision still holds the
+        // legacy shared Icon.gwo cell, which stays accepted.
+        var reviewedIcon =
+            template.Texture.Equals(
+                "./Localization/en_us/UI/Texture/SocketSpells.gwo",
+                StringComparison.Ordinal) &&
+            template.Icon.Equals(
+                $"{(ordinal - 1) * 36},0",
+                StringComparison.Ordinal);
+        var historicalIcon =
+            template.Texture.Equals(
+                "./Localization/en_us/UI/Texture/Icon.gwo",
+                StringComparison.Ordinal) &&
+            template.Icon.Equals("108,900", StringComparison.Ordinal);
         if (!template.Kind.Equals("consume item", StringComparison.Ordinal) ||
             !template.NameKey.Equals(
                 $"Smithing{template.Id}",
                 StringComparison.Ordinal) ||
             !template.DisplayName.Equals(expectedName, StringComparison.Ordinal) ||
-            !template.Texture.Equals(
-                "./Localization/en_us/UI/Texture/Icon.gwo",
-                StringComparison.Ordinal) ||
-            !template.Icon.Equals("108,900", StringComparison.Ordinal) ||
+            !(reviewedIcon || historicalIcon) ||
             template.ClassIds.Count != 0 ||
             template.MinLevel.HasValue ||
             template.MaxLevel.HasValue ||

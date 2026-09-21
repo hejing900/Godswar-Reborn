@@ -84,9 +84,12 @@ internal static partial class PostgresItemTemplateBaselinePublisher
         ReadCanonicalReviewedHolyStoneMaterialsAsync(
             NpgsqlConnection connection,
             NpgsqlTransaction transaction,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool legacy = false)
     {
-        var seeds = HolyStoneMaterialItemContentBaseline.ItemTemplates
+        var seeds = (legacy
+                ? HolyStoneMaterialItemContentBaseline.ItemTemplates
+                : HolyStoneMaterialItemContentV3.ItemTemplates)
             .OrderBy(static value => value.Id)
             .ToArray();
         await using var command = new NpgsqlCommand("""
@@ -149,6 +152,15 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             published,
             reviewed,
             $"published revision {publishedRevision}");
+
+        // Rows still carrying the reviewed reagent predecessor appearance are
+        // upgraded to the current dedicated atlas before the FK projection is
+        // reconciled; anything else fails closed inside the upgrade.
+        await UpgradeReviewedHolyStoneMutableRowsAsync(
+            connection,
+            transaction,
+            published,
+            cancellationToken);
 
         // character_items retains an FK to the mutable compatibility table.
         // Insert missing reviewed identities without overwriting a local row;

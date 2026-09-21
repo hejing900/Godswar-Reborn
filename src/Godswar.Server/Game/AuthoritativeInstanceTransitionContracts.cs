@@ -17,6 +17,10 @@ internal readonly record struct AuthoritativeInstanceTransitionCommand(
     float TargetX,
     float TargetZ)
 {
+    // Voluntary exits can bind the living player who clicked. Forced instance
+    // egress leaves this null so a dead player can still be returned safely.
+    public long? RequiredLivingLifeRevision { get; init; }
+
     public static AuthoritativeInstanceTransitionCommand FromMedusa(
         in MedusaInstanceTransitionCommand command) => new(
         command.CharacterId,

@@ -7,35 +7,22 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
-<<<<<<< HEAD
     private async ValueTask<(
         IReadOnlyList<NpcDialogueRouteDefinition> Routes,
         NpcTextDefinition? Text)> ResolveNpcDialogueRoutesAsync(
-=======
-    private async ValueTask<IReadOnlyList<NpcDialogueRouteDefinition>>
-        ResolveNpcDialogueRoutesAsync(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             NpcSpawnDefinition npc,
             CancellationToken cancellationToken)
     {
         if (CapitalNpcServiceProtocol.TryResolve(npc, out var service) &&
             service == CapitalNpcServiceKind.ExchangeMentor)
         {
-<<<<<<< HEAD
             return ([CapitalNpcServiceProtocol.ExchangeRoute(npc)], null);
-=======
-            return [CapitalNpcServiceProtocol.ExchangeRoute(npc)];
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         if (CapitalNpcServiceProtocol.TryGetDialogueRoutes(
                 npc,
                 out var capturedRoutes))
         {
-<<<<<<< HEAD
             return (capturedRoutes, null);
-=======
-            return capturedRoutes;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         NpcDialogueContent dialogue;
@@ -52,7 +39,6 @@ internal sealed partial class GameClientHandler
             Console.WriteLine(
                 $"[npc] dialogue missing npc={npc.InteractionId} " +
                 $"key={npc.NpcKey}");
-<<<<<<< HEAD
             return ([], null);
         }
 
@@ -71,17 +57,6 @@ internal sealed partial class GameClientHandler
             }
 
             return ([], text);
-=======
-            return [];
-        }
-
-        if (dialogue.Routes.Count == 0)
-        {
-            Console.WriteLine(
-                $"[npc] dialogue has no implemented behavior " +
-                $"npc={npc.InteractionId} key={npc.NpcKey}");
-            return [];
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         if (dialogue.Routes.Any(route =>
@@ -90,17 +65,10 @@ internal sealed partial class GameClientHandler
             Console.Error.WriteLine(
                 "[npc] rejected dialogue capability mismatch " +
                 $"npc={npc.InteractionId} key={npc.NpcKey}");
-<<<<<<< HEAD
             return ([], null);
         }
 
         return (dialogue.Routes, text);
-=======
-            return [];
-        }
-
-        return dialogue.Routes;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     private async ValueTask<NpcDialogueRouteDefinition?>
@@ -109,11 +77,7 @@ internal sealed partial class GameClientHandler
             int dialogIndex,
             CancellationToken cancellationToken)
     {
-<<<<<<< HEAD
         var (routes, _) = await ResolveNpcDialogueRoutesAsync(
-=======
-        var routes = await ResolveNpcDialogueRoutesAsync(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             npc,
             cancellationToken);
         return routes.FirstOrDefault(route =>

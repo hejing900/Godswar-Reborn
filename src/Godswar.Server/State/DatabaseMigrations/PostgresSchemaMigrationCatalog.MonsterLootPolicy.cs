@@ -55,7 +55,10 @@ internal static partial class PostgresSchemaMigrationCatalog
         INSERT INTO public.monster_loot_rules (
             template_key, loot_index, item_id,
             chance_basis_points, minimum_quantity, maximum_quantity)
-        VALUES
+        SELECT
+            seed.template_key, seed.loot_index, seed.item_id,
+            seed.chance_basis_points, seed.minimum_quantity, seed.maximum_quantity
+        FROM (VALUES
             -- Captured 2026-09-14 01:08 (Sparta map 0, object 10035).
             ('A_normal_stub_001', 0, 4529, 2500, 1, 1),
             -- Captured 2026-09-14 08:40 and 2026-09-15 01:37 (Athens map 1
@@ -68,6 +71,36 @@ internal static partial class PostgresSchemaMigrationCatalog
             ('A_normal_stub_002', 5, 12040, 2500, 1, 1),
             -- Captured 2026-09-14 09:12 (Athens map 1, object 10539).
             ('A_normal_deer_001', 0, 4001, 2500, 1, 1)
+        ) AS seed(
+            template_key, loot_index, item_id,
+            chance_basis_points, minimum_quantity, maximum_quantity)
+        -- The complete item catalogue is published only after the schema
+        -- migrations have run, so a captured drop can name an item that this
+        -- baseline does not carry yet. Skip those rows instead of aborting the
+        -- whole migration on the item_templates foreign key.
+        WHERE EXISTS (
+            SELECT 1
+            FROM public.item_templates AS item
+            WHERE item.id = seed.item_id)
         ON CONFLICT (template_key, loot_index) DO NOTHING;
+
+        -- MonsterLootContentSnapshot requires every published table to offer at
+        -- least as many rules as its drop cap. A captured drop whose item the
+        -- baseline does not carry yet is skipped above, so cap each table to the
+        -- rules that actually survived and drop tables that kept none.
+        UPDATE public.monster_loot_tables AS loot_table
+        SET maximum_drops = surviving.rule_count
+        FROM (
+            SELECT template_key, COUNT(*)::smallint AS rule_count
+            FROM public.monster_loot_rules
+            GROUP BY template_key) AS surviving
+        WHERE surviving.template_key = loot_table.template_key
+          AND loot_table.maximum_drops > surviving.rule_count;
+
+        DELETE FROM public.monster_loot_tables AS loot_table
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM public.monster_loot_rules AS rule
+            WHERE rule.template_key = loot_table.template_key);
         """);
 }

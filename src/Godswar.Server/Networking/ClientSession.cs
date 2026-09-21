@@ -327,15 +327,12 @@ internal sealed partial class ClientSession : IAsyncDisposable
             LogSend(clearPacket, label, framed);
         }
 
-<<<<<<< HEAD
         if (label is not null &&
             label.Contains("Quest", StringComparison.Ordinal))
         {
             QuestFrameTrace.Append(label, clearPacket.Span);
         }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await _egress.WriteAsync(clearPacket, cancellationToken);
     }
 

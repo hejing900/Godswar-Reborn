@@ -265,12 +265,8 @@ internal sealed partial class MonsterMapRuntime : IMonsterMapRuntime
                 monster.RespawnAt = monster.RespawnPolicy switch
                 {
                     MonsterRespawnPolicy.Timed => now +
-<<<<<<< HEAD
                         MonsterRespawnPolicyRules.ResolveRespawnInterval(
                             _worldBossCatalog,
-=======
-                        _worldBossCatalog.ResolveRespawnInterval(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                             MapId,
                             monster.Definition.TemplateKey,
                             _respawnDelay!.Value),

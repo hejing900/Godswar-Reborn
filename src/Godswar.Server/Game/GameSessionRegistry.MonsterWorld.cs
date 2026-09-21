@@ -54,18 +54,9 @@ internal sealed partial class GameSessionRegistry
 
             SyncPveMonsterElementalMovement(runtime, now);
 
-            var tick = InvokeWorldOwner(
-                runtime,
-                map => _playerRuntimeMode ==
-                    PlayerRuntimeMode.Ecs
-                    ? map.AdvanceMonsters(
-                        now,
-                        session => TryGetPlayerLifeRevision(
-                            session,
-                            out var lifeRevision)
-                            ? lifeRevision
-                            : null)
-                    : map.AdvanceMonsters(now));
+            // Target vitals are projected before the world owner is acquired;
+            // the owner itself must never wait on a player's vitals lock.
+            var tick = AdvanceMonsterWorldRuntime(runtime, now);
 #if DEBUG
             ProtocolCheckMonsterWorldTickObserved?.Invoke(
                 runtime.InstanceId,

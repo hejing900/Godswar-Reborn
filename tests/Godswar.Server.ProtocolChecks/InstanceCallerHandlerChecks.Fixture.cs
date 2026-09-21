@@ -55,7 +55,9 @@ internal static partial class InstanceCallerHandlerChecks
                 InstanceCallerProtocol.InitialMenuSubIds));
         var worldContent = PinnedWorldContentReader.Create(
             "instance-caller-handler-v1",
-            [npc.MapId, 200, 204, 205],
+            new short[] { npc.MapId, 0, 1, 200, 204, 205, 207 }
+                .Distinct()
+                .ToArray(),
             [npc],
             [],
             [],
@@ -84,6 +86,8 @@ internal static partial class InstanceCallerHandlerChecks
             registry,
             new InstanceCallerSnapshotReader(snapshot),
             worldContent,
+            gameplayCatalogs: GameplayContentTestFixtures.Runtime,
+            petContent: PetContentTestCatalog.Instance,
             legacyInstanceDailyEntries: legacyInstanceDailyEntries,
             legacyInstanceOpalPayments: legacyInstanceOpalPayments);
         SetHandlerField(
@@ -91,6 +95,9 @@ internal static partial class InstanceCallerHandlerChecks
             "_account",
             new AccountIdentity(snapshot.AccountId, "instance-caller-check"));
         SetHandlerField(handler, "_character", character);
+        // Admission is calendar gated. Pin the schedule clock so entry checks
+        // do not depend on the wall-clock time the suite happens to run at.
+        handler.LegacyInstanceScheduleClock = new WonderlandSaturdayClock();
         if (transitionReady)
         {
             SetHandlerField(handler, "_registered", true);
@@ -230,14 +237,18 @@ internal static partial class InstanceCallerHandlerChecks
 
     private static async Task InvokeAsync(
         GameClientHandler handler,
-        GamePacket packet)
+        GamePacket packet,
+        bool confirmEntry = true)
     {
-        var task = HandlePacketMethod.Invoke(
-            handler,
-            [packet, CancellationToken.None]) as Task ??
-            throw new InvalidOperationException(
-                "Instance Caller handler did not return a task.");
-        await task;
+        // Existing admission/lifecycle fixtures exercise the native Enter
+        // click explicitly. Countdown checks leave this stage pending.
+        await InvokeCountdownPacketAsync(handler, packet);
+        if (confirmEntry && PendingEntrySceneId(handler) is { } sceneId)
+        {
+            await InvokeCountdownPacketAsync(
+                handler,
+                CreateRepetitionResponse(sceneId, 0, true));
+        }
     }
 
     private static WorldInstanceId GetSourceInstanceId(
@@ -304,6 +315,22 @@ internal static partial class InstanceCallerHandlerChecks
 
     private sealed class InstanceCallerGameStore : GameStoreTestStub
     {
+        public List<(int CharacterId, int Hp, int Mp, long Revision)>
+            VitalsWrites { get; } = [];
+
+        public override Task SaveCharacterVitalsAsync(
+            int accountId,
+            int characterId,
+            int currentHp,
+            int currentMp,
+            long vitalsRevision,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            VitalsWrites.Add((characterId, currentHp, currentMp, vitalsRevision));
+            return Task.CompletedTask;
+        }
+
         public override Task<CharacterStats?> GetCharacterStatsAsync(
             int accountId,
             int characterId,
@@ -339,6 +366,7 @@ internal static partial class InstanceCallerHandlerChecks
 
         public async ValueTask DisposeAsync()
         {
+            await StopCountdownAsync(Handler);
             Registry.Remove(Session);
             await Session.DisposeAsync();
         }

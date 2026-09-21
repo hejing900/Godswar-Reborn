@@ -1,0 +1,4 @@
+# Native authored PNG atlas import and source-pixel validation.
+Pillow==12.3.0
+# Optional offline-viewer validation; uses the installed Microsoft Edge.
+playwright==1.62.0

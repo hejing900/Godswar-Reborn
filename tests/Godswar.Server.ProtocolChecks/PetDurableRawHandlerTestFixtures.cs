@@ -47,7 +47,9 @@ internal sealed class PetDurableRawHandlerFixture : IAsyncDisposable
         IPetDurableCommandExecutor executor,
         bool hasLocalDevelopmentCapability,
         short openedPetShedCells =
-            PetShedCapacityPolicy.DefaultOpenedCellCount)
+            PetShedCapacityPolicy.DefaultOpenedCellCount,
+        CharacterCalculatedStatsSnapshot? persistedStats = null,
+        CharacterProgressionSnapshot? persistedProgression = null)
     {
         ArgumentNullException.ThrowIfNull(liveCharacter);
         ArgumentNullException.ThrowIfNull(persistedCharacter);
@@ -66,7 +68,9 @@ internal sealed class PetDurableRawHandlerFixture : IAsyncDisposable
         var snapshot = PetDurableHandlerFixture.CreateSnapshot(
             persistedCharacter,
             persistedPets,
-            openedPetShedCells);
+            openedPetShedCells,
+            persistedStats,
+            persistedProgression);
         var snapshotReader = new RawPetSnapshotReader(snapshot);
         var localAccess = hasLocalDevelopmentCapability
             ? LegacyAuthenticationAccess.Create(

@@ -7,7 +7,6 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
-<<<<<<< HEAD
     /// <summary>
     /// The capital shop service whose window is currently open, if any. The
     /// client's sell request carries no NPC identity, so sales are authorized
@@ -18,10 +17,6 @@ internal sealed partial class GameClientHandler
     private async Task<bool> TryHandleCapitalNpcDialogOpenAsync(
         NpcSpawnDefinition npc,
         int questFlags,
-=======
-    private async Task<bool> TryHandleCapitalNpcDialogOpenAsync(
-        NpcSpawnDefinition npc,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         CancellationToken cancellationToken)
     {
         if (!CapitalNpcServiceProtocol.TryResolve(npc, out var service) ||
@@ -35,7 +30,6 @@ internal sealed partial class GameClientHandler
         {
             packet = PacketBuilder.NpcDescriptionDialogOpenAck(
                 npc.InteractionId,
-<<<<<<< HEAD
                 npc.NpcKey,
                 questFlags);
         }
@@ -46,31 +40,20 @@ internal sealed partial class GameClientHandler
             packet = PacketBuilder.NpcMallDialogOpenAck(
                 npc.InteractionId,
                 questFlags);
-=======
-                npc.NpcKey);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         else if (CapitalNpcServiceProtocol.IsShop(service))
         {
             packet = PacketBuilder.NpcShopDialogOpenAck(
                 npc.InteractionId,
-<<<<<<< HEAD
                 npc.NpcKey,
                 questFlags);
-=======
-                npc.NpcKey);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         else if (service == CapitalNpcServiceKind.PrizeChest)
         {
             packet = PacketBuilder.NpcPrizeChestDialogOpenAck(
                 npc.InteractionId,
-<<<<<<< HEAD
                 npc.NpcKey,
                 questFlags);
-=======
-                npc.NpcKey);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
         else if (CapitalNpcServiceProtocol.TryGetDialogueRoutes(
                      npc,
@@ -89,21 +72,17 @@ internal sealed partial class GameClientHandler
             packet,
             cancellationToken,
             "CapitalNpcDialogOpenAck");
-<<<<<<< HEAD
         // The sell request carries no NPC identity, so the open shop is kept for
         // the duration of the conversation to authorize and price sales.
         _openCapitalShopService = CapitalNpcServiceProtocol.IsShop(service)
             ? service
             : null;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Console.WriteLine(
             $"[npc] capital open npc={npc.InteractionId} " +
             $"key={npc.NpcKey} service={service}");
         return true;
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Sells the whole kit bag stack the client addressed. The observed request
     /// is four bytes (bag page, index in page) with no quantity, so the stack is
@@ -189,8 +168,6 @@ internal sealed partial class GameClientHandler
             $"earned={result.Earned} silver={result.SilverBalance}");
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private async Task<bool> TryHandleCapitalNpcPageRequestAsync(
         NpcSpawnDefinition npc,
         CancellationToken cancellationToken)
@@ -257,7 +234,6 @@ internal sealed partial class GameClientHandler
         if (_account is null || _character is null ||
             !CapitalNpcServiceProtocol.TryParsePurchase(
                 packet.Payload,
-<<<<<<< HEAD
                 out var intent))
         {
             Console.Error.WriteLine(
@@ -280,10 +256,6 @@ internal sealed partial class GameClientHandler
         }
 
         if (!TryResolveMapNpc(intent.NpcId, out var npc) ||
-=======
-                out var intent) ||
-            !TryResolveMapNpc(intent.NpcId, out var npc) ||
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             !CapitalNpcServiceProtocol.TryResolve(npc, out var service) ||
             !CapitalNpcServiceProtocol.IsShop(service) ||
             !PacketBuilder.TryResolveCapitalNpcShopOffer(
@@ -349,7 +321,6 @@ internal sealed partial class GameClientHandler
             $"balance={GetCapitalShopCurrencyBalance(offer.Currency)}");
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Prices a purchase against the camp's captured mall catalog.
     /// </summary>
@@ -462,8 +433,6 @@ internal sealed partial class GameClientHandler
             $"balance={GetCapitalShopCurrencyBalance(offer.Currency)}");
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private void InstallCapitalShopProjection(GameCharacter updated)
     {
         if (_character is null ||
@@ -482,15 +451,12 @@ internal sealed partial class GameClientHandler
         _character.Silver = updated.Silver;
         _character.Gold = updated.Gold;
         _character.BindingGold = updated.BindingGold;
-<<<<<<< HEAD
         // The Point Exchanger charges the honor, point, and medal balances, so
         // the live character has to adopt them too or the session keeps quoting
         // the pre-purchase wallet to the client.
         _character.MedusaHonorPoints = updated.MedusaHonorPoints;
         _character.ExchangePoint = updated.ExchangePoint;
         _character.ExchangeMedal = updated.ExchangeMedal;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         _character.KitBag = updated.KitBag;
     }
 
@@ -506,12 +472,9 @@ internal sealed partial class GameClientHandler
             CapitalNpcShopCurrency.Silver => _character.Silver,
             CapitalNpcShopCurrency.Gold => _character.Gold,
             CapitalNpcShopCurrency.BindingGold => _character.BindingGold,
-<<<<<<< HEAD
             CapitalNpcShopCurrency.Honor => _character.MedusaHonorPoints,
             CapitalNpcShopCurrency.Point => _character.ExchangePoint,
             CapitalNpcShopCurrency.Medal => _character.ExchangeMedal,
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _ => 0
         };
     }
@@ -525,14 +488,10 @@ internal sealed partial class GameClientHandler
             : new CapitalNpcShopBalances(
                 _character.Silver,
                 _character.Gold,
-<<<<<<< HEAD
                 _character.BindingGold,
                 _character.MedusaHonorPoints,
                 _character.ExchangePoint,
                 _character.ExchangeMedal);
-=======
-                _character.BindingGold);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (!overrideCurrency.HasValue)
         {
             return balances;
@@ -553,7 +512,6 @@ internal sealed partial class GameClientHandler
             {
                 BindingGold = balance
             },
-<<<<<<< HEAD
             CapitalNpcShopCurrency.Honor => balances with
             {
                 Honor = balance
@@ -566,8 +524,6 @@ internal sealed partial class GameClientHandler
             {
                 Medal = balance
             },
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _ => balances
         };
     }

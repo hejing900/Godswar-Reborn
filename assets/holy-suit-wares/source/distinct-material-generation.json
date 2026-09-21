@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "status": "approved",
+  "generator": "built-in image_gen",
+  "approved_concepts": "../holy-suit-material-concepts/manifest.json",
+  "legacy_atlas": {
+    "file": "source/legacy-ingot-atlas.gwo",
+    "sha256": "2a3a6baf08c39b8756f5cdc6428e818feeb61df1c71ad2b953f3613ded8c9c83"
+  },
+  "entries": [
+    {
+      "slug": "runesteel",
+      "name": "RuneSteel Ingot",
+      "tier": "RuneSteel",
+      "asset": "source/runesteel.png",
+      "itemId": 9014,
+      "x": 0,
+      "y": 0,
+      "approved_source": "../holy-suit-material-concepts/source/runesteel-ingot.png",
+      "source_sha256": "62023b857a02f78fc9cb8acb9d244d377408d2683bc036ab1699d14c27561ff6",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory upgrade material icon for a classic fantasy MMORPG, displayed at only 36x36 pixels. Primary request: a compact beveled forged metal ingot made of deep emerald green RuneSteel, two simple luminous green rune grooves; dark green metal with crisp emerald specular edges. Three-quarter isometric view, centered complete object, simple bold silhouette, thick readable edges, hand-painted polished game inventory art. Fill approximately 82% of a square canvas; small consistent padding on every side. Transparent background with real alpha. A single ingot only. No text, letters, caption, border, tile frame, pedestal, ground plane, drop shadow, surrounding sparks, loose gems or extra objects. Strong readable volume and color separation even when downscaled to 36 pixels. This is one of a coherent family of metallic ingot icons.",
+      "source": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-f328c101-cb23-4613-b035-db9d8b9c6f6d.png",
+      "reused_from": "original RuneSteel ingot artwork"
+    },
+    {
+      "slug": "arcanite",
+      "name": "Arcanite Crystal",
+      "tier": "Arcanite",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory crafting material icon for a classic fantasy MMORPG, displayed at only36x36 pixels. Hand-painted polished game inventory art, crisp bevel highlights, bold simple readable silhouette, strong shading and clear color separation. Center one complete object, fill85percentof square canvas with modest equal padding. Transparent background with real alpha channel. No text, letters, captions, frames, checkerboard, pedestal, ground plane, drop shadow, surrounding particles, loose extra objects or scenery. Primary request: one compact cluster of three large angular Arcanite crystals, a dominant tall central crystal and two shorter crystals fused at its base. Rich royal violet color with deep purple shadows and bright lavender bevels, restrained inner arcane glow. Three large simple facets, rough mineral base. Clearly a crystal, not a metal bar or bottle. Slight three-quarter isometric view.",
+      "asset": "source/arcanite.png",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-2a2fc9d0-62d3-4b7f-8e0e-ddd03f1b640b.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "itemId": 9015,
+      "x": 36,
+      "y": 0,
+      "approved_source": "../holy-suit-material-concepts/source/arcanite-crystal.png",
+      "source_sha256": "047a0b97ae62fe1cb302adec6c6bc27c790d53b041b7bbd89cc66e7523f3cf2b"
+    },
+    {
+      "slug": "seraphite",
+      "name": "Seraphite Core",
+      "tier": "Seraphite",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory crafting material icon for a classic fantasy MMORPG, displayed at only36x36 pixels. Hand-painted polished game inventory art, crisp bevel highlights, bold simple readable silhouette, strong shading and clear color separation. Center one complete object, fill85percentof square canvas with modest equal padding. Transparent background with real alpha channel. No text, letters, captions, frames, checkerboard, pedestal, ground plane, drop shadow, surrounding particles, loose extra objects or scenery. Primary request: one angular crimson Seraphite forging core, an intense ember-red faceted central heart enclosed in a cracked hexagonal gold metal casing. Fiery crimson is dominant; bold warm gold bands and broken edges hold the core. A single bright molten seam crosses its center. Compact near-square silhouette with six strong corners, slight three-quarter view, chunky readable shapes. Clearly a solid power core, not a crystal cluster or glass bottle. No flames outside the core.",
+      "asset": "source/seraphite.png",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-011aba71-c4c6-4599-a6ba-87ac4a29dcb8.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "itemId": 9016,
+      "x": 72,
+      "y": 0,
+      "approved_source": "../holy-suit-material-concepts/source/seraphite-core.png",
+      "source_sha256": "92e79e51b660c47c28aaaf816f0f6e6e645f2747baba3517a4483af40283ce24"
+    },
+    {
+      "slug": "divinium",
+      "name": "Divinium Essence",
+      "tier": "Divinium",
+      "prompt": "Use case: stylized-concept. Asset type: a single inventory crafting material icon for a classic fantasy MMORPG, displayed at only36x36 pixels. Hand-painted polished game inventory art, crisp bevel highlights, bold simple readable silhouette, strong shading and clear color separation. Center one complete object, fill85percentof square canvas with modest equal padding. Transparent background with real alpha channel. No text, letters, captions, frames, checkerboard, pedestal, ground plane, drop shadow, surrounding particles, loose extra objects or scenery. Primary request: one short elegant glass vial containing concentrated pearlescent ivory Divinium essence. Distinct bottle silhouette with broad rounded diamond-shaped body, narrow neck and small pale gold stopper. Luminous ivory liquid fills most of the glass; subtle iridescent cyan, rose and lavender streaks within the liquid. Crisp thick glass edges with pale gold accents, high contrast outline so the white material reads at36pixels. Three-quarter view. Clearly bottled crafting essence, not a potion with a label, loose orb or crystal. No detached sparkles.",
+      "asset": "source/divinium.png",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-69139509-fdb1-4859-8c53-63bab5dcef62.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+      "itemId": 9017,
+      "x": 108,
+      "y": 0,
+      "approved_source": "../holy-suit-material-concepts/source/divinium-essence.png",
+      "source_sha256": "0b2041dd34d93f7f52079999e202cb2257e79e6672127336b8d156622769babf"
+    }
+  ]
+}

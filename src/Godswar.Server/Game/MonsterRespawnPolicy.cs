@@ -10,7 +10,6 @@ internal enum MonsterRespawnPolicy
 
 internal static class MonsterRespawnPolicyRules
 {
-<<<<<<< HEAD
     /// <summary>Thermopylae, the only map with an authored field elite.</summary>
     private const short ThermopylaeMapId = 8;
 
@@ -34,8 +33,6 @@ internal static class MonsterRespawnPolicyRules
                 TimeSpan.FromHours(1)
         };
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public static void Validate(MonsterRespawnPolicy policy)
     {
         if (policy is not (MonsterRespawnPolicy.Timed or MonsterRespawnPolicy.Never))
@@ -76,7 +73,6 @@ internal static class MonsterRespawnPolicyRules
         return delay;
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Resolves the cadence a killed monster waits before it reappears: a
     /// selected world boss keeps its scheduled interval, an authored field
@@ -104,8 +100,6 @@ internal static class MonsterRespawnPolicyRules
             : ordinaryRespawnInterval;
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public static void RejectTimedWorldBossConfiguration(
         MonsterRespawnPolicy policy,
         byte mapId,

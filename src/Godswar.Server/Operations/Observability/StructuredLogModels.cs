@@ -21,7 +21,9 @@ internal enum OperationalLogEvent : byte
     TelemetryExporter = 5,
     LegacyDiagnosticSuppressed = 6,
     StartupFailure = 7,
-    StartupFailureFrame = 8
+    StartupFailureFrame = 8,
+    RuntimeFailure = 9,
+    RuntimeFailureFrame = 10
 }
 
 internal enum OperationalLogField : byte

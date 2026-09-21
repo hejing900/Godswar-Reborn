@@ -93,7 +93,7 @@ internal static partial class InstanceCallerHandlerChecks
                 InstanceCallerProtocol.MedusaRootSubId,
                 InstanceCallerProtocol.AdvancedDifficultySubId));
 
-        var emitted = fixture.ReadPackets().Skip(before).ToArray();
+        var emitted = ReadAdmissionPackets(fixture.ReadPackets().Skip(before));
         var targetInstanceId = GetSourceInstanceId(fixture);
         Check.True(
             emitted is [var scene] &&
@@ -131,7 +131,7 @@ internal static partial class InstanceCallerHandlerChecks
                 InstanceCallerProtocol.MedusaRootSubId,
                 InstanceCallerProtocol.MythicDifficultySubId));
 
-        var emitted = fixture.ReadPackets().Skip(before).ToArray();
+        var emitted = ReadAdmissionPackets(fixture.ReadPackets().Skip(before));
         var targetInstanceId = GetSourceInstanceId(fixture);
         Check.True(
             emitted is [var scene] &&

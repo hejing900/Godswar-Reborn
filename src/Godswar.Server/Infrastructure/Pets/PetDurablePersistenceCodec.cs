@@ -10,7 +10,8 @@ internal static partial class PetDurablePersistenceCodec
     public const short ContractVersion = 1;
     private const short PreviousBagItemActivationContractVersion = 2;
     private const short PreviousBagItemActivationContractVersionV3 = 3;
-    public const short BagItemActivationContractVersion = 4;
+    private const short PreviousBagItemActivationContractVersionV4 = 4;
+    public const short BagItemActivationContractVersion = 5;
     public const short PetToPetMergeContractVersion = 2;
     private const short LegacyPetGrowthResetContractVersion = 3;
     private const short PreviousPetGrowthResetContractVersion = 4;
@@ -163,6 +164,9 @@ internal static partial class PetDurablePersistenceCodec
                 BagItemActivationContractVersion) =>
                 DecodeBagItemActivation(payload),
             (CommandFamily.BagItemActivation,
+                PreviousBagItemActivationContractVersionV4) =>
+                DecodeBagItemActivationV4(payload),
+            (CommandFamily.BagItemActivation,
                 PreviousBagItemActivationContractVersionV3) =>
                 DecodeBagItemActivationV3(payload),
             (CommandFamily.BagItemActivation,
@@ -243,6 +247,7 @@ internal static partial class PetDurablePersistenceCodec
                 version is ContractVersion or
                     PreviousBagItemActivationContractVersion or
                     PreviousBagItemActivationContractVersionV3 or
+                    PreviousBagItemActivationContractVersionV4 or
                     BagItemActivationContractVersion,
             CommandFamily.PetToPetMerge =>
                 version == PetToPetMergeContractVersion,

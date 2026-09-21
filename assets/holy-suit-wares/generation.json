@@ -1,0 +1,51 @@
+{
+  "schema_version": 3,
+  "status": "selected",
+  "generator": "built-in image_gen",
+  "framing": "stock-36-grid",
+  "reference": {
+    "file": "source/platinum-stock-36.png",
+    "enlarged_input": "source/platinum-reference.png",
+    "native_texture": "Icon2.gwo",
+    "rect": [
+      936,
+      0,
+      36,
+      36
+    ]
+  },
+  "entries": [
+    {
+      "slug": "runesteel",
+      "name": "RuneSteel Ingot",
+      "itemId": 9014,
+      "asset": "source/runesteel.png",
+      "prompt": "Use case: precise-object-edit. Asset type: native 36x36 pixel fantasy MMORPG inventory material icon, enlarged as the supplied reference. Edit target: attached stock Platinum ingot icon. Primary request: recolor only this SAME stock icon to make the RuneSteel Ingot tier variant. Color palette: deep emerald green and dark forest green, crisp pale mint glint; deep emerald is dominant. Invariants: preserve the exact silhouette, two overlapping chunky beveled ingot shapes, diagonal orientation, framing, scale, dark navy nearly-black square backdrop, pixelated 36x36 style, shadow placement, and all large highlight shapes of the reference. Keep every shape in the same location and the object occupying the same canvas area. It must look like a color variant from the very same original client sprite sheet. Do not redesign into a crystal, orb, bottle, rune-covered long bar, chest, armor or bag. Do not add fine detail, runes, text, borders, particles, extra objects or scenery. Do not smooth into high-resolution painting; preserve the chunky low resolution grid. This is a pixel-art palette swap only. One square icon.",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-042ddf20-63c5-4325-ae5f-899c30ecac95.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "slug": "arcanite",
+      "name": "Arcanite Crystal",
+      "itemId": 9015,
+      "asset": "source/arcanite.png",
+      "prompt": "Use case: precise-object-edit. Asset type: native 36x36 pixel fantasy MMORPG inventory material icon, enlarged as the supplied reference. Edit target: attached stock Platinum ingot icon. Primary request: recolor only this SAME stock icon to make the Arcanite Crystal tier variant. Color palette: rich violet, dark purple shadows and bright lavender glint; saturated violet is dominant. Invariants: preserve the exact silhouette, two overlapping chunky beveled ingot shapes, diagonal orientation, framing, scale, dark navy nearly-black square backdrop, pixelated 36x36 style, shadow placement, and all large highlight shapes of the reference. Keep every shape in the same location and the object occupying the same canvas area. It must look like a color variant from the very same original client sprite sheet. Do not redesign into a crystal, orb, bottle, rune-covered long bar, chest, armor or bag. Do not add fine detail, runes, text, borders, particles, extra objects or scenery. Do not smooth into high-resolution painting; preserve the chunky low resolution grid. This is a pixel-art palette swap only. One square icon.",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-630f1ff1-c682-48dc-8012-b1442ffd2096.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "slug": "seraphite",
+      "name": "Seraphite Core",
+      "itemId": 9016,
+      "asset": "source/seraphite.png",
+      "prompt": "Use case: precise-object-edit. Asset type: native 36x36 pixel fantasy MMORPG inventory material icon, enlarged as the supplied reference. Edit target: attached stock Platinum ingot icon. Primary request: recolor only this SAME stock icon to make the Seraphite Core tier variant. Color palette: fiery crimson red metal, dark burgundy shadows, warm gold accents only on the sharp highlight ridges; crimson is dominant. Invariants: preserve the exact silhouette, two overlapping chunky beveled ingot shapes, diagonal orientation, framing, scale, dark navy nearly-black square backdrop, pixelated 36x36 style, shadow placement, and all large highlight shapes of the reference. Keep every shape in the same location and the object occupying the same canvas area. It must look like a color variant from the very same original client sprite sheet. Do not redesign into a crystal, orb, bottle, rune-covered long bar, chest, armor or bag. Do not add fine detail, runes, text, borders, particles, extra objects or scenery. Do not smooth into high-resolution painting; preserve the chunky low resolution grid. This is a pixel-art palette swap only. One square icon.",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-1bf4eafe-4306-4ad8-9385-956496388e8c.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "slug": "divinium",
+      "name": "Divinium Essence",
+      "itemId": 9017,
+      "asset": "source/divinium.png",
+      "prompt": "Use case: precise-object-edit. Asset type: native 36x36 pixel fantasy MMORPG inventory material icon, enlarged as the supplied reference. Edit target: attached stock Platinum ingot icon. Primary request: recolor only this SAME stock icon to make the Divinium Essence tier variant. Color palette: pearlescent ivory metal with iridescent pale cyan, rose and lavender highlights; warm ivory is dominant, with gray-violet shadows retaining strong readable contrast. Invariants: preserve the exact silhouette, two overlapping chunky beveled ingot shapes, diagonal orientation, framing, scale, dark navy nearly-black square backdrop, pixelated 36x36 style, shadow placement, and all large highlight shapes of the reference. Keep every shape in the same location and the object occupying the same canvas area. It must look like a color variant from the very same original client sprite sheet. Do not redesign into a crystal, orb, bottle, rune-covered long bar, chest, armor or bag. Do not add fine detail, runes, text, borders, particles, extra objects or scenery. Do not smooth into high-resolution painting; preserve the chunky low resolution grid. This is a pixel-art palette swap only. One square icon.",
+      "source_hint": "Generated images are saved to C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf as C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-c18aecc4-27b9-4bc3-a3f2-82c2531010e0.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    }
+  ]
+}

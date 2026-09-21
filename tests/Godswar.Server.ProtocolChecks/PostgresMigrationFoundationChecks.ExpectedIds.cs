@@ -147,14 +147,18 @@ internal static partial class PostgresMigrationFoundationChecks
         "20260907_140_duel_arena_initial_actions",
         "20260907_141_duel_arena_services",
         "20260907_142_restore_item_view_authority",
-<<<<<<< HEAD
         "20260908_143_atlantis_completion_rewards",
         "20260908_144_exchange_point_balances",
         "20260908_145_character_quest_state",
         "20260908_146_character_quests",
-        "20260915_147_monster_loot_policy"
-=======
-        "20260908_143_atlantis_completion_rewards"
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
+        "20260915_147_monster_loot_policy",
+        "20260916_148_wonderland_titles",
+        "20260916_149_wonderland_all_island_titles",
+        "20260916_150_holy_suit_divinium",
+        "20260916_151_holy_suit_combat_projection",
+        "20260916_152_wonderland_chest_claims",
+        "20260916_153_wonderland_boss_loot_claims",
+        "20260916_154_monster_combat_balance",
+        "20260916_155_bloodfang_pet_species"
     ];
 }

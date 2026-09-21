@@ -83,12 +83,8 @@ internal static class CapturedMonsterSpawnHydrator
         var lifecycle = new MonsterLifecycleComponent(
             corpseDespawnDelay,
             respawnPolicy == MonsterRespawnPolicy.Timed
-<<<<<<< HEAD
                 ? MonsterRespawnPolicyRules.ResolveRespawnInterval(
                     worldBossCatalog,
-=======
-                ? worldBossCatalog.ResolveRespawnInterval(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     mapId,
                     definition.TemplateKey,
                     ordinaryRespawnDelay!.Value)

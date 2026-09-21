@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generator": "built-in image_gen",
+  "status": "selected",
+  "purpose": "Four distinct 36px Socket Spell inventory icons, matching scrolls with one to four visible socket marks.",
+  "shared_prompt": "Use case: stylized-concept. Asset type: one inventory sprite for a 2000s hand-painted fantasy MMORPG displayed at only 36 by 36 pixels. Paint ONE compact, broad, partially unfurled enchanted parchment scroll with curled top and bottom edges, slightly tilted clockwise, facing the viewer in shallow three-quarter view. One object fills 86 percent of the square. Thick readable silhouette, chunky planes, simple large symbols, painterly jewel-like highlights, strong dark outlines. Dark nearly black navy background edge to edge. Light from upper left. Keep the scroll surface broad enough that its socket symbols dominate at tiny scale. No lettering, words, numbers, Roman numerals, labels, UI border, external frame, scenery, hands, or extra props. This belongs to a matching four-tier family of Socket Spells used to drill equipment sockets.",
+  "entries": [
+    {
+      "item_id": 4270,
+      "slug": "socket-spell-1",
+      "display_name": "Socket Spell I",
+      "prompt": "Tier I scroll. Warm tawny parchment with rolled COPPER end caps and a deep EMERALD GREEN magical wash across its broad central panel. The center bears exactly ONE very large luminous MINT GREEN CIRCULAR SOCKET MARK: a thick bright ring with a dark empty center, looking like an empty drilled socket. One ring only. A restrained green light traces the scroll edge. Simple apprentice-level treatment. The broad parchment and curled ends must clearly read as a scroll, not a stone or a flat card.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-3f779fd7-0e9a-4c8d-b7db-09db592ba75f.png",
+      "source_sha256": "88914663bcb4ad7fe1ebf094a56247df2db4e10f000777a0f7bed629210b1849",
+      "source": "source/socket-spell-1.png"
+    },
+    {
+      "item_id": 4271,
+      "slug": "socket-spell-2",
+      "display_name": "Socket Spell II",
+      "prompt": "Tier II scroll. Pale cream parchment with rolled SILVER end caps and a deep SAPPHIRE BLUE magical wash across its broad central panel. The center bears exactly TWO large luminous ICE CYAN CIRCULAR SOCKET MARKS, stacked vertically with a clear gap: thick bright rings with dark empty centers, looking like empty drilled sockets. Two rings only, easy to count. A restrained blue light traces the scroll edge. More refined than tier I. The broad parchment and curled ends must clearly read as a scroll, not a stone or a flat card.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-c83fd97a-f28e-49a8-9d39-40b0630c8028.png",
+      "source_sha256": "7ae6c9871e29ee2b88ca66f457c4edcd7ac26418fdd327e6477dfe41f2e2e779",
+      "source": "source/socket-spell-2.png"
+    },
+    {
+      "item_id": 4272,
+      "slug": "socket-spell-3",
+      "display_name": "Socket Spell III",
+      "prompt": "Tier III scroll. Rich ivory parchment with rolled GOLD end caps and a deep ROYAL VIOLET magical wash across its broad central panel. The center bears exactly THREE large luminous LAVENDER WHITE CIRCULAR SOCKET MARKS arranged as a triangle (one above, two below) with clear gaps: thick bright rings with dark empty centers, looking like empty drilled sockets. Three rings only, easy to count. A contained purple glow traces the scroll edge. Luxurious but bold and uncluttered. The broad parchment and curled ends must clearly read as a scroll, not a stone or a flat card.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-4390200b-c201-410a-ad92-e7bf05d7a50a.png",
+      "source_sha256": "cdb85923f8d3fd979ed325883d8b44467c2a233925f1a9d98f53946bd1615bbb",
+      "source": "source/socket-spell-3.png"
+    },
+    {
+      "item_id": 4273,
+      "slug": "socket-spell-4",
+      "display_name": "Socket Spell IV",
+      "prompt": "Tier IV master scroll. Bright pearlescent IVORY parchment with thick ornate rolled GOLD end caps and a deep CRIMSON RED magical wash across its broad central panel. The center bears exactly FOUR large luminous WHITE GOLD CIRCULAR SOCKET MARKS arranged in a two-by-two square with clear gaps: thick bright rings with dark empty centers, looking like empty drilled sockets. Four rings only, easy to count. A contained crimson and gold halo traces the scroll edge. Powerful final-tier treatment but broad simple design readable at36pixels. The broad parchment and curled ends must clearly read as a scroll, not a stone or a flat card.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-29a62b0a-c1c4-46d6-a20d-e31a6ed0882f.png",
+      "source_sha256": "88844c1502415a2c20e265c90bb01d246775d5240c66cc08dd31a7232b002614",
+      "source": "source/socket-spell-4.png"
+    }
+  ]
+}

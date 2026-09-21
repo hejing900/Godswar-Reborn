@@ -337,15 +337,12 @@ internal sealed partial class GameClientHandler
             PacketBuilder.EnterUiBootstrap(),
             cancellationToken,
             "EnterUiBootstrap");
-<<<<<<< HEAD
         // Published from the character's own quest state: a character holding no
         // quest advertises an empty snapshot, so the first quest no longer appears
         // on every login. It stays here, before the npc catalog is installed,
         // because that is the ordering the client expects; the giver and responder
         // come from the published map content instead.
         await SendQuestSnapshotAsync("login", cancellationToken);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
         foreach (var packet in kitBagDetailPages)
         {
@@ -405,26 +402,16 @@ internal sealed partial class GameClientHandler
         }
 
         var loadedNpcDefinitions = mapContent.Npcs;
-<<<<<<< HEAD
         var compatibleNpcs = new List<NpcSpawnDefinition>(loadedNpcDefinitions.Count);
         foreach (var npc in loadedNpcDefinitions)
         {
             var compatibleNpc =
                 CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility(npc);
             if (CapitalNpcServiceProtocol.IsSuppressedSpawn(compatibleNpc))
-=======
-        var npcDefinitions = new List<NpcSpawnDefinition>(loadedNpcDefinitions.Count);
-        foreach (var npc in loadedNpcDefinitions)
-        {
-            var effectiveNpc =
-                CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility(npc);
-            if (CapitalNpcServiceProtocol.IsSuppressedSpawn(effectiveNpc))
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             {
                 continue;
             }
 
-<<<<<<< HEAD
             compatibleNpcs.Add(compatibleNpc);
         }
 
@@ -435,8 +422,6 @@ internal sealed partial class GameClientHandler
         var npcDefinitions = new List<NpcSpawnDefinition>(placedNpcs.Count);
         foreach (var effectiveNpc in placedNpcs)
         {
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             if (WorldObjectIds.IsReservedForPlayer(effectiveNpc.ObjectId) ||
                 !WorldSectorVisibilityTracker<NpcSpawnDefinition>.TryGetCell(
                     effectiveNpc.X,

@@ -271,9 +271,12 @@ internal static partial class PacketBuilder
         uint targetObjectId,
         uint damage,
         byte result,
-        byte damageType = 1)
+        byte damageType = 1,
+        bool includeMonsterAnimationFlags = false)
     {
-        var packet = new byte[30];
+        // Native monster attacks read byte30 to decide whether to play their model
+        // animation. Captured 32-byte attacks explicitly leave that flag at zero.
+        var packet = new byte[includeMonsterAnimationFlags ? 32 : 30];
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(0, 2), (ushort)packet.Length);
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), PhysicalDamageOpcode);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(4, 4), attackerObjectId);

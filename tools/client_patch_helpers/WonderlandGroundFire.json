@@ -1,0 +1,9 @@
+{
+  "source_id": 580,
+  "visual_id": 589,
+  "effect_file": "effect_fire_002_all.gwm",
+  "source_sections": {
+    "en_us": "[580]\nName=Fire Blast 1\nTarget=1\nAffectObj=28\nDistance=0\nStyle=0\nEffect=0\nRange=8\nEffectTurn=1\nTimeInterval=0\nProperty=1\nMP=400\nCoolingTime=180\nIntonateTime=3\nStiffTime=1.9\nPower1=0.2\nPower2=600\nPower3=0\nEquipRequest=-1\nStatus=-1\nStatusOdds=0\nEntity=0\nKind=20058\nPriority=1\nTypeFlag=0\nAction1=perform_00\nAction2=perform_00\nAction3=perform_00\nEffectFile1=effect_fire_002_all.gwm\nEffectFile2=null\nEffectFile3=null\nEffectFile4=null\nTrackType=4,-1,-1,-1\nTimeOrSpeed=-1,-1,-1,-1\nDspStyle=0,-1,-1,-1\nCtrlType=1\nScale=1\nIntonate=-1\nSound=329,1,1,1\nScriptID=MagicAttack\nFilePathName=./Localization/en_us/UI/Texture/icon.gwo\nIconPos=720,72\nIconSize=36,36\nEnableZBuffer=0,0,0,0\nDirection=0.0",
+    "zh_cn": "[580]\nName=\u521d\u7ea7\u7206\u708e\u672f\nTarget=1\nAffectObj=28\nDistance=0\nStyle=0\nEffect=0\nRange=8\nEffectTurn=1\nTimeInterval=0\nProperty=1\nMP=400\nCoolingTime=180\nIntonateTime=3\nStiffTime=1.9\nPower1=0.2\nPower2=600\nPower3=0\nEquipRequest=-1\nStatus=-1\nStatusOdds=0\nEntity=0\nKind=20058\nPriority=1\nTypeFlag=0\nAction1=perform_00\nAction2=perform_00\nAction3=perform_00\nEffectFile1=effect_fire_002_all.gwm\nEffectFile2=null\nEffectFile3=null\nEffectFile4=null\nTrackType=4,-1,-1,-1\nTimeOrSpeed=-1,-1,-1,-1\nDspStyle=0,-1,-1,-1\nCtrlType=1\nScale=1\nIntonate=-1\nSound=329,1,1,1\nScriptID=MagicAttack\nFilePathName=./Localization/en_us/UI/Texture/icon.gwo\nIconPos=720,72\nIconSize=36,36\nEnableZBuffer=0,0,0,0\nDirection=0.0"
+  }
+}

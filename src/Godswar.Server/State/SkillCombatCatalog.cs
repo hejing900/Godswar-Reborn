@@ -19,7 +19,17 @@ internal readonly record struct SkillCombatDefinition(
     decimal Power1,
     decimal Power2,
     TimeSpan CastTime = default,
-    TimeSpan Cooldown = default);
+    TimeSpan Cooldown = default,
+    decimal ZodiacFlatPower = 0m,
+    int ZodiacFlatRank = 0,
+    decimal ZodiacPowerAdjustment = 0m)
+{
+    // Power2 remains the combined scalar used by existing formula versions.
+    // Preserve its exact projection contribution so newer formulas can recover
+    // the published base independently of the selected training curve.
+    public decimal AuthoredPower2 => Power2 - ZodiacFlatPower;
+    public decimal AuthoredPower1 => Power1 - ZodiacPowerAdjustment;
+}
 
 internal sealed class SkillCombatCatalog
 {

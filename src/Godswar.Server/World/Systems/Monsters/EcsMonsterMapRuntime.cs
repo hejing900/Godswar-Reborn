@@ -10,7 +10,7 @@ namespace Godswar.Server.World.Systems.Monsters;
 /// shared immutable DTOs so shadow parity and the reversible live cutover use
 /// the same AOI and packet-replication path as the legacy runtime.
 /// </summary>
-internal sealed class EcsMonsterMapRuntime : IMonsterMapRuntime
+internal sealed partial class EcsMonsterMapRuntime : IMonsterMapRuntime
 {
     private readonly object _gate = new();
     private readonly EcsWorld _world = new();
@@ -231,12 +231,7 @@ internal sealed class EcsMonsterMapRuntime : IMonsterMapRuntime
                 ref _world.Get<MonsterCombatComponent>(entity);
             if (vitals.SpawnGeneration != expectedSpawnGeneration ||
                 vitals.IsAlive ||
-<<<<<<< HEAD
                 !vitals.IsSpawned)
-=======
-                !vitals.IsSpawned ||
-                combat.Phase != MonsterCombatPhase.AwaitingRetirement)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             {
                 return false;
             }

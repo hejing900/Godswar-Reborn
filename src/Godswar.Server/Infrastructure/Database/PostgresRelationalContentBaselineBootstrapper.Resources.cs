@@ -4,21 +4,21 @@ internal static partial class PostgresRelationalContentBaselineBootstrapper
 {
     private static readonly BaselineResource ItemAttributesResource = new(
         "Godswar.Server.Infrastructure.DatabaseBaselines.005_item_attributes.sql",
-        "2CE8B2539589D3666599C87B50106CE6D52C1C0576EDA227D9551045197E3EE0");
+        "E2405A6AF3CA4B927C02B7DF8E910858585D98014C83EA44CE0244E55ABA0C7B");
 
     private static readonly BaselineResource SkillsResource = new(
         "Godswar.Server.Infrastructure.DatabaseBaselines.006_skills_and_talents.sql",
-        "47CCE1F6514EEA9A969638AAE25BA8B21AE5098A2412A88E54EDF791AD8EF505");
+        "E0E4A0D99FF8113432F90A442FE62F7EA325E86B084EF7F1281958589BC59D19");
 
     private static readonly BaselineResource NpcsResource = new(
         "Godswar.Server.Infrastructure.DatabaseBaselines.007_npcs.sql",
-        "3CE8A37430F0A0E10CF607781790B19EB26BD9F25872AC7CC11459F1BFC824F8");
+        "D4D7DEB430DBAA6FE334A0248E1692E0B0DE383EF517D06A4479CB8FB5F84C4A");
 
     private static readonly BaselineResource MapsResource = new(
         "Godswar.Server.Infrastructure.DatabaseBaselines.008_maps.sql",
-        "A287CB08131DBB55E3A834E28789D38819A474FEEE72E2586ACF31C922BFF3BE");
+        "DF54A88F936C60F2207E10EF3507D6F3CD85604D65903C2F9B75F62007BB1387");
 
     private static readonly BaselineResource MonstersResource = new(
         "Godswar.Server.Infrastructure.DatabaseBaselines.009_monsters.sql",
-        "65AADCEED4C30291D4C2250F4AA2907ED2447644A66A6D454805E7EE5687E9A5");
+        "08BE82B59716E0521A7D9FAD50F0B3FC7B8B369C0BE4940A62FF8A40B608023B");
 }

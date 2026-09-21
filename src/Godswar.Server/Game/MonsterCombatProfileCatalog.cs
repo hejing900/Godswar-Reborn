@@ -35,6 +35,8 @@ internal readonly record struct MonsterCombatProfile(
     bool IsElite,
     bool IsBoss)
 {
+    public float? AuthoredAttackRange { get; init; }
+
     public bool UsesMagicDamage =>
         AttackKind == MonsterAttackDamageKind.Magical;
 
@@ -60,7 +62,7 @@ internal readonly record struct MonsterCombatProfile(
     };
 }
 
-internal sealed class MonsterCombatProfileCatalog
+internal sealed partial class MonsterCombatProfileCatalog
 {
     internal const string PolicyVersion = "reborn-monster-combat-v1";
 
@@ -84,6 +86,8 @@ internal sealed class MonsterCombatProfileCatalog
         GameplayContentCatalog gameplay)
     {
         ArgumentNullException.ThrowIfNull(gameplay);
+        var balances = MonsterCombatBalanceContent.Pin(
+            gameplay.MonsterCombatBalances, gameplay.MonsterTemplates);
         var entries = gameplay.MonsterTemplates
             .Select(static value => new KeyValuePair<
                 GameplayMonsterTemplateDefinition,
@@ -118,7 +122,12 @@ internal sealed class MonsterCombatProfileCatalog
             fallbackGroups.ToFrozenDictionary(
                 static group => group.Key,
                 static group => group.First().Value,
-                StringComparer.Ordinal));
+                StringComparer.Ordinal))
+        {
+            DatabaseCriticalResistances = balances.ToFrozenDictionary(
+                row => (row.MapId, row.TemplateKey),
+                row => row.CriticalResistance)
+        };
     }
 
     public MonsterCombatProfile Resolve(CapturedMonsterSpawn monster)
@@ -129,18 +138,27 @@ internal sealed class MonsterCombatProfileCatalog
                 out var template) ||
             _fallback.TryGetValue(monster.TemplateKey, out template);
         template = known ? template : TemplateProfile.Default;
-<<<<<<< HEAD
-        var profile = Resolve(
-=======
-        return Resolve(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
-            monster.Tier,
-            template,
-            authoritativeIsElite: known && template.IsElite,
-            // Unknown published identity fails closed for boss-control
-            // immunity without changing the default combat-rating scale.
-            authoritativeIsBoss: !known || template.IsBoss);
-<<<<<<< HEAD
+        var profile = AuthoredOverrides.TryGetValue(
+            (monster.MapId, monster.ObjectId, monster.TemplateKey),
+            out var authored)
+            ? authored
+            : Resolve(
+                monster.Tier,
+                template,
+                authoritativeIsElite: known && template.IsElite,
+                // Unknown published identity fails closed for boss-control
+                // immunity without changing the default combat-rating scale.
+                authoritativeIsBoss: !known || template.IsBoss);
+
+        // Database tuning takes precedence over generated and per-run profiles.
+        // Exact map/template keys prevent same-model monsters elsewhere inheriting it.
+        if (DatabaseCriticalResistances.TryGetValue(
+                (monster.MapId, monster.TemplateKey),
+                out var resistance))
+        {
+            profile = profile with { CriticalResistance = resistance };
+        }
+
         // A passive spawn's own level still scales its health and defense, but
         // what it hits back with does not: the reference's level 141 spies in
         // Athens city take exactly one point off whatever character disturbs
@@ -148,8 +166,6 @@ internal sealed class MonsterCombatProfileCatalog
         return MonsterAggroPolicy.IsPassiveTemplate(monster.TemplateKey)
             ? profile with { PhysicalAttack = 1, MagicAttack = 1 }
             : profile;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     internal static MonsterCombatProfile Resolve(

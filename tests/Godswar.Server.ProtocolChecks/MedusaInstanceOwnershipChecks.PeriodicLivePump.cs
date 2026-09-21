@@ -403,12 +403,8 @@ internal static partial class MedusaInstanceOwnershipChecks
             TimeSpan.FromSeconds(3));
         for (var index = 1; index <= 12; index++)
         {
-            var tick = fixture.Runtime.Owner.Invoke(
-                map => map.AdvanceMonsters(
-                    now.AddMilliseconds(index * 100),
-                    session => fixture.Registry
-                        .GetPlayerLifeRevision(session)),
-                TimeSpan.FromSeconds(3));
+            var tick = MonsterOwnerCheckSteps.Advance(fixture.Runtime, fixture.Registry,
+                now.AddMilliseconds(index * 100));
             if (index > 1 &&
                 !tick.PositionsChanged &&
                 tick.Updates.Count == 0)

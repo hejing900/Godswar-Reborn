@@ -154,14 +154,11 @@ internal sealed partial class GameSessionRegistry
                 }
                 if (killed)
                 {
-<<<<<<< HEAD
                     ReviveTrace.Log(
                         $"ECS-DEATH self name={target.Name} " +
                         $"map={target.CurrentMap} " +
                         $"pos={target.PositionX:F2},{target.PositionZ:F2} " +
                         $"hp={target.CurrentHp}/{target.MaxHp}");
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                     await TrySendMonsterAttackPacketExactAsync(
                         runtime,
                         targetContext,

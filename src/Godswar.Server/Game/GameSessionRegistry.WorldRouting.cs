@@ -12,6 +12,44 @@ internal sealed partial class GameSessionRegistry
     /// its instance identity is the route; otherwise this resolves only the
     /// Tempest default open-world instance.
     /// </summary>
+    /// <summary>
+    /// Announces a packet to every session this process is serving, whatever map
+    /// the recipient is on.
+    /// </summary>
+    /// <remarks>
+    /// This is the realm-wide channel an announcement needs: a map or world-instance
+    /// broadcast only reaches the sender's own map. A failure on one session is
+    /// swallowed so a closing client cannot stop the announcement for the rest.
+    /// </remarks>
+    public async Task<int> BroadcastToAllSessionsAsync(
+        ReadOnlyMemory<byte> packet,
+        CancellationToken cancellationToken,
+        string? label = null,
+        bool framed = true)
+    {
+        var delivered = 0;
+        foreach (var session in _sessions.Keys.ToArray())
+        {
+            try
+            {
+                await session.SendAsync(
+                    packet,
+                    cancellationToken,
+                    label,
+                    framed);
+                delivered++;
+            }
+            catch (Exception ex) when (
+                ex is OperationCanceledException or ObjectDisposedException or
+                    IOException or InvalidOperationException)
+            {
+                // A session that is closing must not abort the announcement.
+            }
+        }
+
+        return delivered;
+    }
+
     public Task<int> BroadcastToMapAsync(
         byte mapId,
         ReadOnlyMemory<byte> packet,

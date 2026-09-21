@@ -12,11 +12,7 @@ internal static class MedusaIslandPolicy
     public const int MinimumLevel = 90;
     public const int MinimumPartySize = 1;
     public const int MaximumPartySize = 5;
-<<<<<<< HEAD
-    public const int DailyAttemptLimit = 100;
-=======
     public const int DailyAttemptLimit = 1;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public const int VictoryScore = 3_000;
 
     public static readonly TimeSpan TimeLimit = TimeSpan.FromMinutes(40);

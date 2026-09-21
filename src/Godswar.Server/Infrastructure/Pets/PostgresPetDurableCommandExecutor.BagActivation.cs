@@ -143,6 +143,54 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 cancellationToken);
         }
 
+        if (PetExperienceBoostPolicy.TryResolveItem(
+                _itemContent.Templates,
+                checked((uint)item.PropId),
+                out var boostPotion))
+        {
+            return await ExecuteWithBagConsumableCooldownAsync(
+                connection,
+                transaction,
+                envelope.Subject.CharacterId,
+                command.KitBagSlot,
+                item,
+                activationCancellationToken =>
+                    ApplyPetExperienceBoostPotionAsync(
+                        connection,
+                        transaction,
+                        envelope.Subject.CharacterId,
+                        command.KitBagSlot,
+                        item,
+                        boostPotion,
+                        character,
+                        activationCancellationToken),
+                cancellationToken);
+        }
+
+        if (ExperienceBoostPotionPolicy.TryResolveItem(
+                _itemContent.Templates,
+                checked((uint)item.PropId),
+                out var experiencePotion))
+        {
+            return await ExecuteWithBagConsumableCooldownAsync(
+                connection,
+                transaction,
+                envelope.Subject.CharacterId,
+                command.KitBagSlot,
+                item,
+                activationCancellationToken =>
+                    ApplyExperienceBoostPotionAsync(
+                        connection,
+                        transaction,
+                        envelope.Subject.CharacterId,
+                        command.KitBagSlot,
+                        item,
+                        experiencePotion,
+                        character,
+                        activationCancellationToken),
+                cancellationToken);
+        }
+
         if (PetSkillBookActivationPolicy.IsReviewedItem(
                 checked((uint)item.PropId)))
         {

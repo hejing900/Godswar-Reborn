@@ -326,14 +326,19 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateDuelArenaInitialActions(),
         CreateDuelArenaServices(),
         CreateRestoreItemViewAuthority(),
-<<<<<<< HEAD
         CreateAtlantisCompletionRewards(),
         CreateExchangePointBalances(),
         CreateCharacterQuestState(),
         CreateCharacterQuestTable(),
-        CreateMonsterLootPolicy()
-=======
-        CreateAtlantisCompletionRewards()
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
+        CreateMonsterLootPolicy(),
+        CreateWonderlandTitles(),
+        CreateWonderlandAllIslandTitles(),
+        CreateHolySuitDivinium(),
+        CreateHolySuitCombatProjection(),
+        CreateWonderlandChestClaims(),
+        CreateWonderlandBossLootClaims(),
+        CreateMonsterCombatBalance(),
+        CreateBloodfangPetSpecies(),
+        CreateWishingPoolUsageState()
     ];
 }

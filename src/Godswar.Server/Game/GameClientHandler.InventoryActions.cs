@@ -249,14 +249,11 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
         if (await TryHandleGroundLootPickupAsync(packet, cancellationToken))
         {
             return;
         }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (!TryReadBagItemAction(packet.Payload, out var sourceSlot, out var itemId))
         {
             Console.WriteLine("[equip-re] BagItemAction ignored: payload does not match captured bag-to-equipment shape");

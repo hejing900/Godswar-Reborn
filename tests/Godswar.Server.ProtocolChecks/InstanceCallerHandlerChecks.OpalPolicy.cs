@@ -326,7 +326,7 @@ internal static partial class InstanceCallerHandlerChecks
             CreateActionPacket(
                 InstanceCallerProtocol.AtlantisRootSubId,
                 actionSubId));
-        return fixture.Leader.ReadPackets().Skip(before).ToArray();
+        return ReadAdmissionPackets(fixture.Leader.ReadPackets().Skip(before));
     }
 
     private static async Task<IReadOnlyList<byte[]>>

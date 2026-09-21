@@ -1,0 +1,117 @@
+{
+  "note": "Porting D:\\Godswar new features into D:\\Godswar-Reborn-main without regressing existing behaviour. D:\\Godswar is READ-ONLY: never modified.",
+  "strategy": "Additive only. New files are copied verbatim; every shared core file is edited surgically with the Godswar diff hunks. Shared files that Reborn evolved independently are NEVER overwritten wholesale.",
+  "how_to_reproduce_checks": {
+    "build": "dotnet build GodswarServer.sln -c Release",
+    "test_no_db": "dotnet run --project tests/Godswar.Server.ProtocolChecks/Godswar.Server.ProtocolChecks.csproj -c Release --no-build",
+    "test_with_db": "set GODSWAR_TEST_POSTGRES_CONNECTION_STRING and GODSWAR_TEST_SCHEMA_RELEASE_CONNECTION_STRING to a DISPOSABLE database, then run as above",
+    "warning": "Always pass --no-incremental when only test sources changed. Incremental release builds served stale test binaries during this port and produced misleading pass/fail counts.",
+    "never_point_at_production": "The integration checks create, truncate and drop fixture data. Use a throwaway database, never the live dev/production one."
+  },
+  "client_patch_installation": {
+    "target": "D:\\Godswar Origin (the Origin.exe client)",
+    "source_assets": "D:\\Godswar\\assets (13 feature packs) + D:\\Godswar\\tools\\PatchClient*.py installers",
+    "workflow": "README per pack: python tools/Prepare<X>.py (needs Pillow pinned to the version in generated/release.json) -> python tools/PatchClient<X>.py --mode preview|apply|verify --client-root <client>",
+    "stale_provenance_root_cause": "Four packs (ascension-core, holy-stone-reagents, holy-stones-and-spirits, socket-spells) failed every installer with 'Prepared item artwork release has stale provenance'. This was NOT corrupt artwork: running Prepare<X>.py with Pillow==12.0.0 in a scratch venv, --check reported exactly one differing output per pack, generated/release.json, while every atlas and icon reproduced byte-identically. Regenerating the record (written: 1 file per pack) made --check pass with written: 0. Only release.json's own hashes were stale.",
+    "applied_and_verified": [
+      "VampiricPet (7 files): family 428 skills 6400-6405, books 16400-16405, both locales.",
+      "HolySuitTiers (26 files): RuneSteel/Arcanite/Seraphite/Divinium text, atlas, help and UI rows.",
+      "HolySpiritHelp (8 files): Zephyr Spirits help page plus the shifted navigation rows.",
+      "WonderlandStatus (2 files): Status.ini in both locales.",
+      "WonderlandGroundFire (2 files): coordinate-only Fire Blast presentation.",
+      "BoundGoldVendor (2 files): Gears / Holy Suit tab captions.",
+      "WonderlandEntryText (1 file): entry text.",
+      "WonderlandTitleColors (2 files): the reviewed palette for titles 5155 and 5114-5118.",
+      "AscensionCore (6 files): item 9025 icon, name and Holy Suit instructions.",
+      "HolyStoneReagentIcons (8 files): eight reagent icons plus Platinum protection text.",
+      "SocketSpellIcons (1 file): zh_cn ItemBaseAttribute.xml (en_us and both atlases were already current)."
+    ],
+    "client_state_gates_encountered": [
+      "HolySpiritHelp first reported 'Unknown Water Spirits navigation geometry' on an untouched client; installing HolySuitTiers/ReagentIcons/AscensionCore (which rewrite HelpSystem*.lua and HelpSystem.xml) satisfied the prerequisite and it then applied cleanly.",
+      "WonderlandTitleColors requires eight owned title rows. The client shipped only islands 2,4,6,7,8 (ids 5114-5118) and predated the all-island extension that added 5155(1), 5156(3), 5157(5); both locales also used a different description wording and localised names. Added the three rows, set the reviewed description text, normalised the four catalogs to CRLF, and aligned both locales to the reviewed English names (the reference client ships en_us only and WonderlandTitlePolicy names these titles in English).",
+      "Three installers call powershell.exe for a 'client closed' gate. This host only exposes pwsh on PATH; Windows PowerShell 5.1 exists at C:\\Windows\\System32\\WindowsPowerShell\\v1.0. Without it on PATH the gate raises [WinError 2] instead of running, so a patch could be attempted with the game open. Prepend that directory to PATH for the session; never edit the tools."
+    ],
+    "custom_installer_required": {
+      "pack": "holy-stones-and-spirits (Holy Stone Spirit icons)",
+      "why": "PatchClientHolyStoneSpiritIcons.py accepts only the reviewed baseline stream or its own prepared release. This client's Icon2.gwo is not the byte-stream ancestor (it is 2,074,131 bytes vs the 2,100,032-byte reviewed baseline) and decoded to a different canvas in 6,148 unowned pixels, so whole-file hashing can never accept it, and overwriting it would have regressed those pixels.",
+      "method": "artifacts/install-holystone-spirit-icons.py writes only the 22 owned Icon2 cells with the tools' own patch_atlas(), which emits untouched packets verbatim, so the client's encoder variant and all unowned artwork survive. Icon5.gwo already equalled the prepared release and was left untouched.",
+      "evidence": "28,509 owned pixels changed, 0 wrong, 0 unowned pixels changed, in both locales; verified against the pre-image backup and independently against the prepared 36px icons.",
+      "note": "Whole-file byte equality with the prepared release is NOT achievable here and is not the right test: this client's RLE stream comes from a different encoder. Canonical equivalence is per-pixel."
+    },
+    "blocked_on_origin_exe": [
+      "TitleBrackets: Origin.exe is a valid fixed-base x86 PE32 of the expected 6,676,480 bytes, but the title formatter/width code at 0x20991 and 0x21C41 is absent (0xCC padding) and the three 0x420921 hooks are not installed. The patcher requires those prerequisite bytes verbatim, so it cannot run.",
+      "Bloodfang: the pet-merge prerequisites (0x1F58B6, 0x2A1748, 0x2A9FF1, 0x9198E) all match, but the executable hash (9d8e984f...) is absent from the tool's eight-hash accepted-state table, so even a read-only Status query throws. It also needs Characters\\PetUniteEffect\\e_he_0004_all.gwm, which is built and present in assets/pet-owner-merge but not installed, and installing it requires the octagram patch that this table gates.",
+      "Both need the client binary rebased onto the reference build the tools were authored against, or a bespoke patcher. Neither is a provenance or metadata problem and neither was attempted."
+    ],
+    "backups": "D:\\Godswar Origin\\backups\\client-assets-20260918-230532 (full en_us/zh_cn UI tree snapshot) plus one installer-owned backup per patch.",
+    "reproduce": "All 11 applied installers return exit 0 from --mode verify. The two blocked ones still report the errors above."
+  },
+  "results": {
+    "solution_build": "0 errors, 0 warnings",
+    "without_database": "449 passed, 6 failed, 99 skipped",
+    "with_disposable_database": "470 passed, 19 failed, 65 skipped",
+    "upstream_snapshot_reference": "The read-only D:\\Godswar snapshot reports 511 passed, 7 failed, 123 skipped, so a substantial share of the remaining failures is inherited rather than introduced."
+  },
+  "phase1_done": "700 additive files copied (178 assets, 147 src, 164 tests, 122 tools, 83 docs, 5 database fixtures, 1 localization). Only __pycache__ skipped.",
+  "collisions_resolved": [
+    "PetDurablePersistenceCodec: bag-activation contract bumped V4 -> V5; EncodeBagItemActivationV4/DecodeBagItemActivationV4 kept as the legacy read path.",
+    "PetLearnedSkillContentBaseline: Source/SourceSha256/ExpectedRevision renamed to Installed*; CreateInstalled() added; Create() appends the Vampiric curve.",
+    "GameClientHandler.Progression: dropped Reborn's duplicate SendMonsterDeathProgressionAsync.",
+    "GameSessionRegistry.MonsterAttacks: ProcessMonsterAttackAsync renamed to ProcessMonsterAttackCoreAsync and forwards capturedWorldTime.",
+    "'partial' added to MonsterCombatProfileCatalog, RuntimeContentFingerprint, EcsMonsterMapRuntime and three test check classes.",
+    "Reborn's nested IntonedCombatSkillHandlerChecks.CombatStore removed in favour of the ported fixture.",
+    "GameClientHandler.LegacyInstanceEntry.cs replaced with the upstream countdown/admission state machine."
+  ],
+  "server_hooks_done": [
+    "Monster runtime/viewer: snapshot Controls + interruption revisions + ControlsAt, Wonderland update fields, component Navigation/Controls, TryApplyControl on all three IMonsterMapRuntime implementations, MonsterBehaviorPolicy stationary/passive/navigationGrid, absolute-health publication fence, required-source appearance hydration.",
+    "Monster combat: AuthoredAttackRange, AuthoredOverrides + DatabaseCriticalResistances, MonsterCombatBalanceContent wiring, MonsterAttackRangePolicy passive parameter, MonsterAreaDamageBroadcastHit.Outcome.",
+    "Combat: AttackMultiplier, UsesDirectRatingAccuracy, Zodiac flat-power fields and AuthoredPower projections, AuthoredCombatV2.CriticalChancePolicy, CombatEventIdentity flame-blast pulses, flame-blast field policy moved from State/ to Game/ (layer rule).",
+    "Movement control: PlayerSkillCastControlCatalog.BlocksMovement, GameSessionRegistry.IsPlayerStatusMovementAllowed, Wonderland control folded into GetPlayerSkillCastControl.",
+    "Life absorption: upstream registry-owned per-hit commit, and the client-visible healing packet path.",
+    "Pets: receipt V5, status 113-116, PetTransition Wonderland/PlayerExperience members, IWonderlandSackRollSource; Vampiric-aware curve-count and family-428 validation.",
+    "Items: reviewed-reader legacy parameters and 4-argument overloads, HolySuitContentBaseline WareTexture/Divinium members.",
+    "Packets/ops: MonsterLoot 2-argument overload, CenteredRedAnnouncement, PersonalGameLog, Opcodes.RepetitionQueueState, Opcodes.NativeRevive, RuntimeFailure log events.",
+    "MapInstance: ground-fire visibility, retained boss corpses, CaptureMonsterCombatTargets + AdvanceMonsters(targets) overload, HasAdmittedAtlantisPetOwner, MonsterCombatTargetProjectionStartingHook.",
+    "Live monster tick now projects targets before acquiring the world owner (GameSessionRegistry.MonsterWorld).",
+    "Instance entry: TryHandleInstanceEntryResponseAsync wired into HandleMedusaInvitationResponseAsync; StopInstanceEntryCountdownAsync and StopFlameBlastFieldsAsync joined before the character gate is disposed.",
+    "GameSessionRegistry.IsMedusaPartySnapshotCurrent; AdvancePetOwnerMergeEnergyOnceAsync extracted; GameClientHandler.LegacyInstanceScheduleClock and flameBlastTimeProvider; TryBeginSameMapSceneTransitionAsync publishRevivalVitals.",
+    "LegacyInstanceDailyEntryPolicy.DefaultFreeEntryLimit restored to 3 (Reborn had 100); MedusaIslandPolicy.DailyAttemptLimit restored to 1 (Reborn had 100).",
+    "Mixed-profile lifecycle guards restored as active checks in GameClientHandler.DurableCharacterLifecycle.",
+    "Database-visible item-artwork upgrades restored: PostgreSQL Socket Spell rows accept the legacy shared-atlas predecessor and are rewritten to SocketSpells.gwo; Holy Stone reagent rows are upgraded before the FK projection is reconciled; PinnedDeveloperItemGrantCatalog accepts both the reviewed dedicated atlas and the historical shared cell.",
+    "8 new schema migrations appended as 20260916_148..155. The upstream IDs (20260910_144/145/146, 20260910_147, 20260911_148/149, 20260914_150/151) COLLIDED with Reborn's own 20260908_144..20260915_147 range: the 156-entry set was internally valid so unit checks passed, but any existing database whose history ended at 20260915_147_monster_loot_policy failed PostgresSchemaMigrationPlan's exact-ordered-prefix check and the server refused to start (container restart loop, InvalidOperationException from Build). Renumbered to append after the live head; catalog registration order and ExpectedMigrationIds updated to match.",
+    "PostgresPetLearnedSkillContentBootstrapper replaced with the upstream revision (284 -> 309 lines). Reborn still had the pre-Vampiric version, which only handled an empty publication and otherwise demanded an exact match, so a database still publishing 64748AC2... (384 curves / 1655 steps) failed startup with InvalidDataException 'not the reviewed installed-client revision'. The upstream version validates the immutable predecessor's provenance, copies it into 4B57F856... (390 / 1661, +6 family-428 curves), and advances the pointer with a guarded ON CONFLICT ... WHERE previousRevision compare-and-swap. No schema migration is required; docs/vampiric-pet-skills-20260914.md records the same release shape.",
+    "PostgresWonderlandTitleChecks.Upgrade now anchors its forward-upgrade fixture by catalog position (148 = 20260915_147_monster_loot_policy) instead of by migration ID, so renumbering appended migrations cannot silently retarget the rehearsal."
+  ],
+  "remaining_failures": {
+    "architecture_ratchets": [
+      "Data-boundary architecture ratchet",
+      "B20A legacy persistence retirement ratchet",
+      "Process-pinned runtime content source isolation",
+      "Durable player ownership architecture ratchet",
+      "B18B monster world owner-routing ratchet",
+      "Pinned PostgreSQL item-template content boundary"
+    ],
+    "database_harness_requirements": [
+      "PostgreSQL bounded economy reconciliation / restored reconciliation verification: need a database named godswar_b19_<12 hex>_<suffix> (the suffix is check-specific).",
+      "PostgreSQL character lifecycle migration / Tempest realm authority migration: require a bounded disposable database named for that check.",
+      "PostgreSQL outbox dispatcher recovery and ordering: refuses to run against a database it does not own.",
+      "PostgreSQL gameplay v2-to-v3 publication upgrade: the fixture database already records 156 migrations, so the historical path cannot be replayed from scratch."
+    ],
+    "open_investigations": [
+      "PostgreSQL Holy Suit manifest-v6 publication: explicit Holy Suit point recomputation returns a derived total that mismatches the expectation.",
+      "PostgreSQL item-template publication / official NPC content / official NPC dialogue: published-content assertions still to review.",
+      "PostgreSQL pinned world-content baseline: 'partial mutable source family fails closed before publication'.",
+      "PostgreSQL Gear Mentor race and preservation / developer clear-bag scope and audit."
+    ],
+    "ratchet_note": "These six ratchets are shared, unmodified files. The files they flag (GameClientHandler.Quests.cs, GameDefaults.cs, PostgresGameStore.QuestRewards/QuestState/Characters, PostgresCapitalShopPurchaseStore.CapitalShopSale.cs) are NOT part of the 726 ported files, and five of the six also fail upstream. Updating a reviewed baseline means accepting that debt, so it is left for the owner to approve."
+  },
+  "environment": {
+    "disposable_test_database": "docker container godswar-testpg (postgres:17-alpine) on 127.0.0.1:55432, database godswar_b19_0123456789ab_reconciliation. Remove with: docker rm -f godswar-testpg",
+    "untouched": "The live dev stack (godswar-server, godswar-postgres on 5432) was never written to."
+  },
+  "next_steps": [
+    "Owner decision required: re-baseline the six architecture ratchets or leave them as known debt.",
+    "Create the check-specific disposable databases (names are validated per check) to exercise the remaining harness-gated integration checks.",
+    "Investigate the four open assertion failures listed above."
+  ]
+}

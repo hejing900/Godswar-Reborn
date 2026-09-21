@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Godswar.Server.Application.Inventory;
 using Godswar.Server.Networking;
 using Godswar.Server.Packets;
@@ -43,7 +44,28 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
+        // The Wishing Pool has to be answered before the capital mall: the same
+        // capital npc pair carries both services, and the mall branch claims the
+        // shared dialog indices without answering them.
+        if (IsWishingPool(npcId))
+        {
+            var payload = packet.Payload;
+            var selection = payload.Length >= 20
+                ? BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(16, 4))
+                : subId;
+            if (selection < 0)
+            {
+                selection = subId;
+            }
+
+            await HandleWishingPoolActionAsync(
+                npcId,
+                dialogIndex,
+                selection,
+                cancellationToken);
+            return;
+        }
+
         if (await TryHandleMallFunctionActionAsync(
                 npcId,
                 dialogIndex,
@@ -53,8 +75,6 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         HolyStoneWireIntent? secureHolyStoneIntent = null;
         HolyStoneWireIntent? rawHolyStoneIntent = null;
         if (packet.ClientOperationId.HasValue &&
@@ -210,6 +230,45 @@ internal sealed partial class GameClientHandler
                     ResolveSecureClassSuitCommandFamily(subId),
                 responseDialogIndex: dialogIndex);
             Console.WriteLine($"[npc] function action ignored: npc={npcId} dialog={dialogIndex} subId={subId}");
+            return;
+        }
+
+        // The Zeus gift endpoints have no dialogue route: the installed client owns
+        // the whole function in NpcFunZeus.lua and only needs the server to answer
+        // its menu and selection traffic. Handled before route resolution so it
+        // leaves the versioned dialogue baseline untouched.
+        if (IsZeusGiftEndpoint(npc))
+        {
+            var payload = packet.Payload;
+            var selection = payload.Length >= 20
+                ? BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(16, 4))
+                : subId;
+            if (selection < 0)
+            {
+                selection = subId;
+            }
+
+            await HandleZeusGiftDialogueAsync(
+                npc,
+                dialogIndex,
+                selection,
+                cancellationToken);
+            return;
+        }
+
+        // The scripted NPCs - the Mysterious Elder, the Profession Mentor, the
+        // Personal Helper and the Event Transporters - each own their whole window
+        // in one client script and carry no dialogue route, so they are answered
+        // here as well.
+        if (ResolveScriptedNpcDialogue(npc) is { } scriptedDialogue)
+        {
+            await HandleScriptedNpcDialogueAsync(
+                npc,
+                scriptedDialogue,
+                packet,
+                dialogIndex,
+                subId,
+                cancellationToken);
             return;
         }
 

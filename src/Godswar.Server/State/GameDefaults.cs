@@ -1,12 +1,7 @@
-<<<<<<< HEAD
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.Characters;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game;
-=======
-using Godswar.Server.Domain.Characters;
-using Godswar.Server.Domain.World.Instances;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
 namespace Godswar.Server.State;
 
@@ -30,7 +25,6 @@ internal static class GameDefaults
     public const string StarterKitBag =
         "[4000,,,,,,0,10,1,1,0]#[4030,,,,,,0,10,1,1,0]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#[]#";
 
-<<<<<<< HEAD
     public static void NormalizeCamp(GameCharacter character)
     {
         ArgumentNullException.ThrowIfNull(character);
@@ -38,17 +32,11 @@ internal static class GameDefaults
         character.Camp = character.Camp == SpartaCamp ? SpartaCamp : AthensCamp;
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public static void InitializeStartingLocation(GameCharacter character)
     {
         ArgumentNullException.ThrowIfNull(character);
 
-<<<<<<< HEAD
         NormalizeCamp(character);
-=======
-        character.Camp = character.Camp == SpartaCamp ? SpartaCamp : AthensCamp;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         character.CurrentMap = character.Camp == SpartaCamp ? SpartaCapitalMap : AthensCapitalMap;
         character.PositionX = StartingPositionX;
         character.PositionZ = StartingPositionZ;
@@ -64,7 +52,6 @@ internal static class GameDefaults
             return false;
         }
 
-<<<<<<< HEAD
         ReviveTrace.Log(
             $"TRYRECOVER dynamic map={character.CurrentMap} " +
             $"isMedusa={DynamicDungeonContentMapPolicy.IsMedusaMap(character.CurrentMap)}");
@@ -79,8 +66,6 @@ internal static class GameDefaults
         // client never even sent its first post-entry packet. Re-entering a live run
         // goes through the instance caller, which skips this recovery entirely.
         ReviveTrace.Log("TRYRECOVER falling back to capital");
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         InitializeStartingLocation(character);
         return true;
     }

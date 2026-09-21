@@ -56,7 +56,8 @@ internal sealed partial class PetDurableHandlerFixture : IAsyncDisposable
         TimeSpan? petOwnerMergeEnergyInterval = null,
         ISealedPetSnapshotReader? sealedPetSnapshots = null,
         CharacterCalculatedStatsSnapshot? persistedStats = null,
-        TimeSpan? petOwnerMergeRechargeInterval = null)
+        TimeSpan? petOwnerMergeRechargeInterval = null,
+        CharacterProgressionSnapshot? persistedProgression = null)
     {
         ArgumentNullException.ThrowIfNull(liveCharacter);
         ArgumentNullException.ThrowIfNull(persistedCharacter);
@@ -78,7 +79,8 @@ internal sealed partial class PetDurableHandlerFixture : IAsyncDisposable
             persistedCharacter,
             persistedPets,
             openedPetShedCells,
-            persistedStats);
+            persistedStats,
+            persistedProgression);
         var store = new PetHandlerStore();
         var handler = new GameClientHandler(
             session,
@@ -119,7 +121,8 @@ internal sealed partial class PetDurableHandlerFixture : IAsyncDisposable
         IReadOnlyList<PetBootstrapSnapshot> pets,
         short openedPetShedCells =
             PetShedCapacityPolicy.DefaultOpenedCellCount,
-        CharacterCalculatedStatsSnapshot? persistedStats = null)
+        CharacterCalculatedStatsSnapshot? persistedStats = null,
+        CharacterProgressionSnapshot? persistedProgression = null)
     {
         var basis = CharacterSnapshotContractChecks.CreateValidSnapshot();
         var current = basis.Character ??
@@ -164,6 +167,7 @@ internal sealed partial class PetDurableHandlerFixture : IAsyncDisposable
             {
                 Camp = character.Camp
             },
+            Progression = persistedProgression ?? current.Progression,
             Loadout = loadout,
             Vitals = vitals,
             CalculatedStats = stats,

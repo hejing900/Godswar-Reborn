@@ -63,10 +63,7 @@ VALUES
     (10052, 'S2C', 'StorageItemAck', 'items', 'observed', 'Server item/equipment action acknowledgement.', 'Captured from working server during unequip.'),
     (10053, 'C2S', 'Sell', 'items', 'known', 'Client sell request.', 'From current emulator opcode map.'),
     (10056, 'C2S', 'BagItemAction', 'items', 'known', 'Client bag item action.', 'From current emulator opcode map.'),
-<<<<<<< HEAD
     (10060, 'C2S', 'SellItem', 'items', 'observed', 'Client sell request; sells the whole addressed kit bag stack.', 'Observed live from the installed client: the payload is four bytes, the bag page then the index inside that page, so the authoritative slot is (page * 24) + index. There is no quantity field, so one request covers the entire stack. The client pays the item template Money for every unit in the stack.'),
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     (10090, 'S2C', 'PlayerAcceptedQuests', 'quests', 'known', 'Synchronizes the current character''s accepted-quest records.', 'Installed-client dispatch maps opcode 10090 to MSG_PLAYER_ACCEPTQUESTS. Historical 2048-byte captures contain another character''s quest state and must not be replayed.'),
     (10097, 'S2C', 'PlayerVitalsUpdate', 'character', 'observed', 'Absolute current HP and MP refresh.', 'Captured 16-byte packet: player object id at offset 4, current HP at offset 8, current MP at offset 12; passive recovery cadence is six seconds.'),
     (10114, 'C2S', 'ItemInfoRequest', 'items', 'known', 'Client item-info request.', 'From current emulator opcode map.'),

@@ -1,0 +1,9 @@
+{
+  "captured_utc_date": "2026-09-11",
+  "database": "godswar-dev-postgres/public.holy_spirit_balance_settings",
+  "setting_id": 1,
+  "revision": 1,
+  "live_grade_one_maxima": { "9": 70, "10": 70, "13": 60 },
+  "unit": "one hundredth of a percentage point",
+  "note": "Verified read-only against the running PostgreSQL settings; these override historical acceptance ceilings 80,80,70. Help is a release snapshot and must be updated if live roll balance changes."
+}

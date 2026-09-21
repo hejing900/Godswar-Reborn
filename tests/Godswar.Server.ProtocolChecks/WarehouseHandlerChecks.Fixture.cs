@@ -20,7 +20,6 @@ internal static partial class WarehouseHandlerChecks
     private const int WarehouseSlot = 0;
     private const int BagFourWarehouseSlot = 120;
     private const int KitBagSlot = 0;
-<<<<<<< HEAD
 
     /// <summary>
     /// Bag cell the executor resolves for an automatic withdrawal. It is
@@ -29,8 +28,6 @@ internal static partial class WarehouseHandlerChecks
     /// cannot pass the handler checks.
     /// </summary>
     private const int AutoResolvedKitBagSlot = 13;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private const long BeforeInventoryRevision = 20;
     private const long AfterInventoryRevision = 21;
     private static readonly Guid OperationId =
@@ -55,12 +52,8 @@ internal static partial class WarehouseHandlerChecks
         CharacterAccountSnapshot initialCharacter,
         IEnumerable<CharacterAccountSnapshot> characterReads,
         IEnumerable<WarehouseSnapshot> warehouseReads,
-<<<<<<< HEAD
         WarehouseTransferExecutor executor,
         IEnumerable<NpcSpawnDefinition>? additionalNpcs = null)
-=======
-        WarehouseTransferExecutor executor)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     {
         var hydrated = CharacterLoadSnapshotHydrator.Hydrate(
             initialCharacter) ?? throw new InvalidOperationException(
@@ -68,19 +61,12 @@ internal static partial class WarehouseHandlerChecks
         var character = hydrated.Character;
         var npc = CreateWarehouseNpc(character);
         var managerNpc = CreateManagerNpc(character);
-<<<<<<< HEAD
         var extraNpcs = additionalNpcs?.ToArray() ?? [];
         var npcs = new[] { npc, managerNpc }.Concat(extraNpcs).ToArray();
         var worldContent = PinnedWorldContentReader.Create(
             "warehouse-handler-v1",
             [npc.MapId],
             npcs,
-=======
-        var worldContent = PinnedWorldContentReader.Create(
-            "warehouse-handler-v1",
-            [npc.MapId],
-            [npc, managerNpc],
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             [],
             [],
             new DateTimeOffset(2026, 8, 22, 0, 0, 0, TimeSpan.Zero));
@@ -109,11 +95,7 @@ internal static partial class WarehouseHandlerChecks
 
         var catalog = await registry.PublishMapNpcDefinitionsAsync(
             character.CurrentMap,
-<<<<<<< HEAD
             npcs,
-=======
-            [npc, managerNpc],
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             originSession: null,
             CancellationToken.None);
         InstallNpcCatalogMethod.Invoke(handler, [catalog]);
@@ -203,7 +185,6 @@ internal static partial class WarehouseHandlerChecks
         AuditReference: "warehouse-handler-deposit",
         OutboxEventId);
 
-<<<<<<< HEAD
     private static WarehouseTransferExecutionReceipt WithdrawReceipt(
         int warehouseSlot = WarehouseSlot,
         int capacity = WarehouseCapacityPolicy.DefaultCapacity) => new(
@@ -231,8 +212,6 @@ internal static partial class WarehouseHandlerChecks
         AuditReference: "warehouse-handler-withdraw",
         OutboxEventId);
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static NpcSpawnDefinition CreateWarehouseNpc(
         GameCharacter character) => new(
         character.CurrentMap,
@@ -272,13 +251,10 @@ internal static partial class WarehouseHandlerChecks
     }
 
     private static GamePacket CreateWarehousePageRequest()
-<<<<<<< HEAD
         => CreateWarehousePageRequest(
             WarehouseNpcProtocol.AthensWarehouseNpcId);
 
     private static GamePacket CreateWarehousePageRequest(uint npcId)
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     {
         var bytes = new byte[8];
         BinaryPrimitives.WriteUInt16LittleEndian(bytes, 8);
@@ -287,11 +263,7 @@ internal static partial class WarehouseHandlerChecks
             Opcodes.NpcDialogPageRequest);
         BinaryPrimitives.WriteUInt32LittleEndian(
             bytes.AsSpan(4),
-<<<<<<< HEAD
             npcId);
-=======
-            WarehouseNpcProtocol.AthensWarehouseNpcId);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         return new GamePacket(bytes);
     }
 
@@ -337,7 +309,6 @@ internal static partial class WarehouseHandlerChecks
         return new GamePacket(bytes, OperationId);
     }
 
-<<<<<<< HEAD
     private static GamePacket CreateWithdrawRequest(
         int warehouseSlot = WarehouseSlot)
     {
@@ -366,13 +337,6 @@ internal static partial class WarehouseHandlerChecks
         GameClientHandler handler,
         GamePacket packet)
     {        var task = HandlePacketMethod.Invoke(
-=======
-    private static async Task InvokeAsync(
-        GameClientHandler handler,
-        GamePacket packet)
-    {
-        var task = HandlePacketMethod.Invoke(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             handler,
             [packet, CancellationToken.None]) as Task ??
             throw new InvalidOperationException(
@@ -415,12 +379,9 @@ internal static partial class WarehouseHandlerChecks
 
         public WarehouseTransferExecutionResult? ExecuteResult { get; init; }
 
-<<<<<<< HEAD
         public WarehouseTransferOperation ExpectedOperation { get; init; } =
             WarehouseTransferOperation.Deposit;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         public int ExpectedWarehouseSlot { get; init; } = WarehouseSlot;
 
         public int ReplayCount { get; private set; }
@@ -445,18 +406,12 @@ internal static partial class WarehouseHandlerChecks
             Check.True(
                 subject == new CommandSubject(AccountId, CharacterId) &&
                 intent.RealmId == 1 &&
-<<<<<<< HEAD
                 intent.Operation == ExpectedOperation &&
                 intent.WarehouseSlot == ExpectedWarehouseSlot &&
                 intent.KitBagSlot ==
                     (ExpectedOperation == WarehouseTransferOperation.Withdraw
                         ? WarehouseCapacityPolicy.AutomaticKitBagSlot
                         : KitBagSlot) &&
-=======
-                intent.Operation == WarehouseTransferOperation.Deposit &&
-                intent.WarehouseSlot == ExpectedWarehouseSlot &&
-                intent.KitBagSlot == KitBagSlot &&
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 identity.OperationId == OperationId,
                 "warehouse replay identity is server-bound and wire-stable");
             return Task.FromResult(ReplayResult);

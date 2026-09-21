@@ -12,10 +12,12 @@ internal sealed partial class GameClientHandler
     private const string LegacyInstanceUnavailableMessage =
         "The instance is temporarily unavailable.";
 
-    private async Task HandleLegacyInstanceEntryAsync(
+    private async Task<LegacyEntryResult> HandleLegacyInstanceEntryCoreAsync(
         uint npcId,
         int dialogIndex,
         InstanceCallerEntryDestination destination,
+        LegacyInstanceEntryPreparation expectedPreparation,
+        Guid reservationId,
         CancellationToken cancellationToken)
     {
         var preparation = await TryPrepareLegacyInstanceEntryAsync(
@@ -23,17 +25,26 @@ internal sealed partial class GameClientHandler
             dialogIndex,
             destination,
             cancellationToken);
-        if (preparation is null)
+        if (preparation is null || !_registry.IsLegacyInstancePartySnapshotCurrent(
+                expectedPreparation.Party, destination, preparation.Npc.X, preparation.Npc.Z,
+                InstanceCallerProtocol.MaximumInteractionDistance))
         {
-            return;
+            if (destination.PaymentMode == InstanceCallerEntryPaymentMode.OpalRetry)
+            {
+                _registry.ClearLegacyInstanceOpalRetryConsents(expectedPreparation.Party);
+                if (preparation is not null)
+                    _registry.ClearLegacyInstanceOpalRetryConsents(preparation.Party);
+            }
+            return new(preparation is null ? LegacyEntryOutcome.PreparationRejected : LegacyEntryOutcome.PreparationChanged);
         }
         var npc = preparation.Npc;
-        var party = preparation.Party;
+        // Never replace countdown authority with the second preparation's
+        // roster. Its schedule/consent checks are fresh; the party stays fixed.
+        var party = expectedPreparation.Party;
         var paidIntent = destination.PaymentMode ==
             InstanceCallerEntryPaymentMode.OpalRetry;
 
         var startedAt = DateTimeOffset.UtcNow;
-        var reservationId = Guid.NewGuid();
         LegacyInstanceDailyEntryClaimResult? claimResult;
         try
         {
@@ -65,7 +76,7 @@ internal sealed partial class GameClientHandler
                 _registry.ClearLegacyInstanceOpalRetryConsents(party);
             }
             await SendLegacyInstanceUnavailableAsync(cancellationToken);
-            return;
+            return new(LegacyEntryOutcome.DailyClaimFailed);
         }
         if (claimResult.Status ==
             LegacyInstanceDailyEntryClaimStatus.AlreadyUsed)
@@ -74,11 +85,9 @@ internal sealed partial class GameClientHandler
             {
                 _registry.ClearLegacyInstanceOpalRetryConsents(party);
             }
-            await SendLegacyInstanceDailyEntryUsedAsync(
-                npcId,
-                destination.Kind,
-                cancellationToken);
-            return;
+            if (destination.Kind != InstanceCallerEntryKind.Wonderland)
+                await SendLegacyInstanceDailyEntryUsedAsync(npcId, destination.Kind, cancellationToken);
+            return new(LegacyEntryOutcome.DailyLimitReached, claimResult.DailyEntryLimit);
         }
 
         var paymentRequired = RequiresOpalPayment(claimResult);
@@ -92,7 +101,7 @@ internal sealed partial class GameClientHandler
             await SendAtlantisEntryPolicyAsync(
                 npcId,
                 cancellationToken);
-            return;
+            return new(LegacyEntryOutcome.PaymentModeChanged);
         }
         if (paymentRequired &&
             (_legacyInstanceDailyEntries is null ||
@@ -101,7 +110,7 @@ internal sealed partial class GameClientHandler
             _registry.ClearLegacyInstanceOpalRetryConsents(party);
             await ReleaseLegacyInstanceDailyEntryAsync(reservationId);
             await SendLegacyInstanceUnavailableAsync(cancellationToken);
-            return;
+            return new(LegacyEntryOutcome.PaymentStoreUnavailable);
         }
         if (paymentRequired)
         {
@@ -133,7 +142,7 @@ internal sealed partial class GameClientHandler
                     await SendLegacyInstanceUnavailableAsync(
                         cancellationToken);
                 }
-                return;
+                return new(LegacyEntryOutcome.ConsentRejected);
             }
         }
 
@@ -161,7 +170,7 @@ internal sealed partial class GameClientHandler
                 $"destination={destination.DisplayName}: {error.Message}");
             await SendLegacyInstanceUnavailableAsync(
                 cancellationToken);
-            return;
+            return new(LegacyEntryOutcome.RuntimeCreationFailed);
         }
 
         var target = creation.Runtime?.Descriptor;
@@ -175,7 +184,7 @@ internal sealed partial class GameClientHandler
                 $"status={creation.Status}/{creation.PlacementStatus}");
             await SendLegacyInstanceUnavailableAsync(
                 cancellationToken);
-            return;
+            return new(LegacyEntryOutcome.RuntimeCreationRejected);
         }
 
         if (!_registry.IsLegacyInstancePartySnapshotCurrent(
@@ -190,7 +199,7 @@ internal sealed partial class GameClientHandler
                 reservationId);
             await SendLegacyInstanceUnavailableAsync(
                 CancellationToken.None);
-            return;
+            return new(LegacyEntryOutcome.PartyChangedAfterCreation);
         }
 
         var opalsCharged = false;
@@ -228,7 +237,7 @@ internal sealed partial class GameClientHandler
                 await RetireFailedLegacyInstanceRuntimeAsync(target);
                 await SendLegacyInstanceUnavailableAsync(
                     CancellationToken.None);
-                return;
+                return new(LegacyEntryOutcome.OpalChargeFailed);
             }
 
             if (charge is null ||
@@ -249,7 +258,7 @@ internal sealed partial class GameClientHandler
                     await SendLegacyInstanceUnavailableAsync(
                         CancellationToken.None);
                 }
-                return;
+                return new(LegacyEntryOutcome.OpalChargeRejected);
             }
 
             opalsCharged = true;
@@ -276,7 +285,7 @@ internal sealed partial class GameClientHandler
                 await RetireFailedLegacyInstanceRuntimeAsync(target);
                 await SendLegacyInstanceUnavailableAsync(
                     CancellationToken.None);
-                return;
+                return new(LegacyEntryOutcome.OpalProjectionFailed);
             }
         }
 
@@ -303,7 +312,7 @@ internal sealed partial class GameClientHandler
             }
             await SendLegacyInstanceUnavailableAsync(
                 CancellationToken.None);
-            return;
+            return new(LegacyEntryOutcome.PartyChangedAfterPayment);
         }
 
         var leader = party.Members[0];
@@ -314,11 +323,8 @@ internal sealed partial class GameClientHandler
         bool leaderMoved;
         try
         {
-            leaderMoved = (destination.Kind != InstanceCallerEntryKind.Atlantis ||
-                _registry.TryStartAtlantisEncounter(target.InstanceId,
-                    claimResult.DailyEntryLimit ?? 1,
-                    party.Members.Select(static member => (member.CharacterId, member.Level)).ToArray(),
-                    DateTimeOffset.UtcNow, reservationId, party.Members)) &&
+            leaderMoved = TryStartLegacyInstanceEncounter(destination, target.InstanceId,
+                    claimResult.DailyEntryLimit ?? 1, party, reservationId) &&
                 await TryBeginAuthoritativeInstanceTransitionAsync(
                     leaderCommand,
                     cancellationToken);
@@ -418,109 +424,15 @@ internal sealed partial class GameClientHandler
             }
             await SendLegacyInstanceUnavailableAsync(
                 CancellationToken.None);
-            return;
+            return new(LegacyEntryOutcome.EncounterOrTransferFailed);
         }
 
         _ = await RecordLegacyInstanceAdmissionsAsync(
             reservationId,
             new[] { leader.CharacterId });
 
-        var failedMembers = new List<LegacyInstancePartyMember>();
-        foreach (var member in party.Members.Skip(1))
-        {
-            if (!_registry.IsLegacyInstancePartyMemberSnapshotCurrent(
-                    party,
-                    member,
-                    npc.X,
-                    npc.Z,
-                    InstanceCallerProtocol.MaximumInteractionDistance))
-            {
-                failedMembers.Add(member);
-                Console.Error.WriteLine(
-                    "[instance-caller] member changed party or source " +
-                    $"before transfer character={member.CharacterName}");
-                continue;
-            }
-
-            var command = BuildLegacyInstanceTransitionCommand(
-                member,
-                target.InstanceId,
-                destination);
-            bool moved;
-            try
-            {
-                moved = await _registry
-                    .TransitionPartyMemberToAuthoritativeInstanceAsync(
-                        member.Session,
-                        command,
-                        CancellationToken.None);
-            }
-            catch (Exception error)
-            {
-                Console.Error.WriteLine(
-                    "[instance-caller] member transfer fault " +
-                    $"character={member.CharacterName}: {error.Message}");
-                moved = false;
-            }
-
-            if (!moved && _registry.IsSessionInWorldInstance(
-                    member.Session,
-                    target.InstanceId))
-            {
-                moved = true;
-                Console.Error.WriteLine(
-                    "[instance-caller] member entered before transfer " +
-                    "publication failed; claim and Opal retained " +
-                    $"character={member.CharacterName}");
-            }
-
-            if (!moved)
-            {
-                failedMembers.Add(member);
-            }
-            else
-            {
-                _ = await RecordLegacyInstanceAdmissionsAsync(
-                    reservationId,
-                    new[] { member.CharacterId });
-            }
-        }
-
-        if (failedMembers.Count != 0)
-        {
-            if (!opalsCharged)
-            {
-                await ReleaseLegacyInstanceDailyEntryMembersAsync(
-                    reservationId,
-                    failedMembers
-                        .Select(static member => member.CharacterId)
-                        .ToArray());
-            }
-            await SendLegacyInstanceUnavailableAsync(
-                CancellationToken.None);
-        }
-
-        if (opalsCharged)
-        {
-            var failedCharacterIds = failedMembers
-                .Select(static member => member.CharacterId)
-                .ToHashSet();
-            _ = await SettleLegacyInstanceOpalsAsync(
-                reservationId,
-                party,
-                party.Members
-                    .Where(member =>
-                        !failedCharacterIds.Contains(member.CharacterId))
-                    .Select(static member => member.CharacterId)
-                    .ToArray());
-        }
-
-        Console.WriteLine(
-            "[instance-caller] instance admitted " +
-            $"leader={leader.CharacterName} " +
-            $"destination={destination.DisplayName} " +
-            $"instance={target.InstanceId} party={party.Members.Count} " +
-            $"member-transfer-failures={failedMembers.Count}");
+        await TransferLegacyInstanceFollowersAsync(party, destination, npc, target, reservationId, opalsCharged);
+        return new(LegacyEntryOutcome.Admitted);
     }
 
 }

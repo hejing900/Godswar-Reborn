@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 using System.Collections.Frozen;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 namespace Godswar.Server.Game;
 
 internal static class MonsterAggroPolicy
@@ -10,7 +7,6 @@ internal static class MonsterAggroPolicy
     public const uint MinimumAggressiveTier = 30;
     public const float DetectionRadius = 14f;
 
-<<<<<<< HEAD
     /// <summary>
     /// Monsters the reference leaves alone until they are hit.
     /// </summary>
@@ -38,8 +34,6 @@ internal static class MonsterAggroPolicy
         !IsPassiveTemplate(templateKey) &&
         tier >= MinimumAggressiveTier;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     public static bool IsAggressive(uint tier) =>
         tier >= MinimumAggressiveTier;
 

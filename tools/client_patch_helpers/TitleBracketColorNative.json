@@ -1,0 +1,54 @@
+{
+  "patch_id": "reborn.title-display-brackets.v2",
+  "expected_length": 6676480,
+  "cave_offset": "0x5c3f20",
+  "cave_va": "0x9c3f20",
+  "cave_length": 128,
+  "code_hex": "565789D7FF742410FF742410E8BFEEA3FF83C40889FA83F816765783F83F7752803A5B754D66817A017C6375458D7402F5813E7C6346467539817E0446464646753066817E0846467528807E0A5D752289D64689D7B90A000000F3A4C6075B8D7402FE8D7E01B90A000000FDF3A4FCC6075D5F5EC3",
+  "entry_offset": "0x20921",
+  "entry_hex": "E9FA355A00CCCCCCCCCCCCCCCCCCCC",
+  "width_offset": "0x21bd1",
+  "width_hex": "89F180BFA10900007C7465EB66CCCC",
+  "required_pins": [
+    {
+      "offset": "0x20991",
+      "hex": "C744240404229500E95224FEFFCCCC"
+    },
+    {
+      "offset": "0x210c0",
+      "hex": "E85CF8FFFF"
+    },
+    {
+      "offset": "0x21185",
+      "hex": "E897F7FFFF"
+    },
+    {
+      "offset": "0x211ad",
+      "hex": "E86FF7FFFF"
+    },
+    {
+      "offset": "0x21c41",
+      "hex": "83E914C1E103C3CCCCCCCCCCCCCCCC"
+    },
+    {
+      "offset": "0x1b5b77",
+      "hex": "683C44950052FFD78B8E5C0100008B018B808400000083C40C8D54242852FFD0"
+    },
+    {
+      "offset": "0x1b5b97",
+      "hex": "A1AC5E5701"
+    },
+    {
+      "offset": "0x1b5b9c",
+      "hex": "80B88C07000002754468080200008D4C242C516AFF058D070000506A006A00FF"
+    },
+    {
+      "offset": "0x5503f8",
+      "hex": "5B25735D00"
+    },
+    {
+      "offset": "0x552204",
+      "hex": "257300"
+    }
+  ]
+}

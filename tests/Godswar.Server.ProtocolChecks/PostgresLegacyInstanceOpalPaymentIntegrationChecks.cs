@@ -68,11 +68,7 @@ internal static partial class
         PinnedItemTemplateCatalog catalog)
     {
         Check.True(
-<<<<<<< HEAD
             catalog.Revision.Source.Contains(
-=======
-            catalog.Revision.Source.EndsWith(
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 "+opal-v1",
                 StringComparison.Ordinal),
             "official item publication identifies its reviewed Opal source");

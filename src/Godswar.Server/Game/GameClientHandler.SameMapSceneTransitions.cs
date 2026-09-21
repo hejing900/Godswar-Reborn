@@ -11,7 +11,8 @@ internal sealed partial class GameClientHandler
         float targetZ,
         string source,
         Func<bool>? continuationGuard,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool publishRevivalVitals = false)
     {
         if (_pendingMapTransition is not null ||
             _account is null ||
@@ -138,6 +139,21 @@ internal sealed partial class GameClientHandler
                 cancellationToken,
                 _session,
                 "SameMapSceneTransitionSourceRemove");
+            if (publishRevivalVitals)
+            {
+                // Origin resets the retained local avatar to stand while
+                // processing SceneChange. SetState forces its death animation
+                // if native HP is still zero; a later status refresh cannot
+                // undo that choice. Publish restored HP before the reset.
+                await _session.SendAsync(
+                    PacketBuilder.PlayerVitalsUpdate(
+                        LocalPlayerObjectId,
+                        _character.CurrentHp,
+                        _character.CurrentMp),
+                    cancellationToken,
+                    "SameMapRevivalVitals");
+            }
+
             await _session.SendAsync(
                 PacketBuilder.SceneChange(
                     LocalPlayerObjectId,

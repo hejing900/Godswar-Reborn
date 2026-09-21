@@ -48,6 +48,10 @@ internal interface IMonsterMapRuntime
         DateTimeOffset now,
         out MonsterStunResult result);
 
+    bool TryApplyControl(uint objectId, int attackerCharacterId,
+        HostileStatusEffectDefinition definition, uint expectedSpawnGeneration,
+        DateTimeOffset now, out MonsterControlResult result);
+
     void ClearAggroForCharacter(
         int characterId,
         DateTimeOffset now);

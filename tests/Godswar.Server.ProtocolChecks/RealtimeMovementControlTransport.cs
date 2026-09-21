@@ -18,10 +18,12 @@ internal sealed class RealtimeMovementControlTransport :
 {
     private readonly object _gate = new();
     private readonly MemoryStream _legacyWrites = new();
+    private readonly PacketCipher _legacyDecodeCipher = new();
     private readonly ConcurrentQueue<SecureRealtimeMovementIngress>
         _movementIngress = new();
     private readonly List<SecureRealtimePositionSnapshot> _snapshots =
         [];
+    private WritePause? _nextWritePause;
     private int _active;
     private int _disconnected;
     private int _disposed;
@@ -94,6 +96,31 @@ internal sealed class RealtimeMovementControlTransport :
         return encrypted;
     }
 
+    public WritePause PauseNextWrite()
+    {
+        var pause = new WritePause();
+        if (Interlocked.CompareExchange(ref _nextWritePause, pause, null) is not null)
+        {
+            throw new InvalidOperationException(
+                "A transport write is already paused.");
+        }
+
+        return pause;
+    }
+
+    internal sealed class WritePause
+    {
+        internal readonly TaskCompletionSource Started = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly TaskCompletionSource Released = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WaitUntilStartedAsync() =>
+            Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        public void Release() => Released.TrySetResult();
+    }
+
     public void EnqueueMovement(
         in SecureRealtimeMovementIngress ingress)
     {
@@ -129,21 +156,24 @@ internal sealed class RealtimeMovementControlTransport :
         return ValueTask.FromResult(0);
     }
 
-    public ValueTask WriteAsync(
+    public async ValueTask WriteAsync(
         ReadOnlyMemory<byte> source,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (Interlocked.Exchange(ref _failNextWrite, 0) != 0)
         {
-            return ValueTask.FromException(
-                new IOException("Simulated reliable egress failure."));
+            throw new IOException("Simulated reliable egress failure.");
+        }
+        if (Interlocked.Exchange(ref _nextWritePause, null) is { } pause)
+        {
+            pause.Started.TrySetResult();
+            await pause.Released.Task.WaitAsync(cancellationToken);
         }
         lock (_gate)
         {
             _legacyWrites.Write(source.Span);
         }
-        return ValueTask.CompletedTask;
     }
 
     public void MarkAuthenticated()

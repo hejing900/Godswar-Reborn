@@ -1,0 +1,274 @@
+{
+  "generation_sha256": "81953071674b6e611472adcedb47d94c5657bc161fa8e1367c8f8b3386b4e35e",
+  "manifest_sha256": "74ff7b35f5db72cd4227c04421d8f926695aa1f87415b094abd42363e2ff8ddd",
+  "outputs": {
+    "Icon2.gwo": {
+      "bytes": 2145031,
+      "sha256": "c9441bb3aaab61039696f562d4bca13e9f65b4c76f1e2dd9e7adce56781952d7"
+    },
+    "Icon5.gwo": {
+      "bytes": 307517,
+      "sha256": "138f78203ce35e76d0a4f07f86313f00763f642bf5175cff54c392a4159aa361"
+    },
+    "cooled-holy-stone-36.png": {
+      "bytes": 2804,
+      "sha256": "f8d6d76be30f582c1ccfdd1b1fa7351fc5f1893a0dd83cbe9c60ebae304b81fe"
+    },
+    "daedalus-attunement-36.png": {
+      "bytes": 3795,
+      "sha256": "de3483cab1b763444d348375271413b7229a92e68a5661eb146e7982e779bf6e"
+    },
+    "fire-assail-36.png": {
+      "bytes": 2857,
+      "sha256": "3dee085f694f7c540c4850467f134382704cbfddaf80450d50d4f51813721902"
+    },
+    "fire-blood-36.png": {
+      "bytes": 2785,
+      "sha256": "5433ff35e3db01f5c9d27c5befb4b88d138e877eacc675f1d7dd699926862d7e"
+    },
+    "fire-destruction-36.png": {
+      "bytes": 3243,
+      "sha256": "11b3a7f85395fbe8f2238c5df750e677b419d6fd3e0102778b33b312b7aff7d2"
+    },
+    "fire-fiery-36.png": {
+      "bytes": 2790,
+      "sha256": "b232480fbc22a64cf165501cecb1d70770bfd5a07a17c174a890a37331a4a1ed"
+    },
+    "fire-fist-36.png": {
+      "bytes": 3014,
+      "sha256": "335d9ae19f6b4d0888b398c25dbe06ca736b35035b702ad188ce038e873bb020"
+    },
+    "fire-flow-36.png": {
+      "bytes": 2718,
+      "sha256": "eda19fe1eddd87641d551d20eccc7cf104d4c9347d23e55d7a876cecbadbebee"
+    },
+    "fire-lightning-36.png": {
+      "bytes": 2876,
+      "sha256": "efc3c485bd3dc703eecd727709022457abe5a767fc64af81716e8800e75c6364"
+    },
+    "fire-penetration-36.png": {
+      "bytes": 3026,
+      "sha256": "66789b8cd41339d7c9a2089e040082ba3dffd400d0d4ada04228155b451d6b08"
+    },
+    "fire-pressure-36.png": {
+      "bytes": 3030,
+      "sha256": "56fc6026309a3a9a7f690cb8d0135aebf971820ffa21b369f70c60dd55205ebc"
+    },
+    "fire-tranquility-36.png": {
+      "bytes": 3073,
+      "sha256": "67d473052e4a34f45b80af816088cd14f135ea7f945ff1e1358307da4621a908"
+    },
+    "heated-holy-stone-36.png": {
+      "bytes": 3284,
+      "sha256": "4976195210bb581a7035df39c712c66816d1fe576426a97df0d517090efa54e0"
+    },
+    "hephaestus-tempering-36.png": {
+      "bytes": 4274,
+      "sha256": "3ad4d46ce97ebd8a018deed022c147a2895adf6ecb927be08de979df10f7681f"
+    },
+    "icons-native.png": {
+      "bytes": 82975,
+      "sha256": "18b88f7e69e3af40a095df6ced4e8ef957340905e0662089bfa82b35a3b28131"
+    },
+    "mnemosyne-preservation-36.png": {
+      "bytes": 3757,
+      "sha256": "1a633c6b7b6f40da35dc5444882edb33f662c7d8184023cd85d482247edfeade"
+    },
+    "preview.png": {
+      "bytes": 242976,
+      "sha256": "45b99537cc78773cb47f910f6d4c6c48c76061f38eaa5a6d0923b3ec035faeaa"
+    },
+    "themis-continuity-36.png": {
+      "bytes": 3494,
+      "sha256": "bcf380878dd484af0d4edfdad7a509e84b7317a06b3eb2d8d0a7a74ba405c62e"
+    },
+    "water-chillness-36.png": {
+      "bytes": 3209,
+      "sha256": "35d049c9efbdc7c4c586ce575172d41e670e4d63fa22b5b50eb72c47b7ff55eb"
+    },
+    "water-darkness-36.png": {
+      "bytes": 3070,
+      "sha256": "54349ae42844925a82077457f2a22c529a5dec5efe33267ec4eedc9b563cf96f"
+    },
+    "water-frost-36.png": {
+      "bytes": 3292,
+      "sha256": "c36cd97df05d43f26111a85ef8a79dedbb1fe6a5de48a1a3473be09220545e4d"
+    },
+    "water-ice-36.png": {
+      "bytes": 3633,
+      "sha256": "a9e7a1da53724dc2f6497ff471e413a1f9cd873ffa3f8857cd688a134a7b2333"
+    },
+    "water-intent-36.png": {
+      "bytes": 3334,
+      "sha256": "722f6b4c93214bcf22b0e7a63b0f6363f0605cbc19265ef80e3aece9f3616ee1"
+    },
+    "water-mist-36.png": {
+      "bytes": 3340,
+      "sha256": "5b1f141892010a9fd310d89cfd1ca36f8bf36b14257c1009029af6dbc15cb1aa"
+    },
+    "water-renewal-36.png": {
+      "bytes": 3273,
+      "sha256": "1eeb3ca656967d868db04108bb09d68e37ae14a0e1c9a6ea86502e3f0a2136ab"
+    },
+    "water-resilience-36.png": {
+      "bytes": 3505,
+      "sha256": "23c42e71050a0b5c34e3aea74e9d46640c79be3c5e175505e2875e296651a762"
+    },
+    "water-silence-36.png": {
+      "bytes": 2913,
+      "sha256": "7a9f064740bb2f95990ffd227c87ce691fac3a8a282d0bd851c4d03c21ed0cec"
+    },
+    "water-vitality-36.png": {
+      "bytes": 3410,
+      "sha256": "eefdc380796ca9c17d9ae0e38bcecab2ebdc963ded396d416b08c07f17e3ee7f"
+    },
+    "zephyr-holy-stone-36.png": {
+      "bytes": 3193,
+      "sha256": "35ff74983fe05db70822d7cf478baa29f613aef8cca53721a4d310ece9d224f0"
+    },
+    "zephyr-socket-20.png": {
+      "bytes": 1417,
+      "sha256": "0dcd9ed63f7b7dec6ae186374613baecba69b8dc353556a8d0c66b92f529442f"
+    }
+  },
+  "pillow_version": "12.0.0",
+  "resampling": "whole square, premultiplied-alpha Lanczos to 36px; no added padding",
+  "schema_version": 1,
+  "sources": [
+    {
+      "icon_sha256": "4976195210bb581a7035df39c712c66816d1fe576426a97df0d517090efa54e0",
+      "slug": "heated-holy-stone",
+      "source_sha256": "d884896be12ad335cd2b4618529db8f865016ccb78e46ad5c08f1edd1be05267"
+    },
+    {
+      "icon_sha256": "f8d6d76be30f582c1ccfdd1b1fa7351fc5f1893a0dd83cbe9c60ebae304b81fe",
+      "slug": "cooled-holy-stone",
+      "source_sha256": "70d53e35d4ebebf747230e6dffedc973ea635c08f3930f25a2935d520ed9c4c8"
+    },
+    {
+      "icon_sha256": "35ff74983fe05db70822d7cf478baa29f613aef8cca53721a4d310ece9d224f0",
+      "slug": "zephyr-holy-stone",
+      "source_sha256": "e6211c467cac6f1345b1a55676c6d904a8486373c2d44de927234b154ac3435f"
+    },
+    {
+      "icon_sha256": "11b3a7f85395fbe8f2238c5df750e677b419d6fd3e0102778b33b312b7aff7d2",
+      "slug": "fire-destruction",
+      "source_sha256": "57c9711b87dc34a98260adbd1711d12a05eabcd74a698daedad33d41728be3c3"
+    },
+    {
+      "icon_sha256": "66789b8cd41339d7c9a2089e040082ba3dffd400d0d4ada04228155b451d6b08",
+      "slug": "fire-penetration",
+      "source_sha256": "33505e58d20f5a17f7ae30967b481b37d98eaba6588f4a647130d36e82553e71"
+    },
+    {
+      "icon_sha256": "335d9ae19f6b4d0888b398c25dbe06ca736b35035b702ad188ce038e873bb020",
+      "slug": "fire-fist",
+      "source_sha256": "f842bc275743c565d349636491d0db815890c786ff782c29a0076174b21cfbed"
+    },
+    {
+      "icon_sha256": "b232480fbc22a64cf165501cecb1d70770bfd5a07a17c174a890a37331a4a1ed",
+      "slug": "fire-fiery",
+      "source_sha256": "3252198456ff382351c3423af8d343a140db69446937b77d97fb43cbadba545c"
+    },
+    {
+      "icon_sha256": "5433ff35e3db01f5c9d27c5befb4b88d138e877eacc675f1d7dd699926862d7e",
+      "slug": "fire-blood",
+      "source_sha256": "0006651954bd6c6a8edcfed50440f6272af5976aa6450fc5849c41b9d6cf64cf"
+    },
+    {
+      "icon_sha256": "56fc6026309a3a9a7f690cb8d0135aebf971820ffa21b369f70c60dd55205ebc",
+      "slug": "fire-pressure",
+      "source_sha256": "98d9125f7514fc8349b4cc79f370c03351b23a9ff9fb518e5c4c5c1038e11c42"
+    },
+    {
+      "icon_sha256": "3dee085f694f7c540c4850467f134382704cbfddaf80450d50d4f51813721902",
+      "slug": "fire-assail",
+      "source_sha256": "919fef4efcf85f9cb982778c8da6fd5eb312ed1e90edc0f0bfd8dd094f6076ab"
+    },
+    {
+      "icon_sha256": "efc3c485bd3dc703eecd727709022457abe5a767fc64af81716e8800e75c6364",
+      "slug": "fire-lightning",
+      "source_sha256": "d4e8abf8411f232d1425587478fa696b4e3cd205370d775e39ef5b2e145f0def"
+    },
+    {
+      "icon_sha256": "eda19fe1eddd87641d551d20eccc7cf104d4c9347d23e55d7a876cecbadbebee",
+      "slug": "fire-flow",
+      "source_sha256": "192470a96e1f2698ce7bab33ff7e7855c3cedfbe9469b77b27caebaea7945605"
+    },
+    {
+      "icon_sha256": "67d473052e4a34f45b80af816088cd14f135ea7f945ff1e1358307da4621a908",
+      "slug": "fire-tranquility",
+      "source_sha256": "7c5bc1fe7549a9625f2d511b698412f5107e9dafdc0252143b5756bbf5d418b7"
+    },
+    {
+      "icon_sha256": "54349ae42844925a82077457f2a22c529a5dec5efe33267ec4eedc9b563cf96f",
+      "slug": "water-darkness",
+      "source_sha256": "078275b47e24215ad40c6950e2c3bcfa5fa52b5d2ad5b5b74e0bdd54c2e8aa77"
+    },
+    {
+      "icon_sha256": "5b1f141892010a9fd310d89cfd1ca36f8bf36b14257c1009029af6dbc15cb1aa",
+      "slug": "water-mist",
+      "source_sha256": "206c6f8557f6a43972fcdd861dc0499018ee2e3af5a2f61b6018c45356bc52d5"
+    },
+    {
+      "icon_sha256": "7a9f064740bb2f95990ffd227c87ce691fac3a8a282d0bd851c4d03c21ed0cec",
+      "slug": "water-silence",
+      "source_sha256": "25a40a05f13c4b125413bf87756508021de57f2206bf162df449b87f1601c32b"
+    },
+    {
+      "icon_sha256": "35d049c9efbdc7c4c586ce575172d41e670e4d63fa22b5b50eb72c47b7ff55eb",
+      "slug": "water-chillness",
+      "source_sha256": "597fc9b6c431c2ee216d02e0f8235711f5852203adeec105959d0a548d6a8701"
+    },
+    {
+      "icon_sha256": "a9e7a1da53724dc2f6497ff471e413a1f9cd873ffa3f8857cd688a134a7b2333",
+      "slug": "water-ice",
+      "source_sha256": "4a18ac8021986b9574fba4da727c070fe15679b118a9a6561ccc37b04954cd56"
+    },
+    {
+      "icon_sha256": "c36cd97df05d43f26111a85ef8a79dedbb1fe6a5de48a1a3473be09220545e4d",
+      "slug": "water-frost",
+      "source_sha256": "81c4bb7a7ced02a502a4ec0abbacefab7669f2ac8b10f0f368e04af9d36b7e25"
+    },
+    {
+      "icon_sha256": "722f6b4c93214bcf22b0e7a63b0f6363f0605cbc19265ef80e3aece9f3616ee1",
+      "slug": "water-intent",
+      "source_sha256": "2a230cbb0b687a537a7cb893412225fc4a1def06f89e82c95ea511e381aae2f9"
+    },
+    {
+      "icon_sha256": "23c42e71050a0b5c34e3aea74e9d46640c79be3c5e175505e2875e296651a762",
+      "slug": "water-resilience",
+      "source_sha256": "b0943d0d427df9a960675558e4f699b79b801cb931669931bd1fbfa467dc7509"
+    },
+    {
+      "icon_sha256": "1eeb3ca656967d868db04108bb09d68e37ae14a0e1c9a6ea86502e3f0a2136ab",
+      "slug": "water-renewal",
+      "source_sha256": "37f15eaa00025b65a4eeef2a9b691e3befe18762245ba78c021a2c1522aac9af"
+    },
+    {
+      "icon_sha256": "eefdc380796ca9c17d9ae0e38bcecab2ebdc963ded396d416b08c07f17e3ee7f",
+      "slug": "water-vitality",
+      "source_sha256": "eaf50838b9302a95300491b44d52ecd835a57c62e8c3f9310b45d75657165796"
+    },
+    {
+      "icon_sha256": "de3483cab1b763444d348375271413b7229a92e68a5661eb146e7982e779bf6e",
+      "slug": "daedalus-attunement",
+      "source_sha256": "9906257eaabe9616af3fc182bc6bd52d01510648fb13cd728730370ffe4da5df"
+    },
+    {
+      "icon_sha256": "3ad4d46ce97ebd8a018deed022c147a2895adf6ecb927be08de979df10f7681f",
+      "slug": "hephaestus-tempering",
+      "source_sha256": "8c419fbe156aa1d4daa1a2e27e2911a5bd776b137f9f03ddd51b751ac0256e4f"
+    },
+    {
+      "icon_sha256": "1a633c6b7b6f40da35dc5444882edb33f662c7d8184023cd85d482247edfeade",
+      "slug": "mnemosyne-preservation",
+      "source_sha256": "f5f243daafdad48dfe73baa0a41d99e3748fd46207e904f924aac3ff5248c006"
+    },
+    {
+      "icon_sha256": "bcf380878dd484af0d4edfdad7a509e84b7317a06b3eb2d8d0a7a74ba405c62e",
+      "slug": "themis-continuity",
+      "source_sha256": "0d21368bc7730ef962e0153d60bb800ed5c33bfdf4170bfc5399894d8bd6d14d"
+    }
+  ]
+}

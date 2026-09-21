@@ -5,6 +5,11 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class GameClientHandler
 {
+    // Calendar admission is independently testable without changing the world
+    // clock that owns instance creation, combat events, and deadlines.
+    internal TimeProvider LegacyInstanceScheduleClock { private get; set; } =
+        TimeProvider.System;
+
     private async Task<LegacyInstanceEntryPreparation?>
         TryPrepareLegacyInstanceEntryAsync(
         uint npcId,
@@ -23,12 +28,19 @@ internal sealed partial class GameClientHandler
             return null;
         }
 
+        var admissionInstant = LegacyInstanceScheduleClock.GetUtcNow();
         var schedule = LegacyInstanceAdmissionPolicy.CheckSchedule(
             destination.Kind,
             _realmCalendar,
-            DateTimeOffset.UtcNow);
+            admissionInstant);
         if (schedule != LegacyInstanceScheduleStatus.Open)
         {
+            Console.WriteLine(
+                "[instance-caller] schedule rejected " +
+                $"character={_character.Name} destination={destination.Kind} " +
+                $"status={schedule} realm={_realmCalendar.RealmId} " +
+                $"time_zone={_realmCalendar.TimeZoneId} " +
+                $"realm_time={_realmCalendar.ToRealmTime(admissionInstant):O}");
             await SendLegacyInstanceScheduleFailureAsync(
                 npcId,
                 schedule,

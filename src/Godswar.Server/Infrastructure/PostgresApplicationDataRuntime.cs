@@ -30,6 +30,7 @@ using Godswar.Server.Infrastructure.Zodiac;
 using Godswar.Server.Infrastructure.World;
 using Godswar.Server.Infrastructure.Warehouse;
 using Godswar.Server.Infrastructure.WorldInstances;
+using Godswar.Server.Infrastructure.WishingPool;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.State;
 using Npgsql;
@@ -99,6 +100,7 @@ internal sealed class PostgresApplicationDataRuntime :
 
         _dataSource = NpgsqlDataSource.Create(connectionString);
         Accounts = new PostgresAccountStore(_dataSource);
+        WishingPoolUsage = new PostgresWishingPoolUsageStore(_dataSource);
         RealmCatalog = new PostgresRealmCatalogReader(_dataSource);
         var characterReader =
             new PostgresCharacterSnapshotReader(
@@ -300,6 +302,11 @@ internal sealed class PostgresApplicationDataRuntime :
     }
 
     public PostgresAccountStore Accounts { get; }
+
+    /// <summary>
+    /// The Wishing Pool's per-character free-wish counter.
+    /// </summary>
+    public PostgresWishingPoolUsageStore WishingPoolUsage { get; }
 
     public IRealmCatalogReader RealmCatalog { get; }
 

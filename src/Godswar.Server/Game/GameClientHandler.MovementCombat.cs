@@ -1,12 +1,9 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
-<<<<<<< HEAD
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Domain.World.Instances;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Networking;
 using Godswar.Server.Packets;
 using Godswar.Server.Protocol;
@@ -88,15 +85,10 @@ internal sealed partial class GameClientHandler
 
     private async Task HandleReviveAsync(GamePacket packet, CancellationToken cancellationToken)
     {
-<<<<<<< HEAD
         ReviveTrace.Log("REVIVE-HANDLER entered");
         if (_character is null)
         {
             ReviveTrace.Log("REVIVE-HANDLER rejected: character null");
-=======
-        if (_character is null)
-        {
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Console.WriteLine("[revive] ignored request before character enter");
             return;
         }
@@ -107,7 +99,6 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
         ReviveTrace.Log(
             $"REVIVE-PARSED obj={request.PlayerObjectId} " +
             $"type={request.ReviveType} local={LocalPlayerObjectId} " +
@@ -117,10 +108,6 @@ internal sealed partial class GameClientHandler
         if (request.PlayerObjectId != LocalPlayerObjectId)
         {
             ReviveTrace.Log("REVIVE-REJECT spoofed");
-=======
-        if (request.PlayerObjectId != LocalPlayerObjectId)
-        {
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Console.WriteLine(
                 $"[revive] ignored spoofed player object character={_character.Name} request-object={request.PlayerObjectId} expected-object={LocalPlayerObjectId}");
             return;
@@ -128,10 +115,7 @@ internal sealed partial class GameClientHandler
 
         if (request.ReviveType != ReviveRequest.FreeReviveType)
         {
-<<<<<<< HEAD
             ReviveTrace.Log($"REVIVE-REJECT unsupported type={request.ReviveType}");
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Console.WriteLine(
                 $"[revive] ignored unsupported type character={_character.Name} requested-type={request.ReviveType}");
             return;
@@ -139,19 +123,13 @@ internal sealed partial class GameClientHandler
 
         if (_character.CurrentHp > 0)
         {
-<<<<<<< HEAD
             ReviveTrace.Log($"REVIVE-REJECT living hp={_character.CurrentHp}");
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Console.WriteLine($"[revive] ignored request for living character={_character.Name}");
             return;
         }
 
-<<<<<<< HEAD
         ReviveTrace.Log("REVIVE-ACCEPT");
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (!_registry.TryGetPlayerLifeRevision(
                 _session,
                 out _))
@@ -187,7 +165,6 @@ internal sealed partial class GameClientHandler
         }
 
         var previousMap = _character.CurrentMap;
-<<<<<<< HEAD
         ReviveTrace.Log($"REVIVE-BEFORE-ENTRY map={previousMap} pos={_character.PositionX:F2},{_character.PositionZ:F2} hp={_character.CurrentHp}/{_character.MaxHp}");
 
         // The reference revive response opens by dropping the dead player's
@@ -201,8 +178,6 @@ internal sealed partial class GameClientHandler
             cancellationToken,
             "PlayerReviveFightStateReset");
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (_worldPresenceAnnounced)
         {
             await BroadcastPlayerLeaveAsync(cancellationToken);
@@ -226,18 +201,13 @@ internal sealed partial class GameClientHandler
         // in-place revival remains unsupported until its native contract and
         // settlement rules are proven.
         await RestoreEntryStateAsync(cancellationToken);
-<<<<<<< HEAD
         ReviveTrace.Log($"REVIVE-AFTER-RESTORE map={_character.CurrentMap} pos={_character.PositionX:F2},{_character.PositionZ:F2} hp={_character.CurrentHp}/{_character.MaxHp}");
         await HandleEnterGameAsync(cancellationToken);
         ReviveTrace.Log($"REVIVE-AFTER-ENTER map={_character.CurrentMap} pos={_character.PositionX:F2},{_character.PositionZ:F2} hp={_character.CurrentHp}/{_character.MaxHp}");
-=======
-        await HandleEnterGameAsync(cancellationToken);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         Console.WriteLine(
             $"[revive] free revival character={_character.Name} request-object={request.PlayerObjectId} requested-type={request.ReviveType} map={previousMap}->{_character.CurrentMap} hp={_character.CurrentHp}/{_character.MaxHp} mp={_character.CurrentMp}/{_character.MaxMp}");
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Reference revive strategy: a free revive puts the character back on the
     /// map it died on, at that map's own revive point. The landing is per map
@@ -265,8 +235,6 @@ internal sealed partial class GameClientHandler
         GameDefaults.InitializeStartingLocation(character);
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private async Task RestoreFreeRevivalStateAsync(CancellationToken cancellationToken)
     {
         if (_character is null)
@@ -274,7 +242,6 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-<<<<<<< HEAD
         var medusaRevival = TryRestoreMedusaRevivalState(_character);
         if (!medusaRevival)
         {
@@ -302,14 +269,6 @@ internal sealed partial class GameClientHandler
             _character.CurrentMp = Math.Max(
                 0,
                 checked(_character.MaxMp * restoredPercent / 100));
-=======
-        GameDefaults.InitializeStartingLocation(_character);
-        _character.MarkPositionChanged();
-        lock (_character.VitalsSync)
-        {
-            _character.CurrentHp = Math.Max(1, _character.MaxHp / 10);
-            _character.CurrentMp = Math.Max(0, _character.MaxMp / 10);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             _character.MarkVitalsChanged();
         }
         _positionDirty = false;
@@ -333,7 +292,6 @@ internal sealed partial class GameClientHandler
         }
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// <see cref="MedusaPlayerDeathRule.RespawnAtInstanceBeginning"/> keeps a
     /// dead challenger inside the run: the capital round-trip would drop the
@@ -360,8 +318,6 @@ internal sealed partial class GameClientHandler
         return true;
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private async Task HandleBasicAttackAsync(GamePacket packet, CancellationToken cancellationToken)
     {
         if (_character is null)

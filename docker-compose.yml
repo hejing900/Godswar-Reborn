@@ -30,6 +30,11 @@ services:
         condition: service_healthy
     environment:
       GODSWAR_RUNTIME_PROFILE: LocalDevelopment
+      # Local diagnostic switch: with LocalDevelopment this disables the
+      # structured console boundary so the raw gameplay diagnostics reach the
+      # container log verbatim instead of being folded into counters. It changes
+      # logging only; no packet or game behaviour depends on it.
+      GODSWAR_LOCAL_GAMEPLAY_LOGS: ${GODSWAR_LOCAL_GAMEPLAY_LOGS:-false}
       GODSWAR_STORAGE_PROVIDER: postgres
       GODSWAR_POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-godswar};Username=${POSTGRES_USER:-godswar};Password=${POSTGRES_PASSWORD:-godswar_dev_password};Pooling=true"
       GODSWAR_LOGIN_BIND_HOST: 0.0.0.0

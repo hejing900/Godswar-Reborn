@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bloodfang · Vampiric dragon</title>
+<link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+<main>
+  <header><p class="eyebrow">GODSWAR · PET STUDIO</p><h1>Bloodfang</h1><p class="subtitle">Vampiric dragon</p></header>
+  <div class="halo" aria-hidden="true"></div>
+  <canvas id="model" tabindex="0" aria-label="Bloodfang 3D preview. Drag or use arrow keys to rotate. Scroll or use plus and minus to zoom."></canvas>
+  <p id="error" role="alert" hidden></p>
+  <aside class="guide"><span>Drag to rotate</span><span>Scroll to zoom</span><button id="reset" type="button">Reset view</button></aside>
+  <footer>
+    <div class="controls">
+      <button id="play" type="button" aria-pressed="true">Pause</button>
+      <label>Animation<select id="clip"></select></label>
+      <label>Speed<select id="speed"><option value=".5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+      <span id="frame" aria-live="off"></span>
+    </div>
+    <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Animation position">
+    <p class="note">Original model study · Preview lighting and timing may differ in-game.</p>
+  </footer>
+</main>
+<script src="viewer-data.js"></script><script src="viewer.js"></script>
+</body></html>

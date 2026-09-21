@@ -153,14 +153,7 @@ internal static partial class PacketBuilder
         }
 
         var packet = EquipmentItemSnapshot(sourceSlot, item, LocalPlayerObjectId);
-<<<<<<< HEAD
         WriteSnapshotBagPosition(packet, sourceSlot);
-=======
-        BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(8, 4), 0);
-        var sourcePage = Math.DivRem(Math.Max(sourceSlot, 0), 24, out var sourceIndex);
-        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(12, 2), (ushort)sourcePage);
-        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(14, 2), (ushort)sourceIndex);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         // The working service uses these two bytes as move-event flags in this
         // response, not as the equipped item's persisted bound/stack values.
         packet[46] = 0;
@@ -170,7 +163,6 @@ internal static partial class PacketBuilder
 
     public static byte[] KitBagItemSnapshot(GameCharacter character, int sourceSlot)
     {
-<<<<<<< HEAD
         return KitBagItemSnapshot(character, sourceSlot, LocalPlayerObjectId);
     }
 
@@ -181,8 +173,6 @@ internal static partial class PacketBuilder
     /// </summary>
     public static byte[] KitBagItemSnapshot(GameCharacter character, int sourceSlot, uint objectId)
     {
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         if (sourceSlot is < 0 or >= KitBagPageCount * KitBagSlotsPerPage)
         {
             return [];
@@ -191,7 +181,6 @@ internal static partial class PacketBuilder
         var item = KitBagSlots.GetItem(
             string.IsNullOrWhiteSpace(character.KitBag) ? GameDefaults.EmptyKitBag : character.KitBag,
             sourceSlot);
-<<<<<<< HEAD
         var packet = EquipmentItemSnapshot(sourceSlot, item, objectId);
         WriteSnapshotBagPosition(packet, sourceSlot);
         return packet;
@@ -209,14 +198,6 @@ internal static partial class PacketBuilder
         var sourcePage = Math.DivRem(bagSlot, KitBagSlotsPerPage, out var sourceIndex);
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(12, 2), (ushort)sourcePage);
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(14, 2), (ushort)sourceIndex);
-=======
-        var packet = EquipmentItemSnapshot(sourceSlot, item, LocalPlayerObjectId);
-        BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(8, 4), 0);
-        var sourcePage = Math.DivRem(sourceSlot, KitBagSlotsPerPage, out var sourceIndex);
-        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(12, 2), (ushort)sourcePage);
-        BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(14, 2), (ushort)sourceIndex);
-        return packet;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     }
 
     public static byte[] EquipmentItemClearSnapshot(int slot)

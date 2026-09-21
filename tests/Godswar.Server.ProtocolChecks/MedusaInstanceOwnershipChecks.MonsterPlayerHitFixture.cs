@@ -175,12 +175,8 @@ internal static partial class MedusaInstanceOwnershipChecks
             var advanceAt = DateTimeOffset.UtcNow;
             for (var index = 1; index <= 160; index++)
             {
-                _ = Runtime.Owner.Invoke(
-                    map => map.AdvanceMonsters(
-                        advanceAt.AddMilliseconds(index * 100),
-                        session =>
-                            Registry.GetPlayerLifeRevision(session)),
-                    TimeSpan.FromSeconds(3));
+                _ = MonsterOwnerCheckSteps.Advance(Runtime, Registry,
+                    advanceAt.AddMilliseconds(index * 100));
                 var current = RequiredMonster(Map, initial.ObjectId);
                 if (current.CombatPhase ==
                     MonsterCombatPhase.Attacking)

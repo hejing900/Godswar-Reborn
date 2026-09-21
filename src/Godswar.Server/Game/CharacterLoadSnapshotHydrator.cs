@@ -43,7 +43,6 @@ internal static partial class CharacterLoadSnapshotHydrator
                 snapshot.Identity.FactionCrierRevision,
             OnlineAwardRevision =
                 snapshot.Identity.OnlineAwardRevision,
-<<<<<<< HEAD
             Quests = [.. snapshot.Identity.Quests.Select(static quest =>
                 new CharacterQuest
                 {
@@ -51,8 +50,6 @@ internal static partial class CharacterLoadSnapshotHydrator
                     Progress = quest.Progress
                 })],
             QuestCompletedIds = snapshot.Identity.QuestCompletedIds.ToArray(),
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             Name = snapshot.Identity.Name,
             Gender = snapshot.Appearance.Gender,
             Camp = snapshot.Appearance.Camp,
@@ -98,11 +95,8 @@ internal static partial class CharacterLoadSnapshotHydrator
             BindingGold = snapshot.Wallet.BindingGold,
             MedusaHonorPoints = snapshot.Wallet.MedusaHonorPoints,
             MedusaRewardRevision = snapshot.Wallet.MedusaRewardRevision,
-<<<<<<< HEAD
             ExchangePoint = snapshot.Wallet.ExchangePoint,
             ExchangeMedal = snapshot.Wallet.ExchangeMedal,
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             MaxHp = Math.Max(1, calculatedStats.MaxHp),
             MaxMp = Math.Max(0, calculatedStats.MaxMp),
             CurrentHp = Math.Clamp(

@@ -322,14 +322,15 @@ internal sealed partial class MapInstance
                         monster.X,
                         monster.Z,
                         out var monsterCell) &&
-                    WorldSectorVisibilityTracker<CapturedMonsterSpawn>.IsNeighbor(
+                    (WorldSectorVisibilityTracker<CapturedMonsterSpawn>.IsNeighbor(
                         playerCell,
-                        monsterCell))
+                        monsterCell) || IsWonderlandGroundFireSourceVisible(monster, playerX, playerZ)))
                 .OrderBy(monster => monster.ObjectId)
                 .ToArray();
             var desired = nearbySpawned
                 .Where(monster =>
                     monster.IsAlive ||
+                    IsRetainedWonderlandBossCorpse(monster) ||
                     !forceRefreshVisible &&
                     viewer.VisibleMonsterVersions.TryGetValue(
                         monster.ObjectId,
@@ -343,7 +344,7 @@ internal sealed partial class MapInstance
                     monster => monster.AppearanceVersion);
             var entering = desired
                 .Where(monster =>
-                    monster.IsAlive &&
+                    (monster.IsAlive || IsRetainedWonderlandBossCorpse(monster)) &&
                     (forceRefreshVisible ||
                      !viewer.VisibleMonsterVersions.TryGetValue(
                          monster.ObjectId,
@@ -530,7 +531,7 @@ internal sealed partial class MapInstance
             foreach (var reconciliationObjectId in reconciliationObjectIds)
             {
                 if (currentMonsters.TryGetValue(reconciliationObjectId, out var monster) &&
-                    monster.IsAlive &&
+                    (monster.IsAlive || IsRetainedWonderlandBossCorpse(monster)) &&
                     monster.IsSpawned &&
                     viewer.PlayerCell is { } playerCell &&
                     WorldSectorVisibilityTracker<CapturedMonsterSpawn>.TryGetCell(

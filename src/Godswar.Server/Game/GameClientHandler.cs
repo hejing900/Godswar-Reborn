@@ -42,6 +42,20 @@ internal sealed partial class GameClientHandler : IClientHandler
     private readonly GameplayItemContent? _itemContent;
     private readonly IPetContentCatalog? _petContent;
     private readonly DeveloperCommandOptions _developerCommands;
+
+    /// <summary>
+    /// The Wishing Pool's durable free-wish counter; null when the storage
+    /// provider does not expose it, in which case the free wish is unavailable.
+    /// </summary>
+    private readonly Godswar.Server.Infrastructure.WishingPool
+        .PostgresWishingPoolUsageStore? _wishingPoolUsage;
+
+    /// <summary>
+    /// Set when the player chose the paid wish entry, so the following class click
+    /// charges gold instead of consuming a free wish. Cleared once that click has
+    /// been answered, and never kept across sessions.
+    /// </summary>
+    private bool _wishingPoolPaidWishPending;
     private readonly Guid _commandConnectionId = Guid.NewGuid();
     private Guid? _loginPetCallOutOperationId;
     private readonly LegacyAuthenticationAccess?
@@ -111,7 +125,6 @@ internal sealed partial class GameClientHandler : IClientHandler
                             ServerTraceOutcome.Cancelled);
                         throw;
                     }
-<<<<<<< HEAD
                     catch (Exception ex)
                     {
                         activity.Complete(
@@ -125,12 +138,6 @@ internal sealed partial class GameClientHandler : IClientHandler
                             $"len={packet.Length} " +
                             $"character={_character?.Name ?? "(none)"} " +
                             $"{ex.GetType().Name}: {ex.Message}");
-=======
-                    catch
-                    {
-                        activity.Complete(
-                            ServerTraceOutcome.Faulted);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                         throw;
                     }
                 }
@@ -142,6 +149,10 @@ internal sealed partial class GameClientHandler : IClientHandler
         }
         finally
         {
+            // Both background loops wait on _characterStateGate, so they must be
+            // joined before the gate is disposed at the end of this method.
+            await StopFlameBlastFieldsAsync();
+            await StopInstanceEntryCountdownAsync();
             await StopRealtimeMovementAsync();
             await StopNpcCatalogUpdatesAsync();
             await StopPetOwnerMergeEnergyLifecycleAsync();

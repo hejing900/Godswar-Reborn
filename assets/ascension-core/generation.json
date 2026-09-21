@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "generator": "built-in image_gen",
+  "status": "selected",
+  "purpose": "Rename Experience Prism item9025 to Ascension Core with a distinct native36px Holy Suit upgrade catalyst icon; preserve its100millionEXP conversion behavior.",
+  "shared_prompt": "Use case: stylized-concept. Asset type: one inventory sprite for a 2000s hand-painted fantasy MMORPG, displayed at only36by36pixels. Paint one centered compact magical item filling86percentofthesquare. Chunky readable planes, strong dark outlines, rich painterly highlights, simple distinct silhouette with little fine detail. Dark nearly black navy background fills the canvas edge to edge, light from upper left. Orthographic three-quarter item illustration. No lettering, numbers, labels, UI border, external frame, scenery, hands, extra props or modern technology.",
+  "entries": [
+    {
+      "item_id": 9025,
+      "slug": "ascension-core",
+      "display_name": "Ascension Core",
+      "prompt": "An ASCENSION CORE: concentrated spiritual experience forged into a sacred energy heart for ascending legendary armor. One brilliant round WHITE-GOLD ENERGY NUCLEUS nested inside four thick angular IVORY CERAMIC AND ANTIQUE GOLD protective petals, making a compact broad diamond-like silhouette. The four petals are separate curved claw-like plates embracing the core while leaving its large central face visible. The center glows with a large simple warm golden four-point star, a small turquoise-teal inner halo adds cool contrast. Dark teal shadows between the ivory plates; controlled white-gold light leaks through four broad gaps. Ancient Greek divine craftsmanship, physical and precious, a hefty small artifact, visually more advanced than a holy box. This is neither a rough stone, a cut crystal prism, a ring, a scroll, a pendant nor a floating magic-circle graphic. No long spikes, wings or chains. The large luminous core and four broad ivory-gold petals must remain unmistakable at36pixels.",
+      "generated_path": "C:\\Users\\Iamc1\\.codex\\generated_images\\01a07967-4860-7d70-aef4-f03e4ae249cf\\exec-df23f1b1-4a0e-4842-9b5b-7d9d7610c339.png",
+      "source_sha256": "6fd377db66fb44ccae27a61b448ea0e7aa191f1562a985f35f758bae82c5d4b0",
+      "source": "source/ascension-core.png"
+    }
+  ]
+}

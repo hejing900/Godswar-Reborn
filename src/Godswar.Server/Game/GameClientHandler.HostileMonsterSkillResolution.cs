@@ -65,14 +65,11 @@ internal sealed partial class GameClientHandler
             _session,
             character,
             advanceWorldRevision: false);
-<<<<<<< HEAD
         // The client only clears its local "casting" state when it observes a
         // cast terminator. The hit path publishes SkillCastImpact for that
         // reason; a miss must publish the same terminator or the caster stays
         // locked in the casting stance forever.
         var (targetX, targetZ) = ResolveMissImpactTarget(cast);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         var casterNotified = true;
         try
         {
@@ -90,7 +87,6 @@ internal sealed partial class GameClientHandler
                     "SkillMissCastSelf");
             }
 
-<<<<<<< HEAD
             await _registry.DeliverMonsterPacketToViewerAsync(
                 _session,
                 character.CurrentMap,
@@ -105,8 +101,6 @@ internal sealed partial class GameClientHandler
                 cancellationToken,
                 "SkillMissCastImpactSelf");
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
             if (combat.Mp > 0)
             {
                 await _session.SendAsync(
@@ -137,7 +131,6 @@ internal sealed partial class GameClientHandler
                 "SkillMissCastWorld",
                 expectedSpawnGeneration: targetSpawnGeneration)
             : 0;
-<<<<<<< HEAD
         await _registry.BroadcastToMonsterViewersAsync(
             character.CurrentMap,
             cast.TargetObjectId,
@@ -151,8 +144,6 @@ internal sealed partial class GameClientHandler
             _session,
             "SkillMissCastImpactWorld",
             expectedSpawnGeneration: targetSpawnGeneration);
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         await PersistSkillVitalsAsync(
             character,
             areaSkill: false,
@@ -160,7 +151,6 @@ internal sealed partial class GameClientHandler
         Console.WriteLine(
             $"[skill] unreported miss character={character.Name} skill={cast.SkillId} target={cast.TargetObjectId} event={resolution.EventId} hit={resolution.Rolls.HitRollBasisPoints}/{resolution.Rolls.HitChanceBasisPoints} mp={currentMana}/{character.MaxMp} caster-notified={casterNotified} viewers={visualRecipients}");
     }
-<<<<<<< HEAD
 
     /// <summary>
     /// The impact frame mirrors the authoritative monster position when the
@@ -182,6 +172,4 @@ internal sealed partial class GameClientHandler
 
         return (cast.TargetX, cast.TargetZ);
     }
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 }

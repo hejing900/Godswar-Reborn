@@ -95,6 +95,7 @@ internal sealed partial record PetDurableReceipt
             PetDurableReceiptStatus.PlayerSkillBookInvalidState or
             PetDurableReceiptStatus.PetNotTaken or
             PetDurableReceiptStatus.PetExperienceAdded or
+            PetDurableReceiptStatus.PetExperienceBoostActivated or
             PetDurableReceiptStatus.PetExperienceRestrictedPetUnbound or
             PetDurableReceiptStatus.PetExperienceMaximumReached or
             PetDurableReceiptStatus.OwnerMerged or

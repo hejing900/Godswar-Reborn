@@ -1,13 +1,8 @@
 using System.Collections.Concurrent;
-<<<<<<< HEAD
 using Godswar.Server.Application.World.Content;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game.WorldInstances;
-=======
-using Godswar.Server.Application.WorldInstances;
-using Godswar.Server.Domain.World.Instances;
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 using Godswar.Server.Networking;
 
 namespace Godswar.Server.Game;
@@ -16,7 +11,6 @@ internal sealed partial class GameSessionRegistry
 {
     private const float MonsterLootPickupRadius = 12f;
 
-<<<<<<< HEAD
     /// <summary>
     /// Captured corpse window for a looted field kill. The reference kept the
     /// corpse of the Athens kill on object 10492 from 01:37:23.758 until its
@@ -25,8 +19,6 @@ internal sealed partial class GameSessionRegistry
     /// </summary>
     private const int CorpseWithLootMilliseconds = 20_000;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private readonly ConcurrentDictionary<
         MonsterLootRuntimeKey,
         MonsterLootRuntimeState> _monsterLoot = [];
@@ -140,13 +132,9 @@ internal sealed partial class GameSessionRegistry
             damage.Monster.SpawnGeneration,
             deathEventId,
             prepared.ExpiresAt,
-<<<<<<< HEAD
             prepared.Entries,
             damage.Monster.X,
             damage.Monster.Z);
-=======
-            prepared.Entries);
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         _monsterLoot[key] = state;
         return new(
             damage.ObjectId,
@@ -155,7 +143,6 @@ internal sealed partial class GameSessionRegistry
             prepared.Entries);
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Rolls the database-owned drop table of the killed monster's template and
     /// starts tracking its ground items. Unlike the Medusa path this needs no
@@ -271,8 +258,6 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     internal bool TryReserveMonsterLootPickup(
         ClientSession session,
         uint monsterObjectId,
@@ -298,7 +283,6 @@ internal sealed partial class GameSessionRegistry
             return false;
         }
 
-<<<<<<< HEAD
         return TryReserveLootEntry(
             session,
             context,
@@ -434,14 +418,11 @@ internal sealed partial class GameSessionRegistry
         // out the old loot.
         var corpseX = state.CorpseX;
         var corpseZ = state.CorpseZ;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         var monsterAttempt = InvokeWorldOwner(
             runtime,
             map =>
             {
                 var found = map.TryGetMonsterSnapshot(
-<<<<<<< HEAD
                     key.MonsterObjectId,
                     out var monster);
                 return (Found: found, Monster: monster);
@@ -467,21 +448,6 @@ internal sealed partial class GameSessionRegistry
                 corpseX,
                 corpseZ) >
             MonsterLootPickupRadius * MonsterLootPickupRadius)
-=======
-                    monsterObjectId,
-                    out var monster);
-                return (Found: found, Monster: monster);
-            });
-        var target = monsterAttempt.Monster;
-        if (!monsterAttempt.Found || target.IsAlive || !target.IsSpawned ||
-            target.SpawnGeneration != state.SpawnGeneration ||
-            DistanceSquared(
-                context.Character.PositionX,
-                context.Character.PositionZ,
-                target.X,
-                target.Z) >
-                MonsterLootPickupRadius * MonsterLootPickupRadius)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         {
             return false;
         }
@@ -507,11 +473,7 @@ internal sealed partial class GameSessionRegistry
             state.Pending.Add(pickupIndex, attemptId);
             reservation = new(
                 key.WorldInstanceId,
-<<<<<<< HEAD
                 key.MonsterObjectId,
-=======
-                monsterObjectId,
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
                 state.SpawnGeneration,
                 state.DeathEventId,
                 pickupIndex,
@@ -599,13 +561,9 @@ internal sealed partial class GameSessionRegistry
             uint spawnGeneration,
             Guid deathEventId,
             DateTimeOffset? expiresAt,
-<<<<<<< HEAD
             IReadOnlyList<MonsterLootEntry> entries,
             float corpseX,
             float corpseZ)
-=======
-            IReadOnlyList<MonsterLootEntry> entries)
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         {
             ClaimantCharacterId = claimantCharacterId;
             SpawnGeneration = spawnGeneration;
@@ -613,11 +571,8 @@ internal sealed partial class GameSessionRegistry
             ExpiresAt = expiresAt;
             Entries = entries.ToDictionary(
                 static entry => entry.PickupIndex);
-<<<<<<< HEAD
             CorpseX = corpseX;
             CorpseZ = corpseZ;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         public object Gate { get; } = new();
@@ -625,7 +580,6 @@ internal sealed partial class GameSessionRegistry
         public uint SpawnGeneration { get; }
         public Guid DeathEventId { get; }
         public DateTimeOffset? ExpiresAt { get; }
-<<<<<<< HEAD
 
         /// <summary>
         /// Where the corpse died. The map runtime despawns a field corpse as
@@ -635,8 +589,6 @@ internal sealed partial class GameSessionRegistry
         public float CorpseX { get; }
         public float CorpseZ { get; }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         public Dictionary<int, MonsterLootEntry> Entries { get; }
         public Dictionary<int, Guid> Pending { get; } = [];
     }

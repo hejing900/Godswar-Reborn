@@ -146,6 +146,12 @@ internal static class PlayerSkillCastControlCatalog
         };
     }
 
+    // Native Effect 2 (NonMoving). Frozen 299-305 blocks movement even
+    // though its HaltIntonate effect only interrupts a cast once.
+    public static bool BlocksMovement(uint statusId) =>
+        statusId is >= 299 and <= 305 ||
+        ResolveActiveBlock(statusId) == PlayerSkillCastControl.Stunned;
+
     /// <summary>
     /// Resolves a one-shot interruption when a status is applied. Status.ini
     /// Effect 0 (HaltIntonate) interrupts an in-flight cast. Controls which

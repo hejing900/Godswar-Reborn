@@ -64,6 +64,10 @@ internal sealed partial class GameClientHandler
             PetItemCatalog.GoldenAppleJuice;
         var isPetExperienceItem =
             PetExperienceItemPolicy.IsMorningDew(itemId);
+        var isPetExperienceBoostPotion =
+            IsReviewedPetExperienceBoostPotion(itemId);
+        var isExperienceBoostPotion =
+            ExperienceBoostPotionPolicy.IsReviewedItem(itemId);
         var isReviewedPetSkillBook =
             PetSkillBookActivationPolicy.IsReviewedItem(itemId);
         var isReviewedPlayerSkillBook =
@@ -106,7 +110,9 @@ internal sealed partial class GameClientHandler
 
         var isPackedSealJade = itemId == PetItemCatalog.PackedSealJade;
         if (isPetEgg || isPetShedExpansion || isPetSkillCellItem ||
-            isPetExperienceItem || isReviewedPetSkillBook ||
+            isPetExperienceItem || isPetExperienceBoostPotion ||
+            isExperienceBoostPotion ||
+            isReviewedPetSkillBook ||
             isReviewedPlayerSkillBook ||
             isPackedSealJade)
         {
@@ -121,7 +127,11 @@ internal sealed partial class GameClientHandler
                                 ? "pet_skill_cell_advance"
                                 : isPetExperienceItem
                                     ? "pet_experience_item"
-                                    : isReviewedPlayerSkillBook
+                                    : isPetExperienceBoostPotion
+                                        ? "pet_experience_boost_potion"
+                                        : isExperienceBoostPotion
+                                            ? "experience_boost_potion"
+                                            : isReviewedPlayerSkillBook
                                         ? "player_skill_book_learn"
                                     : "pet_skill_book_learn"))
             {
@@ -167,4 +177,13 @@ internal sealed partial class GameClientHandler
             itemIdHint: 0,
             cancellationToken);
     }
+
+    /// <summary>
+    /// Whether the equipped bag slot holds one of the five reviewed
+    /// pet-experience potions. The narrow reviewed item set is read without the
+    /// pinned template, exactly as <c>IsMorningDew</c> does, so the
+    /// compatibility classifier cannot throw on an unknown ID.
+    /// </summary>
+    private static bool IsReviewedPetExperienceBoostPotion(uint itemId) =>
+        itemId is 4529 or 4530 or 4531 or 4532 or 4533 or 4540;
 }

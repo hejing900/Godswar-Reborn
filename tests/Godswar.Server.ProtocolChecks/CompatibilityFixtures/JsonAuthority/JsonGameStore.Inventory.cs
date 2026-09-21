@@ -315,6 +315,72 @@ internal sealed partial class JsonGameStore
         }
     }
 
+    public async Task<KitBagItemGrantResult> AddWishingPoolSkillBookAsync(
+        int accountId,
+        int characterId,
+        uint itemId,
+        int goldCost,
+        CancellationToken cancellationToken = default)
+    {
+        if (itemId == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(itemId));
+        }
+
+        if (goldCost < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(goldCost));
+        }
+
+        await _lock.WaitAsync(cancellationToken);
+        try
+        {
+            var db = await LoadUnsafeAsync(cancellationToken);
+            var character = db.Characters.FirstOrDefault(candidate =>
+                candidate.AccountId == accountId &&
+                candidate.Id == characterId);
+            if (character is null)
+            {
+                return new KitBagItemGrantResult(
+                    KitBagItemGrantStatus.CharacterNotFound,
+                    null);
+            }
+
+            if (character.Gold < goldCost)
+            {
+                return new KitBagItemGrantResult(
+                    KitBagItemGrantStatus.InsufficientGold,
+                    Clone(character));
+            }
+
+            if (!KitBagItemGrantPlanner.TryAdd(
+                    character.KitBag,
+                    itemId,
+                    quantity: 1,
+                    stackCap: 1,
+                    bound: 1,
+                    out var updatedKitBag))
+            {
+                return new KitBagItemGrantResult(
+                    KitBagItemGrantStatus.InsufficientCapacity,
+                    Clone(character));
+            }
+
+            // The skill book and the gold debit commit together, so a rejected
+            // grant never charges the character.
+            character.KitBag = updatedKitBag;
+            character.Gold = checked(character.Gold - goldCost);
+            await SaveUnsafeAsync(db, cancellationToken);
+            return new KitBagItemGrantResult(
+                KitBagItemGrantStatus.Added,
+                Clone(character));
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public async Task<ForgeTransactionResult> ForgeEquipmentAsync(
         int accountId,
         int characterId,

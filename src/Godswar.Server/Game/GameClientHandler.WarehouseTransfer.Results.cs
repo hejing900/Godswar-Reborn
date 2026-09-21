@@ -3,10 +3,7 @@ using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Warehouse;
 using Godswar.Server.Networking.Secure;
 using Godswar.Server.Packets;
-<<<<<<< HEAD
 using Godswar.Server.Protocol;
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
 
 namespace Godswar.Server.Game;
 
@@ -83,7 +80,6 @@ internal sealed partial class GameClientHandler
                     cancellationToken,
                     "WarehouseTransferKitBagClear");
             }
-<<<<<<< HEAD
 
             foreach (var vacatedWarehouseSlot in receipt.Mutations
                          .Where(static mutation =>
@@ -129,8 +125,6 @@ internal sealed partial class GameClientHandler
                     cancellationToken,
                     "WarehouseTransferSourceClear");
             }
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
         }
 
         // The client presents one physical 40-cell view over the selected

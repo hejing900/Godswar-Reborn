@@ -5,19 +5,26 @@ namespace Godswar.Server.Infrastructure.Pets;
 
 internal static partial class PetLearnedSkillContentBaseline
 {
-    public const string Source =
+    public const string InstalledSource =
         "installed-en-us-pet-skill-normalized-v1";
-    public const string SourceSha256 =
+    public const string InstalledSourceSha256 =
         "B2EE9219E5E804AFA34797D6D2BCB8787B7C1C6EDF7914F4C1A6AC982A553F43";
-    public const string ExpectedRevision =
+    public const string InstalledRevision =
         "64748AC27B0D815B9C30CFF78A7CE8AD519AE83DF528CB5CDFF4374503ABB473";
 
     public static PinnedPetLearnedSkillContentCatalog Create() =>
         PinnedPetLearnedSkillContentCatalog.Create(
             Source,
             SourceSha256,
-            Parse(Data1).Concat(Parse(Data2)).ToArray(),
+            Parse(Data1).Concat(Parse(Data2)).Concat(Parse(VampiricData)).ToArray(),
             ExpectedRevision);
+
+    public static PinnedPetLearnedSkillContentCatalog CreateInstalled() =>
+        PinnedPetLearnedSkillContentCatalog.Create(
+            InstalledSource,
+            InstalledSourceSha256,
+            Parse(Data1).Concat(Parse(Data2)).ToArray(),
+            InstalledRevision);
 
     private static IEnumerable<PetLearnedSkillCurveContentDefinition> Parse(
         string data)

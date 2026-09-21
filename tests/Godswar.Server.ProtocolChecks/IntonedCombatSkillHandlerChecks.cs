@@ -332,7 +332,12 @@ internal static partial class IntonedCombatSkillHandlerChecks
             string characterName,
             int currentHp = 500,
             int lifeAbsorption = 0,
-            PlayerRuntimeMode playerRuntimeMode = PlayerRuntimeMode.Ecs)
+            PlayerRuntimeMode playerRuntimeMode = PlayerRuntimeMode.Ecs,
+            CapturedMonsterSpawn? monster = null,
+            int lifeAbsorptionFlat = 0,
+            IReadOnlyList<CapturedMonsterSpawn>? monsters = null,
+            TimeProvider? flameBlastTimeProvider = null,
+            MonsterRuntimeMode monsterRuntimeMode = MonsterRuntimeMode.Ecs)
         {
             var socket =
                 await RuntimePolicySessionSocket.CreateAsync();
@@ -355,18 +360,19 @@ internal static partial class IntonedCombatSkillHandlerChecks
                 CalculatedStats = new CharacterStats
                 {
                     MagicAttack = 100,
-                    LifeAbsorption = lifeAbsorption
+                    LifeAbsorption = lifeAbsorption,
+                    LifeAbsorptionFlat = lifeAbsorptionFlat
                 }
             };
             var store = new CombatStore();
             var registry = new GameSessionRegistry(
                 store: null,
                 zodiacEnergyOptions: null,
-                MonsterRuntimeMode.Ecs,
+                monsterRuntimeMode,
                 playerRuntimeMode);
             registry.InitializeMapMonsters(
                 character.CurrentMap,
-                [CreateMonster()],
+                monsters ?? [monster ?? CreateMonster()],
                 DateTimeOffset.UtcNow);
             registry.JoinMap(
                 socket.Session,
@@ -392,7 +398,8 @@ internal static partial class IntonedCombatSkillHandlerChecks
                 store,
                 registry,
                 CharacterSnapshotReaderTestFixtures.Unused,
-                WorldContentReaderTestFixtures.Empty);
+                WorldContentReaderTestFixtures.Empty,
+                flameBlastTimeProvider: flameBlastTimeProvider);
             SetField(
                 handler,
                 "_account",
@@ -499,48 +506,9 @@ internal static partial class IntonedCombatSkillHandlerChecks
                 ?? throw new InvalidOperationException(
                     "StopPendingSkillCastsAsync returned no task.");
             await stop;
+            await StopFlameFieldsAsync(Handler);
             Registry.Remove(Socket.Session);
             await Socket.DisposeAsync();
-        }
-    }
-
-    private sealed class CombatStore : GameStoreTestStub
-    {
-        private readonly TaskCompletionSource<bool> _vitalsWritten =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public int VitalsWrites { get; private set; }
-
-        public Task WaitForVitalsWriteAsync() =>
-            _vitalsWritten.Task.WaitAsync(TimeSpan.FromSeconds(1));
-
-        public override Task<IReadOnlyList<SkillState>>
-            GetSkillStatesAsync(
-                int accountId,
-                int characterId,
-                CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<SkillState>>(
-                [new SkillState
-                {
-                    SkillId = checked((int)ThunderSkillId),
-                    Level = 1
-                }]);
-
-        public override Task SaveCharacterVitalsAsync(
-            int accountId,
-            int characterId,
-            int currentHp,
-            int currentMp,
-            long vitalsRevision,
-            CancellationToken cancellationToken = default)
-        {
-            Check.True(
-                accountId == AccountId &&
-                characterId == CharacterId,
-                "Thunder persists the active character");
-            VitalsWrites++;
-            _vitalsWritten.TrySetResult(true);
-            return Task.CompletedTask;
         }
     }
 }

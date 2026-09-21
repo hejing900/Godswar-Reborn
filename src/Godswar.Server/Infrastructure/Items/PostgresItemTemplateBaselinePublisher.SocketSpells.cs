@@ -18,20 +18,30 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             transaction,
             cancellationToken);
         var byId = prior.ToDictionary(static value => value.Id);
+        // A database published from the pre-artwork revision still holds the
+        // legacy shared-atlas definition, which is an accepted predecessor and
+        // is upgraded to the dedicated SocketSpells.gwo appearance below.
+        var legacy = await ReadCanonicalReviewedSocketSpellsAsync(
+            connection,
+            transaction,
+            cancellationToken,
+            legacy: true);
         foreach (var definition in reviewed)
         {
             if (byId.TryGetValue(definition.Id, out var existing))
             {
-                if (!DefinitionsEquivalent(existing, definition))
+                if (!DefinitionsEquivalent(existing, definition) &&
+                    !DefinitionsEquivalent(
+                        existing,
+                        legacy.Single(item => item.Id == definition.Id)))
                 {
                     throw new InvalidOperationException(
                         $"Reviewed Socket Spell {definition.Id} conflicts " +
                         "with the published item definition.");
                 }
-                continue;
             }
 
-            byId.Add(definition.Id, definition);
+            byId[definition.Id] = definition;
         }
 
         return byId.Values
@@ -84,9 +94,12 @@ internal static partial class PostgresItemTemplateBaselinePublisher
         ReadCanonicalReviewedSocketSpellsAsync(
             NpgsqlConnection connection,
             NpgsqlTransaction transaction,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool legacy = false)
     {
-        var seeds = SocketSpellItemContentBaseline.ItemTemplates
+        var seeds = (legacy
+                ? SocketSpellItemContentBaseline.ItemTemplates
+                : SocketSpellItemContentV2.ItemTemplates)
             .OrderBy(static value => value.Id)
             .ToArray();
         await using var command = new NpgsqlCommand("""

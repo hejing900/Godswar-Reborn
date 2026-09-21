@@ -3,6 +3,7 @@ using Godswar.Server.Game.WorldInstances;
 using Godswar.Server.Networking;
 using Godswar.Server.State;
 using Godswar.Server.World.Components.Players;
+using Godswar.Server.World.Systems.Combat;
 
 namespace Godswar.Server.Game;
 
@@ -221,4 +222,5 @@ internal sealed partial class GameSessionRegistry
 
 internal readonly record struct MonsterAreaDamageBroadcastHit(
     MonsterHealthMutation HealthMutation,
-    uint ReportedDamage);
+    uint ReportedDamage,
+    CombatHitOutcome Outcome = CombatHitOutcome.Normal);

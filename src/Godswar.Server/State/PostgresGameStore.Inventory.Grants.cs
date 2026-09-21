@@ -176,6 +176,160 @@ internal sealed partial class PostgresGameStore
             await GetCharacterByIdAsync(characterId, cancellationToken));
     }
 
+    /// <summary>
+    /// Grants one Wishing Pool skill book to the character's kit bag.
+    /// </summary>
+    /// <remarks>
+    /// This is the Wishing Pool's own grant path, deliberately separate from the
+    /// developer grant: that executor only accepts materials and GM items from its
+    /// allowlist, which skill books are not part of, and the developer channel is
+    /// scheduled for removal. The mutation itself is the same atomic shape as the
+    /// other grants here - lock the character, take the first free slot, insert the
+    /// item, and return the committed character.
+    /// </remarks>
+    public async Task<KitBagItemGrantResult> AddWishingPoolSkillBookAsync(
+        int accountId,
+        int characterId,
+        uint itemId,
+        int goldCost,
+        CancellationToken cancellationToken = default)
+    {
+        if (itemId == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(itemId));
+        }
+
+        if (goldCost < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(goldCost));
+        }
+
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        var goldBefore = 0;
+        await using (var lockCharacter = new NpgsqlCommand("""
+            SELECT "Stone"
+            FROM character_base
+            WHERE account_id = @accountId AND id = @characterId
+            FOR UPDATE;
+            """, connection, transaction))
+        {
+            lockCharacter.Parameters.AddWithValue("accountId", accountId);
+            lockCharacter.Parameters.AddWithValue("characterId", characterId);
+            var scalar = await lockCharacter.ExecuteScalarAsync(cancellationToken);
+            if (scalar is not int gold)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return new KitBagItemGrantResult(
+                    KitBagItemGrantStatus.CharacterNotFound,
+                    null);
+            }
+
+            goldBefore = gold;
+        }
+
+        if (goldBefore < goldCost)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return new KitBagItemGrantResult(
+                KitBagItemGrantStatus.InsufficientGold,
+                await GetCharacterByIdAsync(characterId, cancellationToken));
+        }
+
+        var occupiedSlots = new HashSet<int>();
+        await using (var readSlots = new NpgsqlCommand("""
+            SELECT slot_index
+            FROM character_items
+            WHERE user_id = @characterId AND item_location = @kitBagLocation
+            FOR UPDATE;
+            """, connection, transaction))
+        {
+            readSlots.Parameters.AddWithValue("characterId", characterId);
+            readSlots.Parameters.AddWithValue("kitBagLocation", ItemLocationKitBag);
+            await using var reader = await readSlots.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var slot = reader.GetInt16(0);
+                if (slot is >= 0 and < KitBagItemGrantPlanner.SlotCount)
+                {
+                    occupiedSlots.Add(slot);
+                }
+            }
+        }
+
+        var freeSlot = -1;
+        for (var slot = 0; slot < KitBagItemGrantPlanner.SlotCount; slot++)
+        {
+            if (!occupiedSlots.Contains(slot))
+            {
+                freeSlot = slot;
+                break;
+            }
+        }
+        if (freeSlot < 0)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return new KitBagItemGrantResult(
+                KitBagItemGrantStatus.InsufficientCapacity,
+                await GetCharacterByIdAsync(characterId, cancellationToken));
+        }
+
+        await using (var insertItem = new NpgsqlCommand("""
+            INSERT INTO character_items (
+                user_id, item_location, slot_index, prop_id,
+                item_quality, item_grade, bound, stack, item_exp, holy_suit_code
+            )
+            VALUES (
+                @characterId, @itemLocation, @slotIndex, @itemId,
+                1, 1, 1, 1, 0, 0
+            );
+            """, connection, transaction))
+        {
+            insertItem.Parameters.AddWithValue("characterId", characterId);
+            insertItem.Parameters.AddWithValue("itemLocation", ItemLocationKitBag);
+            insertItem.Parameters.AddWithValue("slotIndex", checked((short)freeSlot));
+            insertItem.Parameters.AddWithValue("itemId", checked((int)itemId));
+            if (await insertItem.ExecuteNonQueryAsync(cancellationToken) != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Kit-bag slot {freeSlot} changed while granting a wishing pool skill book.");
+            }
+        }
+
+        if (goldCost > 0)
+        {
+            await using var debitGold = new NpgsqlCommand("""
+                UPDATE character_base
+                SET "Stone" = "Stone" - @goldCost
+                WHERE account_id = @accountId
+                  AND id = @characterId
+                  AND "Stone" = @goldBefore
+                  AND "Stone" >= @goldCost;
+                """, connection, transaction);
+            debitGold.Parameters.AddWithValue("goldCost", goldCost);
+            debitGold.Parameters.AddWithValue("accountId", accountId);
+            debitGold.Parameters.AddWithValue("characterId", characterId);
+            debitGold.Parameters.AddWithValue("goldBefore", goldBefore);
+            if (await debitGold.ExecuteNonQueryAsync(cancellationToken) != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Character {characterId} gold changed while charging " +
+                    $"{goldCost} for a wishing pool skill book.");
+            }
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        var committed = await GetCharacterByIdAsync(characterId, cancellationToken);
+        Console.WriteLine(
+            $"[wishing-pool] gold charged character={characterId} " +
+            $"before={goldBefore} cost={goldCost} " +
+            $"after={committed?.Gold.ToString() ?? "unknown"}");
+        return new KitBagItemGrantResult(
+            KitBagItemGrantStatus.Added,
+            committed);
+    }
+
     public async Task<KitBagItemGrantResult> AddDeveloperMountAsync(
         int accountId,
         int characterId,

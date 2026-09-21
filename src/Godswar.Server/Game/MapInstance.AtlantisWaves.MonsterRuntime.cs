@@ -108,6 +108,15 @@ internal sealed partial class MapInstance
             foreach (var wave in _waves) wave.ClearAggroForCharacter(characterId, now);
         }
 
+        public bool TryApplyControl(uint objectId, int attackerCharacterId,
+            Godswar.Server.State.HostileStatusEffectDefinition definition, uint generation,
+            DateTimeOffset now, out MonsterControlResult result)
+        {
+            result = null!;
+            return CanFight(now) && _owners.TryGetValue(objectId, out var wave) &&
+                wave.TryApplyControl(objectId, attackerCharacterId, definition, generation, now, out result);
+        }
+
         public void ClearAggroForCharacterStateOnly(int characterId, DateTimeOffset now)
         {
             foreach (var wave in _waves) wave.ClearAggroForCharacterStateOnly(characterId, now);

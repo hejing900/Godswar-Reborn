@@ -251,7 +251,6 @@ internal sealed partial class GameClientHandler
         return true;
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Reads the client's sell request (opcode 10060). The four-byte payload is
     /// the bag page followed by the index inside that page, observed live:
@@ -284,8 +283,6 @@ internal sealed partial class GameClientHandler
     internal const int KitBagSlotsPerPage = 24;
     internal const int KitBagPageCount = 4;
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     private static bool TryReadBagItemAction(
         ReadOnlySpan<byte> payload,
         out int sourceSlot,
@@ -304,7 +301,6 @@ internal sealed partial class GameClientHandler
         return sourceSlot is >= 0 and < 96 && itemId != 0;
     }
 
-<<<<<<< HEAD
     /// <summary>
     /// Parses the ground-loot pickup descriptor the installed client sends on
     /// 10056. Captured 2026-09-15 (captures/monster-drop-20260915.txt): a
@@ -349,8 +345,6 @@ internal sealed partial class GameClientHandler
         return true;
     }
 
-=======
->>>>>>> da67a14d626fe493b373a8c188aeb4ec075ac3b0
     internal static bool TryReadTalentUpgrade(
         ReadOnlySpan<byte> payload,
         out int talentId,

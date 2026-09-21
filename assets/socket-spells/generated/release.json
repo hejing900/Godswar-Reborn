@@ -1,0 +1,60 @@
+{
+  "generation_sha256": "f1edd7297d8434c459eff6084e0591ed3ca593ecf27896173751cfc9a0d18aa9",
+  "manifest_sha256": "234c92d008b0247595a59ec1a25f88b3257d0aeb8454779098e134a76e272b3d",
+  "native_format_sha256": "d9e0f1f5b0e422f14f348da737f67a4a36cee93c1d93cf8f7db1cf86c0b05693",
+  "outputs": {
+    "SocketSpells.gwo": {
+      "bytes": 60457,
+      "sha256": "eac1002d1ae9ecc782b070e00234134bc2bc9b96da9d7b40c3fdfa71a0b85124"
+    },
+    "icons-native.png": {
+      "bytes": 14336,
+      "sha256": "e61f4de4a0c334726b7edee11fec5db61e94b271cde4849b33290969ea49c7e7"
+    },
+    "preview.png": {
+      "bytes": 38974,
+      "sha256": "e49d729e84fcd58d9fbfc264286776a23993948581bae0a5856a124b88ca5770"
+    },
+    "socket-spell-1-36.png": {
+      "bytes": 3043,
+      "sha256": "512ec08448bdd39ea62b793ad64bf8724eeeac9f2c4b6a930084b2ae8157d719"
+    },
+    "socket-spell-2-36.png": {
+      "bytes": 3419,
+      "sha256": "f0822e07399a9f0381bb78cfc4b5523087baa81c9f664b2f2cc1b5b6ae87bbd9"
+    },
+    "socket-spell-3-36.png": {
+      "bytes": 4221,
+      "sha256": "ac67d1b5e3011c3dc577bfb638c25234388cc3d2d0ba64542431d5f4ccddbbb0"
+    },
+    "socket-spell-4-36.png": {
+      "bytes": 3893,
+      "sha256": "c526b3454dc2876b7a727f4315c3573913f64aa3c0ba70a1d548497c955d4453"
+    }
+  },
+  "pillow_version": "12.0.0",
+  "resampling": "whole square, premultiplied-alpha Lanczos to 36px; no added padding",
+  "schema_version": 1,
+  "sources": [
+    {
+      "icon_sha256": "512ec08448bdd39ea62b793ad64bf8724eeeac9f2c4b6a930084b2ae8157d719",
+      "slug": "socket-spell-1",
+      "source_sha256": "88914663bcb4ad7fe1ebf094a56247df2db4e10f000777a0f7bed629210b1849"
+    },
+    {
+      "icon_sha256": "f0822e07399a9f0381bb78cfc4b5523087baa81c9f664b2f2cc1b5b6ae87bbd9",
+      "slug": "socket-spell-2",
+      "source_sha256": "7ae6c9871e29ee2b88ca66f457c4edcd7ac26418fdd327e6477dfe41f2e2e779"
+    },
+    {
+      "icon_sha256": "ac67d1b5e3011c3dc577bfb638c25234388cc3d2d0ba64542431d5f4ccddbbb0",
+      "slug": "socket-spell-3",
+      "source_sha256": "cdb85923f8d3fd979ed325883d8b44467c2a233925f1a9d98f53946bd1615bbb"
+    },
+    {
+      "icon_sha256": "c526b3454dc2876b7a727f4315c3573913f64aa3c0ba70a1d548497c955d4453",
+      "slug": "socket-spell-4",
+      "source_sha256": "88844c1502415a2c20e265c90bb01d246775d5240c66cc08dd31a7232b002614"
+    }
+  ]
+}

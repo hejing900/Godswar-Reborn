@@ -1,0 +1,327 @@
+{
+  "atlas": "HolySuitBadges.gwo",
+  "base_atlas": {
+    "bytes": 1915354,
+    "file": "source/main.gwo",
+    "sha256": "fe614cf23605b20694187d079328057f461a2e82c5e8a3bd4a4e3318a754ccdc"
+  },
+  "changed_pixels": 3308,
+  "entries": [
+    {
+      "icon": {
+        "file": "runesteel-30.png",
+        "sha256": "41b85e08c9e58b0438d98be93899357e9e42a8bc2132464486193a4dc73d7270"
+      },
+      "icon_alpha_bounds": [
+        0,
+        0,
+        30,
+        30
+      ],
+      "optical_alpha128_after": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 247,
+        "solid_pixels": 707
+      },
+      "optical_alpha128_before": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 215,
+        "solid_pixels": 609
+      },
+      "rect": [
+        774,
+        355,
+        30,
+        30
+      ],
+      "slug": "runesteel",
+      "source": "source/runesteel.png",
+      "source_alpha_bounds": [
+        0,
+        5,
+        1216,
+        1238
+      ],
+      "source_optical_bounds": [
+        93,
+        107,
+        1166,
+        1151
+      ],
+      "source_sha256": "b1adeca15edb6765aa80754fb0437665429b908a03b910bef5a148ec8322389c",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 5,
+      "visible_pixels": 824
+    },
+    {
+      "icon": {
+        "file": "arcanite-30.png",
+        "sha256": "4a9680520f247cea1439e99410d2c38eefa05d05c361b84d598d7f4f5ae59b74"
+      },
+      "icon_alpha_bounds": [
+        0,
+        0,
+        30,
+        30
+      ],
+      "optical_alpha128_after": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 230,
+        "solid_pixels": 646
+      },
+      "optical_alpha128_before": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 197,
+        "solid_pixels": 555
+      },
+      "rect": [
+        744,
+        355,
+        30,
+        30
+      ],
+      "slug": "arcanite",
+      "source": "source/arcanite.png",
+      "source_alpha_bounds": [
+        19,
+        63,
+        1232,
+        1222
+      ],
+      "source_optical_bounds": [
+        91,
+        65,
+        1149,
+        1175
+      ],
+      "source_sha256": "0622cd52768d5d23c23d491a2dfc55003671f1efdff6df58c4c9216c1873a994",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 6,
+      "visible_pixels": 783
+    },
+    {
+      "icon": {
+        "file": "seraphite-30.png",
+        "sha256": "41d3c0de615bfd19f667b2a077d4bd216ea4b3abd3a4c060e2c4d940be697396"
+      },
+      "icon_alpha_bounds": [
+        0,
+        0,
+        30,
+        30
+      ],
+      "optical_alpha128_after": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 240,
+        "solid_pixels": 675
+      },
+      "optical_alpha128_before": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 199,
+        "solid_pixels": 578
+      },
+      "rect": [
+        714,
+        355,
+        30,
+        30
+      ],
+      "slug": "seraphite",
+      "source": "source/seraphite.png",
+      "source_alpha_bounds": [
+        49,
+        64,
+        1206,
+        1228
+      ],
+      "source_optical_bounds": [
+        56,
+        66,
+        1200,
+        1186
+      ],
+      "source_sha256": "7b0b89b75ab2b149dcf123a244ce2ca64cef2a79c1778f15b47524afe3f367bc",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 7,
+      "visible_pixels": 797
+    },
+    {
+      "icon": {
+        "file": "divinium-30.png",
+        "sha256": "995f759887ff52088275061a303694a350095e9677749a228c4ab3403b8724c1"
+      },
+      "icon_alpha_bounds": [
+        0,
+        0,
+        30,
+        30
+      ],
+      "optical_alpha128_after": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 238,
+        "solid_pixels": 667
+      },
+      "optical_alpha128_before": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 205,
+        "solid_pixels": 572
+      },
+      "rect": [
+        684,
+        355,
+        30,
+        30
+      ],
+      "slug": "divinium",
+      "source": "source/divinium.png",
+      "source_alpha_bounds": [
+        49,
+        89,
+        1194,
+        1214
+      ],
+      "source_optical_bounds": [
+        113,
+        94,
+        1146,
+        1168
+      ],
+      "source_sha256": "06771e833e80972960f6faf36e0b8504abb7b76b2c37cb918b75dcc87279dd88",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "tier": 8,
+      "visible_pixels": 775
+    }
+  ],
+  "format": "Native TGA type10 RLE BGRA32; bottom-origin descriptor0x08",
+  "height": 1024,
+  "optical_framing": {
+    "alpha_threshold": 8,
+    "destination_center_columns": 25,
+    "discarded_padding_max_alpha": 7,
+    "previous_destination_center_columns": 19,
+    "source_center_fraction": 0.5,
+    "stock_alpha128": {
+      "Common": {
+        "bounds": [
+          1,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 186,
+        "solid_pixels": 622
+      },
+      "Platinum": {
+        "bounds": [
+          0,
+          0,
+          30,
+          30
+        ],
+        "middle_band_solid_pixels": 186,
+        "solid_pixels": 623
+      }
+    },
+    "supersampling": 8
+  },
+  "outputs": {
+    "HolySuitBadges.gwo": {
+      "bytes": 1920592,
+      "sha256": "da02e272fa1a456b3abf68e3dbc23a4d63b36c87d6cfbd96f94e649b39f91c2a"
+    },
+    "HolySuitBadges.png": {
+      "bytes": 945389,
+      "sha256": "471f30c01bc1b74c84c8489db1495a6642c2fd5a5f64913451d78030f7468c88"
+    },
+    "arcanite-30.png": {
+      "bytes": 3102,
+      "sha256": "4a9680520f247cea1439e99410d2c38eefa05d05c361b84d598d7f4f5ae59b74"
+    },
+    "badges-native.png": {
+      "bytes": 11866,
+      "sha256": "fb8e139b221701c0a04a6631e87f020db887e4829e2d024a1bad0cb7e5509ab9"
+    },
+    "divinium-30.png": {
+      "bytes": 3024,
+      "sha256": "995f759887ff52088275061a303694a350095e9677749a228c4ab3403b8724c1"
+    },
+    "preview.png": {
+      "bytes": 86118,
+      "sha256": "5be975c80207601ca677ba9ea7ee08df9f4366304110d57f290828c42ee64130"
+    },
+    "runesteel-30.png": {
+      "bytes": 3077,
+      "sha256": "41b85e08c9e58b0438d98be93899357e9e42a8bc2132464486193a4dc73d7270"
+    },
+    "seraphite-30.png": {
+      "bytes": 3089,
+      "sha256": "41d3c0de615bfd19f667b2a077d4bd216ea4b3abd3a4c060e2c4d940be697396"
+    }
+  },
+  "owned_pixels": 3600,
+  "pillow_version": "12.0.0",
+  "pipeline": "tools/PrepareHolySuitBadges.py",
+  "preserved_pixels": 1044976,
+  "resampling": "premultiplied-alpha Lanczos8x; alpha>=8 optical bounds; continuous three-strip bicubic width fit; native30px copied exactly",
+  "schema_version": 1,
+  "validation": {
+    "independent_decode_matches": true,
+    "native_metadata_preserved": true,
+    "new_divinium_cell_originally_transparent": true,
+    "outside_cells_identical": true,
+    "tier0_through4_identical": true
+  },
+  "width": 1024
+}

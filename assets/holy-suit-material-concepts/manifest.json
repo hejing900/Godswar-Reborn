@@ -1,0 +1,50 @@
+{
+  "status": "approved",
+  "entries": [
+    {
+      "name": "RuneSteel Ingot",
+      "source": "source/runesteel-ingot.png",
+      "source_sha256": "62023b857a02f78fc9cb8acb9d244d377408d2683bc036ab1699d14c27561ff6",
+      "icon": "icons\\runesteel-ingot-36.png",
+      "real_alpha": true,
+      "source_size": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "name": "Arcanite Crystal",
+      "source": "source/arcanite-crystal.png",
+      "source_sha256": "047a0b97ae62fe1cb302adec6c6bc27c790d53b041b7bbd89cc66e7523f3cf2b",
+      "icon": "icons\\arcanite-crystal-36.png",
+      "real_alpha": true,
+      "source_size": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "name": "Seraphite Core",
+      "source": "source/seraphite-core.png",
+      "source_sha256": "92e79e51b660c47c28aaaf816f0f6e6e645f2747baba3517a4483af40283ce24",
+      "icon": "icons\\seraphite-core-36.png",
+      "real_alpha": true,
+      "source_size": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "name": "Divinium Essence",
+      "source": "source/divinium-essence.png",
+      "source_sha256": "0b2041dd34d93f7f52079999e202cb2257e79e6672127336b8d156622769babf",
+      "icon": "icons\\divinium-essence-36.png",
+      "real_alpha": true,
+      "source_size": [
+        1254,
+        1254
+      ]
+    }
+  ],
+  "production_assets": "../holy-suit-wares/generated/manifest.json"
+}

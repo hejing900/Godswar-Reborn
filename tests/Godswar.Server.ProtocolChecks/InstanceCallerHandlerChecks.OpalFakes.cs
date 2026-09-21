@@ -15,6 +15,8 @@ internal static partial class InstanceCallerHandlerChecks
         public LegacyInstanceDailyEntryClaimStatus ClaimStatus { get; set; } =
             LegacyInstanceDailyEntryClaimStatus.Claimed;
 
+        public ushort DailyEntryLimit { get; set; } = 4;
+
         public List<LegacyInstanceDailyEntryClaimRequest> Claims { get; } =
             [];
 
@@ -44,9 +46,8 @@ internal static partial class InstanceCallerHandlerChecks
                 : [];
             return Task.FromResult(new LegacyInstanceDailyEntryClaimResult(
                 ClaimStatus,
-                DailyEntryLimit: 4,
-                FreeEntryLimit: 3,
-                payers,
+                DailyEntryLimit: DailyEntryLimit,
+                FreeEntryLimit: 3,                payers,
                 PaidRetryLimit: 1));
         }
 

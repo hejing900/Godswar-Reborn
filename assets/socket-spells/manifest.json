@@ -1,0 +1,40 @@
+{
+  "atlas_size": 1024,
+  "entries": [
+    {
+      "atlas": "SocketSpells.gwo",
+      "item_id": 4270,
+      "name": "Socket Spell I",
+      "slug": "socket-spell-1",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "atlas": "SocketSpells.gwo",
+      "item_id": 4271,
+      "name": "Socket Spell II",
+      "slug": "socket-spell-2",
+      "x": 36,
+      "y": 0
+    },
+    {
+      "atlas": "SocketSpells.gwo",
+      "item_id": 4272,
+      "name": "Socket Spell III",
+      "slug": "socket-spell-3",
+      "x": 72,
+      "y": 0
+    },
+    {
+      "atlas": "SocketSpells.gwo",
+      "item_id": 4273,
+      "name": "Socket Spell IV",
+      "slug": "socket-spell-4",
+      "x": 108,
+      "y": 0
+    }
+  ],
+  "schema_version": 1,
+  "sprite_size": 36,
+  "texture": "./Localization/en_us/UI/Texture/SocketSpells.gwo"
+}

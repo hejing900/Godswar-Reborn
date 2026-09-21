@@ -8,15 +8,8 @@ internal static partial class MedusaInstanceOwnershipChecks
     {
         await using var fixture =
             await MonsterPlayerHitFixture.CreateAsync("E1-Elite");
-        var tick = fixture.Runtime.Owner.Invoke(
-            map => map.AdvanceMonsters(
-                DateTimeOffset.UtcNow.AddMinutes(1),
-                session => fixture.Registry.TryGetPlayerLifeRevision(
-                    session,
-                    out var life)
-                    ? life
-                    : null),
-            TimeSpan.FromSeconds(3));
+        var tick = MonsterOwnerCheckSteps.Advance(fixture.Runtime, fixture.Registry,
+            DateTimeOffset.UtcNow.AddMinutes(1));
         var emitted = tick.Updates.Single(update =>
             update.Kind == MonsterRuntimeUpdateKind.Attacked &&
             update.Monster.ObjectId == fixture.Source.ObjectId &&
