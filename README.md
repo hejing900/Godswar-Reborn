@@ -17,6 +17,9 @@ NPC对话链路技术文档以总结（后续可添加所有NPC对话链路根�
 经验加成道具技术文档以总结（目前以添加宠物，人物经验，工会总体没做，专长没做）.
 
 荣誉，徽记，奖章以实现，相关NPC以实现.
+宠物所有技能，所有功能已经实现，创建工会建筑，供奉，加成以实现.
+
+All pet skills and all pet features are implemented; guild building creation, worship, and bonuses are implemented.
 更多技术路线请阅读docs文件夹.
 
 更多内容请参照https://github.com/p5y-Ph3R/Godswar-Reborn.
@@ -272,6 +275,8 @@ Implemented:
 - Map-specific NPC interaction IDs, including Holy Stone Artisan dialog/action routing in both Sparta and Athens
 - Secure networking: PreviewReadyV6 completed original-client TLS authentication, authenticated encrypted UDP binding, authoritative movement, forced one-way TLS fallback/correction, and a ten-minute Soak. Exact rollback restored stock files and disabled activation; protected receipt `completion-0a73fd79-961b-42c7-82cc-9e4a6f9e3355.json` has SHA-256 `5EB6E369...F4A6F` ([acceptance record](docs/network-infrastructure-controlled-host-acceptance.md)). The secure Docker profile publishes only loopback `6599/TCP`, `7443/TCP`, and `7444/UDP`; viewer parity was `Unavailable`, and production security/capacity gates remain ([Slice 9 overview](docs/network-infrastructure-phase3-slice9c-protected-udp.md), [Phase 4 record](docs/network-infrastructure-phase4-authoritative-movement.md)).
 - Raw-authentication retirement: checked-in defaults reject raw startup; the unsafe original-client path now requires the explicit loopback-only `legacy-raw` Docker profile. The playable `7FB43C8D...BA07F9` Origin plus deterministic secure Net `A26096B0...D50AA4` pair passed exact offline gates, but is not installed or live re-accepted. An Origin hash is compatibility metadata rather than authentication or anti-cheat ([B14 evidence](docs/data-architecture-b14-raw-auth-retirement-20260731.md)).
+- Pets: all pet skills and all pet features are implemented, including learned-skill activation from pet skill books, innate talents, rebirth, care/decay, owner merge, discard/delete, presence audit, and durable pet persistence
+- Guilds: guild building creation, worship, and bonuses are implemented, including the guild registrar, buildings, member duties, donations, proclamation, guild text, and altar worship with settlement and decay ([guild system](docs/工会系统技术文档.md), [pet skills/talents](docs/pet-skills-talents.md))
 
 The multiplayer, NPC, and captured-monster synchronization above is server-side. It does not require game client code changes; a client already configured to connect to this server can use it as-is. The patches below cover separate extended-grade, rank, aura, talent, and native client-stability work.
 
