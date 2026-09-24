@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.Json;
 using Godswar.Server.Application.Items;
@@ -11,39 +10,61 @@ internal sealed record PetSkillBookActivationDefinition(
     int FamilyType,
     short Priority,
     int RuntimeSkillId,
+    int RestrictedSpeciesId,
     PetSkillTraitRequirement TraitRequirement);
 
 /// <summary>
-/// Fail-closed allow-list for the stock pet-skill families reviewed for
-/// live activation. Item metadata and learned-skill content must agree with
-/// this independent mapping before a book can reach durable mutation code.
+/// Fail-closed allow-list for the stock pet-skill books reviewed for live
+/// activation. Item metadata and learned-skill content must agree with this
+/// independent mapping before a book can reach durable mutation code.
 /// </summary>
-internal static class PetSkillBookActivationPolicy
+internal static partial class PetSkillBookActivationPolicy
 {
-    private static readonly FrozenDictionary<
-        uint,
-        (int RuntimeSkillId, short Priority)> ReviewedBooks =
-        new Dictionary<uint, (int, short)>
+    /// <summary>
+    /// Every distinct stock book is reviewed, so the allow-list sizes are
+    /// invariants of the installed client rather than a subset selection. The
+    /// client repeats twelve exact item rows (10600-10605 and 10610-10615), so
+    /// its 402 book rows collapse to 390 distinct item IDs.
+    /// </summary>
+    public const int ReviewedBookCount = 390;
+    public const int SpeciesExclusiveFamilyCount = 44;
+
+    static PetSkillBookActivationPolicy()
+    {
+        if (ReviewedBooks.Count != ReviewedBookCount ||
+            SpeciesExclusiveFamilies.Count != SpeciesExclusiveFamilyCount)
         {
-            [10464] = (3900, 1), [10465] = (3904, 2),
-            [10466] = (3908, 3), [10467] = (3912, 4),
-            [10468] = (3916, 5), [10469] = (3920, 6),
-            [10510] = (4500, 1), [10511] = (4503, 2),
-            [10512] = (4507, 3), [10513] = (4511, 4),
-            [10514] = (4515, 5), [10515] = (4519, 6),
-            [10530] = (4600, 1), [10531] = (4604, 2),
-            [10532] = (4608, 3), [10533] = (4612, 4),
-            [10534] = (4616, 5), [10535] = (4620, 6),
-            [10590] = (5200, 1), [10591] = (5204, 2),
-            [10592] = (5208, 3), [10593] = (5212, 4),
-            [10594] = (5216, 5), [10595] = (5220, 6),
-            [10700] = (5600, 1), [10701] = (5604, 2),
-            [10702] = (5608, 3), [10703] = (5612, 4),
-            [10704] = (5616, 5), [10705] = (5620, 6)
-        }.ToFrozenDictionary();
+            throw new InvalidDataException(
+                "The installed-client pet skill-book catalog is incomplete.");
+        }
+    }
 
     public static bool IsReviewedItem(uint itemId) =>
         ReviewedBooks.ContainsKey(itemId);
+
+    /// <summary>
+    /// Species that exclusively owns a skill family, or zero when every pet
+    /// may learn it.
+    /// </summary>
+    public static int ResolveRestrictedSpeciesId(int familyType) =>
+        SpeciesExclusiveFamilies.TryGetValue(familyType, out var speciesId)
+            ? speciesId
+            : 0;
+
+    /// <summary>
+    /// Whether the carried pet may consume this book. A restricted family is
+    /// open to its owning species and to any pet that was born with that
+    /// family as its species starter skill, so an innate skill can always be
+    /// advanced. The pet's current species decides, and a species change never
+    /// invalidates a family the pet already learned.
+    /// </summary>
+    public static bool CanSpeciesLearn(
+        int petSpeciesId,
+        int petInnateFamilyType,
+        PetSkillBookActivationDefinition book) =>
+        book.RestrictedSpeciesId == 0 ||
+        book.RestrictedSpeciesId == petSpeciesId ||
+        book.FamilyType == petInnateFamilyType;
 
     public static bool TryResolve(
         IItemTemplateCatalog items,
@@ -79,6 +100,7 @@ internal static class PetSkillBookActivationPolicy
             curve.FamilyType,
             curve.Priority,
             curve.FirstRuntimeSkillId,
+            ResolveRestrictedSpeciesId(curve.FamilyType),
             curve.LearnTraitRequirement);
         return true;
     }

@@ -294,11 +294,11 @@ internal static partial class WorldContentReaderDialogueChecks
     {
         var reader = await GeneratedWorldContentReaderLoader.LoadAsync();
         Check.Equal(
-            364,
+            376,
             reader.Manifest.NpcDialogues.EntryCount,
-            "generated fallback pins its 356 NPC texts and 8 reviewed routes");
+            "generated fallback pins its 368 NPC texts and 8 reviewed routes");
         Check.Equal(
-            "C0AB5E8B4173245565DCD36BE54DA06881479E376FD9303CC8FCC0D93C12B36C",
+            "6F42A44204AFED10058F117DD1EA845CC40641C834FE340953DB47AD0AD21996",
             reader.Manifest.NpcDialogues.Sha256,
             "generated fallback dialogue publication has a golden revision");
 

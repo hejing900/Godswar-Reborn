@@ -141,8 +141,10 @@ internal static partial class PetPresenceProtocolChecks
             executor);
         await fixture.InvokeAsync(
             CreateActionPacket(opcode, PetId, operationId));
-        var expectedPacketCount = expectedOperation ==
-            PetPresenceOperation.Take ? 3 : 1;
+        // Take, Call Out and Recall each move which pet supplies the summoned
+        // learned-skill passives, so every one of them republishes the owner's
+        // calculated stats after its native result frame.
+        const int expectedPacketCount = 3;
         var packets = await fixture.Transport.ReadLegacyPacketsAsync(
             expectedPacketCount);
         Check.Equal(
@@ -152,20 +154,10 @@ internal static partial class PetPresenceProtocolChecks
         Check.True(
             ReadOpcode(packets[0]) == Opcodes.PetOperationResult,
             $"{expectedOperation} begins with its native result frame");
-        if (expectedOperation == PetPresenceOperation.Take)
-        {
-            Check.True(
-                ReadOpcode(packets[1]) == 10_167 &&
-                ReadOpcode(packets[2]) == 10_166,
-                "Take refreshes the changed carried-skill source in 10167 then 10166 order");
-        }
-        else
-        {
-            Check.True(
-                packets.All(packet =>
-                    ReadOpcode(packet) == Opcodes.PetOperationResult),
-                $"{expectedOperation} preserves the carried-skill source without a stat refresh");
-        }
+        Check.True(
+            ReadOpcode(packets[1]) == 10_167 &&
+            ReadOpcode(packets[2]) == 10_166,
+            $"{expectedOperation} refreshes the moved summoned-skill source in 10167 then 10166 order");
         var response = packets[0];
 
         Check.True(

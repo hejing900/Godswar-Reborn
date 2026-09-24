@@ -206,6 +206,11 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             UPDATE public.character_pets
             SET contributes_to_character = @contributes,
                 current_energy = @currentEnergy,
+                amity = CASE
+                    WHEN @contributes
+                        THEN GREATEST(0, amity - @amityCost)
+                    ELSE amity
+                END,
                 revision = revision + 1,
                 updated_at = transaction_timestamp()
             WHERE id = @petId
@@ -218,6 +223,9 @@ internal sealed partial class PostgresPetDurableCommandExecutor
         update.Parameters.AddWithValue("petId", pet.PetId);
         update.Parameters.AddWithValue("characterId", characterId);
         update.Parameters.AddWithValue("contributes", plan.IsMerging);
+        update.Parameters.AddWithValue(
+            "amityCost",
+            PetManagerPlanner.OwnerMergeAmityCost);
         update.Parameters.AddWithValue(
             "currentEnergy",
             plan.PetAfter.CurrentEnergy);

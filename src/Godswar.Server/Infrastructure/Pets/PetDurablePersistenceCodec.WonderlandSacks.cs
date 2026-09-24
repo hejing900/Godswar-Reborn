@@ -17,7 +17,8 @@ internal static partial class PetDurablePersistenceCodec
             receipt.PetId, receipt.PetLevel, receipt.PetExperience, receipt.PetRevision,
             receipt.IsCarried, receipt.IsSummoned, receipt.PresenceOperation, receipt.AggregateRevision,
             receipt.AuditReference, receipt.OutboxEventId, receipt.HatchRank, receipt.SkillLearn,
-            receipt.PlayerSkillLearn, receipt.WonderlandSack, receipt.PlayerExperience));
+            receipt.PlayerSkillLearn, receipt.WonderlandSack, receipt.PlayerExperience,
+            receipt.CareRestore));
     }
 
     private static PetDurableReceipt DecodeBagItemActivation(ReadOnlySpan<byte> payload)
@@ -32,9 +33,12 @@ internal static partial class PetDurablePersistenceCodec
             stored.IsCarried, stored.IsSummoned, stored.PresenceOperation, stored.AggregateRevision,
             stored.AuditReference, stored.OutboxEventId, HatchRank: stored.HatchRank,
             SkillLearn: stored.SkillLearn, PlayerSkillLearn: stored.PlayerSkillLearn,
-            WonderlandSack: stored.WonderlandSack, PlayerExperience: stored.PlayerExperience);
+            WonderlandSack: stored.WonderlandSack, PlayerExperience: stored.PlayerExperience,
+            CareRestore: stored.CareRestore);
     }
 
+    // The care-restore member is appended, so a v5 payload written before the
+    // feature simply decodes with a null member.
     private sealed record PersistedBagItemActivationReceiptV5(
         short ContractVersion, ushort Family, byte Status, int AccountId, int CharacterId,
         int KitBagSlot, int EquipmentSlot, long PetId, short PetLevel, long PetExperience,
@@ -42,5 +46,6 @@ internal static partial class PetDurablePersistenceCodec
         long AggregateRevision, string AuditReference, Guid? OutboxEventId,
         PetHatchRankEvidence? HatchRank, PetSkillLearnEvidence? SkillLearn,
         PlayerSkillLearnEvidence? PlayerSkillLearn, WonderlandSackOpenEvidence? WonderlandSack,
-        PlayerExperienceItemEvidence? PlayerExperience);
+        PlayerExperienceItemEvidence? PlayerExperience,
+        PetCareRestoreEvidence? CareRestore = null);
 }

@@ -10,6 +10,7 @@ internal static partial class PacketBuilder
     private const ushort OwnedPetListOpcode = 0x27FD;
     private const ushort PetOperationResultOpcode = 0x2804;
     private const ushort PetSkillStateOpcode = 0x2807;
+    private const ushort PetCareStateOpcode = 0x2805;
     private const ushort PetShedExpansionResultOpcode = 0x2809;
     private const int OwnedPetListHeaderLength = 8;
     private const int OwnedPetRecordLength = 0xA8;
@@ -71,6 +72,39 @@ internal static partial class PacketBuilder
             packet.AsSpan(12, OwnedPetMaximumSkillCount * sizeof(ushort)),
             pet.PetId,
             activeSkills);
+        return packet;
+    }
+
+    /// <summary>
+    /// Builds the stock client's live pet-care refresh (opcode 10245). This
+    /// updates one existing pet bean's satiety, amity and current lifetime
+    /// without rebuilding carry/summon presentation state.
+    /// </summary>
+    public static byte[] PetCareState(
+        long petId,
+        int satiety,
+        int amity,
+        int remainingLifetime)
+    {
+        if (petId is <= 0 or > uint.MaxValue)
+        {
+            throw new InvalidDataException(
+                $"Pet ID {petId} cannot be represented by the native client.");
+        }
+
+        var packet = new byte[16];
+        BinaryPrimitives.WriteUInt16LittleEndian(packet, 16);
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(2),
+            PetCareStateOpcode);
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            packet.AsSpan(4),
+            checked((uint)petId));
+        packet[9] = ToPercentageByte(satiety);
+        packet[11] = ToPercentageByte(amity);
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(14, sizeof(ushort)),
+            ToUInt16(remainingLifetime));
         return packet;
     }
 
@@ -452,6 +486,10 @@ internal enum PetOperationResultCode : byte
 {
     TakeSucceeded = 1,
     TakeFailed = 2,
+    // Captured for the discard at 2026-09-24 23:57:39: the reference answered
+    // the delete request with code 3 and no further pet record.
+    DeleteSucceeded = 3,
+    DeleteFailed = 4,
     RecallSucceeded = 5,
     RecallFailed = 6,
     CallOutSucceeded = 7,

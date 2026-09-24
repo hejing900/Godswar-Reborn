@@ -22,6 +22,7 @@ using Godswar.Server.Infrastructure.Messaging;
 using Godswar.Server.Infrastructure.OnlineAwards;
 using Godswar.Server.Infrastructure.Pets;
 using Godswar.Server.Infrastructure.Progression;
+using Godswar.Server.Infrastructure.Quests;
 using Godswar.Server.Infrastructure.Rewards;
 using Godswar.Server.Infrastructure.Reconciliation;
 using Godswar.Server.Infrastructure.Realms;
@@ -31,6 +32,8 @@ using Godswar.Server.Infrastructure.World;
 using Godswar.Server.Infrastructure.Warehouse;
 using Godswar.Server.Infrastructure.WorldInstances;
 using Godswar.Server.Infrastructure.WishingPool;
+using Godswar.Server.Infrastructure.LuckyGods;
+using Godswar.Server.Infrastructure.Guilds;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.State;
 using Npgsql;
@@ -101,6 +104,11 @@ internal sealed class PostgresApplicationDataRuntime :
         _dataSource = NpgsqlDataSource.Create(connectionString);
         Accounts = new PostgresAccountStore(_dataSource);
         WishingPoolUsage = new PostgresWishingPoolUsageStore(_dataSource);
+        QuestAppraisal = new PostgresQuestAppraisalStore(_dataSource);
+        LuckyGodsWish = new PostgresLuckyGodsWishStore(_dataSource);
+        Guilds = new PostgresGuildStore(
+            _dataSource,
+            new PostgresGuildAltarContent(_dataSource));
         RealmCatalog = new PostgresRealmCatalogReader(_dataSource);
         var characterReader =
             new PostgresCharacterSnapshotReader(
@@ -307,6 +315,22 @@ internal sealed class PostgresApplicationDataRuntime :
     /// The Wishing Pool's per-character free-wish counter.
     /// </summary>
     public PostgresWishingPoolUsageStore WishingPoolUsage { get; }
+
+    /// <summary>
+    /// The permanent quest experience appraisal behind the quest window's
+    /// 经验加成 tab.
+    /// </summary>
+    public PostgresQuestAppraisalStore QuestAppraisal { get; }
+
+    /// <summary>
+    /// The divine wish's per-character streak and unclaimed prize pool.
+    /// </summary>
+    public PostgresLuckyGodsWishStore LuckyGodsWish { get; }
+
+    /// <summary>
+    /// The guild tables behind the guild registrar.
+    /// </summary>
+    public PostgresGuildStore Guilds { get; }
 
     public IRealmCatalogReader RealmCatalog { get; }
 

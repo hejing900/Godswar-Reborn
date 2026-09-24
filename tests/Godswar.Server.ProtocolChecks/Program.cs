@@ -184,9 +184,11 @@ internal static partial class Program
             (
                 CompactItemClassAttributeChecks.CheckName,
                 CompactItemClassAttributeChecks.RunAsync),
-            ("NPC definitions and spawn layout", CheckNpcDefinitionsAndSpawnLayoutAsync),
-            ("NPC multi-segment scene-key generation", NpcMultiSegmentSceneChecks.RunAsync),
+            ("NPC definitions and spawn layout", CheckNpcDefinitionsAndSpawnLayoutAsync),            ("NPC multi-segment scene-key generation", NpcMultiSegmentSceneChecks.RunAsync),
             ("NPC movement-cell visibility", CheckNpcMovementCellVisibilityAsync),
+            (
+                LuckyGodsWishPolicyChecks.CheckName,
+                LuckyGodsWishPolicyChecks.RunAsync),
             ("Monster movement-cell visibility and spawn layout", CheckMonsterMovementCellVisibilityAsync),
             ("World boss outdoor-area catalog", WorldBossCatalogChecks.RunAsync),
             (MonsterLootChannelChecks.CheckName, MonsterLootChannelChecks.RunAsync),

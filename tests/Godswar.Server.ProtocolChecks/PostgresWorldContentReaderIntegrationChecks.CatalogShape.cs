@@ -50,13 +50,11 @@ internal static partial class PostgresWorldContentReaderIntegrationChecks
         Check.Equal(
             MonsterContentBaselineV1.ExpectedEntryCount +
                 PostgresWorldContentReaderLoader.ThermopylaeSpawnCount +
-                PostgresWorldContentReaderLoader.SpartaNewbieSpawnCount +
-                PostgresWorldContentReaderLoader.AthensCityCapturedSpawnCount +
-                PostgresWorldContentReaderLoader.AthensNewbieCapturedSpawnCount,
+                PostgresWorldContentReaderLoader.SpartaNewbieSpawnCount,
             postgres.Manifest.Monsters.EntryCount,
             "pinned catalog uses every official monster definition plus the " +
-            "authored Thermopylae and Sparta newbie populations and the " +
-            "captured Athens populations");
+            "authored Thermopylae and Sparta newbie populations; the captured " +
+            "Athens populations travel in the revision itself");
         Check.Equal(
             81,
             postgres.Gameplay.Maps.Count,

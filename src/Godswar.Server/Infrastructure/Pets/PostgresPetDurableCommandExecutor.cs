@@ -16,6 +16,7 @@ namespace Godswar.Server.Infrastructure.Pets;
 internal sealed partial class PostgresPetDurableCommandExecutor :
     IPetDurableCommandExecutor,
     IPetOwnerMergeLifecycleStore,
+    IPetCareDecayStore,
     IPetGrowthPreviewLifecycleStore,
     IPetBasicSavvyPreviewLifecycleStore
 {
@@ -449,7 +450,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
         PetSkillLearnEvidence? SkillLearn = null,
         PlayerSkillLearnEvidence? PlayerSkillLearn = null,
         WonderlandSackOpenEvidence? WonderlandSack = null,
-        PlayerExperienceItemEvidence? PlayerExperience = null)
+        PlayerExperienceItemEvidence? PlayerExperience = null,
+        PetCareRestoreEvidence? CareRestore = null)
     {
         public bool Succeeded =>
             Status is PetDurableReceiptStatus.PlayerExperienceAdded or
@@ -469,6 +471,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor :
                 PetDurableReceiptStatus.PetBasicSavvyPreviewed or
                 PetDurableReceiptStatus.PetBasicSavvyAccepted or
                 PetDurableReceiptStatus.PetExperienceAdded or
+                PetDurableReceiptStatus.PetCareRestored or
                 PetDurableReceiptStatus.PetExperienceBoostActivated or
                 PetDurableReceiptStatus.PetToPetMerged or
                 PetDurableReceiptStatus.PetReborn or

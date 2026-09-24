@@ -13,6 +13,7 @@ internal sealed partial class PostgresGameStore
             PetPresenceOperation.Take => "take",
             PetPresenceOperation.CallOut => "summon",
             PetPresenceOperation.Recall => "dismiss",
+            PetPresenceOperation.Delete => "delete",
             _ => throw new ArgumentOutOfRangeException(
                 nameof(operation),
                 operation,

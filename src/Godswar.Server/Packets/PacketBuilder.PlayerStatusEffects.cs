@@ -136,10 +136,10 @@ internal static partial class PacketBuilder
         var stats = CharacterStats.FromCharacter(character);
         BinaryPrimitives.WriteInt32LittleEndian(
             packet.AsSpan(PlayerStatusEffectsMaximumHpOffset, sizeof(int)),
-            character.MaxHp);
+            stats.MaxHp);
         BinaryPrimitives.WriteInt32LittleEndian(
             packet.AsSpan(PlayerStatusEffectsMaximumMpOffset, sizeof(int)),
-            character.MaxMp);
+            stats.MaxMp);
         BinaryPrimitives.WriteInt32LittleEndian(
             packet.AsSpan(PlayerStatusEffectsHpRecoveryOffset, sizeof(int)),
             PlayerRecoveryCatalog.GetTotalHp(character));

@@ -129,7 +129,8 @@ try
         itemContent: itemContent,
         trainingDummies: TrainingDummyPolicy.Create(
             options.Game.TrainingDummies,
-            runtimeProfile));
+            runtimeProfile),
+        guildAltarSettlements: applicationData.Guilds);
     var gameHandlerFactory = new GameClientHandlerFactory(
         store,
         accountPersistence.Directory,
@@ -352,6 +353,11 @@ try
 
         criticalTasks.Start(CriticalTaskKind.MonsterWorld, registry.RunMonsterRoamingAsync);
         criticalTasks.Start(CriticalTaskKind.PlayerRecovery, registry.RunPlayerRecoveryAsync);
+        // The altar drain has to be applied whether or not the member is online, so
+        // it runs on the server's own clock rather than on a read.
+        criticalTasks.Start(
+            CriticalTaskKind.GuildAltarSettlement,
+            registry.RunGuildAltarSettlementAsync);
         criticalTasks.Start(CriticalTaskKind.ExperienceBoostReconciliation, registry.RunExperienceBoostStatusReconciliationAsync);
         if (options.Game.ZodiacEnergy.Enabled)
         {

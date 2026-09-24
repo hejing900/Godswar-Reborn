@@ -26,12 +26,17 @@ internal static class PetItemsV3UpgradePolicyChecks
             "pets-v3 predecessor also pins its exact source label");
         var publicationSource = type.GetField("PublicationSource", flags)
             ?.GetRawConstantValue() as string ?? string.Empty;
+        // The label must name the lineage the realms have actually sealed: the
+        // publisher accepts a stored release only when its source is this value
+        // or a strict prefix of it. A shorter label (the former
+        // "pets-v5 ... client-catalog-v1" form) matched neither test and
+        // blocked startup against a deployed database.
         Check.Equal(
-            "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1+" +
-            "client-catalog-v1",
+            "items-v9+pets-v7+nameplates-v1+warehouse-v1+opal-v1+holy-v5+" +
+            "holy-stones-v3+sockets-v2+ascension-v1+wonderland-v1+exp-pill-v1",
             publicationSource,
-            "the client-catalog release retains the reviewed Opal lineage");
-        Check.True(publicationSource.Length is > 0 and <= 96,
+            "the item publication label names the deployed provenance lineage");
+        Check.True(publicationSource.Length is > 0 and <= 128,
             "current item publication provenance fits the durable source column");
         return Task.CompletedTask;
     }

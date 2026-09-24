@@ -51,6 +51,28 @@ internal sealed partial class GameClientHandler : IClientHandler
         .PostgresWishingPoolUsageStore? _wishingPoolUsage;
 
     /// <summary>
+    /// The permanent quest experience appraisal; null when the storage provider
+    /// does not expose it, in which case the appraisal answers zero and pays no
+    /// bonus.
+    /// </summary>
+    private readonly Godswar.Server.Infrastructure.Quests
+        .PostgresQuestAppraisalStore? _questAppraisal;
+
+    /// <summary>
+    /// The divine wish's durable streak and unclaimed prize pool; null when the
+    /// storage provider does not expose it, in which case the wish is unavailable.
+    /// </summary>
+    private readonly Godswar.Server.Application.LuckyGods
+        .ILuckyGodsWishStore? _luckyGodsWish;
+
+    /// <summary>
+    /// The guild tables, or null in a profile without durable gameplay state, in
+    /// which case the guild registrar cannot found anything.
+    /// </summary>
+    private readonly Godswar.Server.Infrastructure.Guilds
+        .PostgresGuildStore? _guilds;
+
+    /// <summary>
     /// Set when the player chose the paid wish entry, so the following class click
     /// charges gold instead of consuming a free wish. Cleared once that click has
     /// been answered, and never kept across sessions.
@@ -156,6 +178,7 @@ internal sealed partial class GameClientHandler : IClientHandler
             await StopRealtimeMovementAsync();
             await StopNpcCatalogUpdatesAsync();
             await StopPetOwnerMergeEnergyLifecycleAsync();
+            await StopPetCareDecayAsync();
             UnregisterSkillCastInterruption();
             await StopPendingSkillCastsAsync();
 
@@ -196,6 +219,14 @@ internal sealed partial class GameClientHandler : IClientHandler
             }
 
             await DiscardPetGrowthPreviewForSessionExitAsync();
+
+            // The altar bonus is held by character id so it survives the session's
+            // character object being replaced; drop it when the session ends so the
+            // process cache does not accumulate entries for characters that are gone.
+            if (_character is { } leaving)
+            {
+                GuildAltarBonusCache.Clear(leaving.Id);
+            }
 
             if (_registered)
             {

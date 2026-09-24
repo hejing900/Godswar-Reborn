@@ -105,8 +105,8 @@ internal static partial class PacketBuilder
         BinaryPrimitives.WriteSingleLittleEndian(packet.AsSpan(EnterPositionYOffset, 4), 0f);
         BinaryPrimitives.WriteSingleLittleEndian(packet.AsSpan(EnterPositionZOffset, 4), character.PositionZ);
         // The client renders the current fields first and the max fields second.
-        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(EnterMaxHpOffset, 4), character.MaxHp);
-        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(EnterMaxMpOffset, 4), character.MaxMp);
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(EnterMaxHpOffset, 4), character.EffectiveMaxHp);
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(EnterMaxMpOffset, 4), character.EffectiveMaxMp);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(EnterCurrentHpOffset, 4), character.CurrentHp);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(EnterCurrentMpOffset, 4), character.CurrentMp);
         WriteLegacyFighterExperience(

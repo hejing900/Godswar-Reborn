@@ -43,17 +43,45 @@ internal static partial class PacketBuilder
     private const int ObjectiveAnswerRequiredOffset = 48;
 
     /// <summary>
+    /// Where the 10082 kill-quest frame carries its kill-quest marker.
+    /// </summary>
+    /// <remarks>
+    /// The reference server's answer for quest 1533 - two targets, 1414 and 1415 -
+    /// reads 8 here, the same marker the 10076 detail and the login snapshot
+    /// carry.
+    /// </remarks>
+    private const int ObjectiveAnswerKindOffset = 20;
+
+    /// <summary>
+    /// How many targets the parallel objective arrays can hold.
+    /// </summary>
+    /// <remarks>
+    /// The monster array starts at 10082 <c>+32</c> and the count array at
+    /// <c>+48</c>, sixteen bytes apart; the login snapshot's descriptor gives each
+    /// of its two arrays twelve bytes before the next field. Six is therefore what
+    /// every frame can carry, and no quest in the content names more than three
+    /// targets.
+    /// </remarks>
+    private const int QuestObjectiveMaximumSlots = 6;
+
+    /// <summary>
     /// The 10076 equivalents of those two fields, four bytes earlier.
     /// </summary>
     /// <remarks>
-    /// Kept as the verified offsets of a kill objective in this frame, but the
-    /// builder below never writes them: the reference server sends 10076 with
-    /// <c>kind = 4</c>, <c>monster = 0</c> and <c>required = 0</c> in every one of
-    /// the 79 frames captured - including the ones whose next quest is a kill
-    /// quest (521, 523, 524, 526, 527, 528, 531, 532, 533). Writing the objective
-    /// here is what killed the client: with 532's monster id filled in, the
-    /// hand-in answer disagreed with the reference in exactly four bytes and the
-    /// client faulted with a null dereference.
+    /// The same parallel objective arrays as 10082, four bytes earlier, and the
+    /// builder fills them for every quest that names a target - one slot per
+    /// target.
+    /// <para>
+    /// History worth keeping: the 2026-09-13 capture had every one of its 79 10076
+    /// frames carrying <c>kind = 4</c>, <c>monster = 0</c> and <c>required = 0</c>,
+    /// and filling a single objective into one of them (quest 532) made the client
+    /// fault with a null dereference - because the frame then disagreed with the
+    /// reference in exactly four bytes, with a kill-quest marker that did not match
+    /// the half-filled area. The 2026-09-24 capture settled it: the reference's own
+    /// 10076 for the two-target quest 1533 carries <c>kind = 8</c> with both of its
+    /// targets in the first two slots. Kind and area are therefore written
+    /// together, never one without the other.
+    /// </para>
     /// </remarks>
     private const int QuestNextDetailMonsterOffset = 28;
     private const int QuestNextDetailRequiredOffset = 44;
@@ -110,6 +138,17 @@ internal static partial class PacketBuilder
     // lists are assembled from the chain, so adding a quest never adds packet
     // code - it only adds a chain row.
 
+    /// <summary>One target a carried quest is still counting.</summary>
+    /// <remarks>
+    /// A quest can name several targets, and the snapshot carries every one of
+    /// them: the objective areas are parallel arrays, so slot <c>i</c> of the
+    /// monster array belongs with slot <c>i</c> of the count and progress arrays.
+    /// </remarks>
+    internal readonly record struct QuestSnapshotObjective(
+        uint MonsterId,
+        int Required,
+        int Current);
+
     /// <summary>One quest as the login snapshot describes it.</summary>
     /// <remarks>
     /// The descriptor carries the target monster, how many are wanted and how many
@@ -118,6 +157,14 @@ internal static partial class PacketBuilder
     /// character carrying quest 520 at three of ten had the monster at +40, the
     /// count at +56, the kill-quest marker at +68 and <c>3 &lt;&lt; 16</c> - the
     /// progress - at +80.
+    /// <para>
+    /// <paramref name="Objectives"/> is the multi-target form: when it is given,
+    /// every entry fills one slot of the parallel arrays and the single
+    /// <paramref name="MonsterId"/>/<paramref name="Required"/>/<paramref name="Current"/>
+    /// triple is ignored. The single form is kept because captured frames and
+    /// existing callers pass exactly one target, and it must stay byte for byte
+    /// what it was.
+    /// </para>
     /// </remarks>
     internal readonly record struct QuestSnapshotEntry(
         uint QuestId,
@@ -125,7 +172,8 @@ internal static partial class PacketBuilder
         uint ResponderNpcId,
         uint MonsterId = 0,
         int Required = 0,
-        int Current = 0);
+        int Current = 0,
+        IReadOnlyList<QuestSnapshotObjective>? Objectives = null);
 
     /// <summary>
     /// Builds the opcode-10090 accepted-quest snapshot from the captured frame.
@@ -168,7 +216,14 @@ internal static partial class PacketBuilder
                 packet.AsSpan(descriptor + 4, 4), quest.GiverNpcId);
             BinaryPrimitives.WriteUInt32LittleEndian(
                 packet.AsSpan(descriptor + 8, 4), quest.ResponderNpcId);
-            if (quest.Required > 0)
+            var descriptorObjectives = quest.Objectives;
+            if (descriptorObjectives is { Count: > 0 })
+            {
+                WriteSnapshotObjectives(
+                    packet.AsSpan(descriptor),
+                    descriptorObjectives);
+            }
+            else if (quest.Required > 0)
             {
                 BinaryPrimitives.WriteUInt32LittleEndian(
                     packet.AsSpan(
@@ -300,8 +355,8 @@ internal static partial class PacketBuilder
             return captured;
         }
 
-        var singleObjective = objectives.Count == 1;
-        var packet = singleObjective
+        var hasObjectives = objectives.Count > 0;
+        var packet = hasObjectives
             ? (byte[])Objective10082Bytes.Clone()
             : (byte[])AcceptAnswerFrame().Clone();
         BinaryPrimitives.WriteUInt32LittleEndian(
@@ -310,18 +365,21 @@ internal static partial class PacketBuilder
             packet.AsSpan(8, sizeof(uint)), responderNpcId);
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.AsSpan(12, sizeof(uint)), questId);
-        if (singleObjective)
+        if (hasObjectives)
         {
-            // The kill objective is what makes the client show the quest as
-            // unfinished and count the kills up. The reference sends the target
-            // monster id and how many are wanted for the quests whose objective
-            // area can hold them.
-            BinaryPrimitives.WriteUInt32LittleEndian(
-                packet.AsSpan(ObjectiveAnswerMonsterOffset, sizeof(uint)),
-                objectives[0].MonsterId);
+            // Every target the quest names goes into its own slot: the reference
+            // server's own answer for quest 1533, which asks for fifteen Plumed
+            // and fifteen Frenzied Harpies, carries monster 1414/1415 and count
+            // 20/20 in the first two slots of the two arrays. Writing only the
+            // first target is what left a multi-target quest showing one line.
+            WriteObjectiveSlots(
+                packet,
+                ObjectiveAnswerMonsterOffset,
+                ObjectiveAnswerRequiredOffset,
+                objectives);
             BinaryPrimitives.WriteInt32LittleEndian(
-                packet.AsSpan(ObjectiveAnswerRequiredOffset, sizeof(uint)),
-                objectives[0].Required);
+                packet.AsSpan(ObjectiveAnswerKindOffset, sizeof(int)),
+                QuestWithObjectivesKind);
         }
 
         ApplyQuestRewardRecords(
@@ -329,7 +387,7 @@ internal static partial class PacketBuilder
             QuestAnswerRecordOffset,
             questId,
             StarterQuestRewardRecords.AreaBytes,
-            singleObjective ? 8u : 4u);
+            hasObjectives ? 8u : 4u);
         return packet;
     }
 
@@ -456,7 +514,7 @@ internal static partial class PacketBuilder
         }
 
         var detailObjectives = StarterQuestObjectives.For(questId);
-        var detailSingleObjective = detailObjectives.Count == 1;
+        var detailHasObjectives = detailObjectives.Count > 0;
         var packet = (byte[])HandInDetailBytes.Clone();
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.AsSpan(4, sizeof(uint)), giverNpcId);
@@ -464,15 +522,18 @@ internal static partial class PacketBuilder
             packet.AsSpan(8, sizeof(uint)), questId);
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.AsSpan(QuestNextDetailKindOffset, sizeof(uint)),
-            detailSingleObjective ? 8u : 4u);
-        if (detailSingleObjective)
+            detailHasObjectives ? 8u : 4u);
+        if (detailHasObjectives)
         {
-            BinaryPrimitives.WriteUInt32LittleEndian(
-                packet.AsSpan(QuestNextDetailMonsterOffset, sizeof(uint)),
-                detailObjectives[0].MonsterId);
-            BinaryPrimitives.WriteInt32LittleEndian(
-                packet.AsSpan(QuestNextDetailRequiredOffset, sizeof(uint)),
-                detailObjectives[0].Required);
+            // The same parallel arrays as 10082, four bytes earlier. The reference
+            // server's own 10076 for quest 1533 carries both of its targets, so a
+            // multi-target follow-up detail is written the same way as the accept
+            // answer rather than left empty.
+            WriteObjectiveSlots(
+                packet,
+                QuestNextDetailMonsterOffset,
+                QuestNextDetailRequiredOffset,
+                detailObjectives);
         }
 
         ApplyQuestRewardRecords(
@@ -480,7 +541,7 @@ internal static partial class PacketBuilder
             QuestNextDetailRecordOffset,
             questId,
             QuestNextDetailRecordBytes,
-            detailSingleObjective ? 8u : 4u);
+            detailHasObjectives ? 8u : 4u);
         return packet;
     }
 
@@ -528,6 +589,89 @@ internal static partial class PacketBuilder
         var emptyLength = Math.Min(bytes, EmptyQuestRewardArea.Length);
         EmptyQuestRewardArea.AsSpan(0, emptyLength)
             .CopyTo(packet.AsSpan(offset, emptyLength));
+    }
+
+    /// <summary>
+    /// Writes every target a quest names into the frame's parallel objective
+    /// arrays: slot <c>i</c> holds one monster id and one required count.
+    /// </summary>
+    /// <remarks>
+    /// Verified against the reference server's own answer for quest 1533, whose
+    /// objective area carries monster 1414 at <c>+32</c> and 1415 at <c>+34</c>,
+    /// with 20 at <c>+48</c> and 20 at <c>+50</c>. The area is cleared first so a
+    /// template's own single target cannot bleed into a later slot.
+    /// </remarks>
+    private static void WriteObjectiveSlots(
+        byte[] packet,
+        int monsterOffset,
+        int requiredOffset,
+        IReadOnlyList<QuestObjective> objectives)
+    {
+        packet.AsSpan(monsterOffset, QuestObjectiveMaximumSlots * 2).Clear();
+        packet.AsSpan(requiredOffset, QuestObjectiveMaximumSlots * 2).Clear();
+        var count = Math.Min(objectives.Count, QuestObjectiveMaximumSlots);
+        for (var slot = 0; slot < count; slot++)
+        {
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                packet.AsSpan(monsterOffset + (slot * 2), 2),
+                checked((ushort)Math.Clamp(
+                    objectives[slot].MonsterId,
+                    0u,
+                    ushort.MaxValue)));
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                packet.AsSpan(requiredOffset + (slot * 2), 2),
+                checked((ushort)Math.Clamp(
+                    objectives[slot].Required,
+                    0,
+                    ushort.MaxValue)));
+        }
+    }
+
+    /// <summary>
+    /// Writes a carried quest's targets into one login-snapshot descriptor, plus
+    /// the progress of each slot.
+    /// </summary>
+    /// <remarks>
+    /// The monster and count arrays are the same parallel u16 arrays as 10082, at
+    /// the descriptor's own offsets. Progress is the one field with no
+    /// multi-target sample: the captured single-target descriptor puts the count
+    /// done in the high half of the word at <c>+80</c> (<c>3 &lt;&lt; 16</c> for
+    /// three of ten), so slot <c>i</c> keeps that shape at <c>+80 + 4i</c>. That
+    /// per-slot stride is inferred, not captured.
+    /// </remarks>
+    private static void WriteSnapshotObjectives(
+        Span<byte> descriptor,
+        IReadOnlyList<QuestSnapshotObjective> objectives)
+    {
+        descriptor.Slice(
+            QuestSnapshotMonsterOffset,
+            QuestObjectiveMaximumSlots * 2).Clear();
+        descriptor.Slice(
+            QuestSnapshotRequiredOffset,
+            QuestObjectiveMaximumSlots * 2).Clear();
+        var count = Math.Min(objectives.Count, QuestObjectiveMaximumSlots);
+        for (var slot = 0; slot < count; slot++)
+        {
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                descriptor.Slice(QuestSnapshotMonsterOffset + (slot * 2), 2),
+                checked((ushort)Math.Clamp(
+                    objectives[slot].MonsterId,
+                    0u,
+                    ushort.MaxValue)));
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                descriptor.Slice(QuestSnapshotRequiredOffset + (slot * 2), 2),
+                checked((ushort)Math.Clamp(
+                    objectives[slot].Required,
+                    0,
+                    ushort.MaxValue)));
+            BinaryPrimitives.WriteInt32LittleEndian(
+                descriptor.Slice(QuestSnapshotProgressOffset + (slot * 4), 4),
+                Math.Clamp(objectives[slot].Current, 0, ushort.MaxValue) << 16);
+        }
+
+        BinaryPrimitives.WriteInt32LittleEndian(
+            descriptor.Slice(QuestSnapshotKindOffset, 4),
+            QuestWithObjectivesKind);
     }
 
     /// <summary>

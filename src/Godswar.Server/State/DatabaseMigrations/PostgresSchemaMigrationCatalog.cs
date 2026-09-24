@@ -339,6 +339,19 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateWonderlandBossLootClaims(),
         CreateMonsterCombatBalance(),
         CreateBloodfangPetSpecies(),
-        CreateWishingPoolUsageState()
+        CreateWishingPoolUsageState(),
+        CreateGuildState(),
+        CreateGuildBuildingState(),
+        CreateGuildContent(),
+        CreateCharacterGuildDuty(),
+        CreateCharacterGuildDutyBackfill(),
+        CreateLuckyGodsWishState(),
+        CreateGuildAltarWorshipState(),
+        CreateGuildWorshipImpact(),
+        // Ascending id order is enforced at startup.
+        CreateGuildAltarWorshipSettlement(),
+        CreatePetCareConsumableTemplates(),
+        CreateQuestExperienceAppraisal(),
+        CreatePetPresenceDeleteOperation()
     ];
 }

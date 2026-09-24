@@ -36,7 +36,8 @@ internal sealed partial class GameSessionRegistry
         GameplayItemContent? itemContent = null,
         TrainingDummyPolicy? trainingDummies = null,
         ICharacterRuntimeProjectionReader?
-            characterRuntimeProjections = null)
+            characterRuntimeProjections = null,
+        GuildAltarSettlementStore? guildAltarSettlements = null)
         : this(
             store,
             zodiacEnergyOptions,
@@ -50,7 +51,8 @@ internal sealed partial class GameSessionRegistry
             gameplayCatalogs,
             itemContent,
             trainingDummies,
-            characterRuntimeProjections)
+            characterRuntimeProjections,
+            guildAltarSettlements)
     {
         if (!Enum.IsDefined(playerRuntimeMode))
         {

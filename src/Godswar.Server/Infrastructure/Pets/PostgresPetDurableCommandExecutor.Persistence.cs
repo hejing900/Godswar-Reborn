@@ -162,7 +162,8 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             transition.PetManagerUtility,
             transition.RebirthGrowth,
             transition.SkillLearn,
-            transition.PlayerSkillLearn);
+            transition.PlayerSkillLearn,
+            CareRestore: transition.CareRestore);
         receipt.Validate();
         var payload = PetDurablePersistenceCodec.Encode(receipt);
         var resultHash = PetDurablePersistenceCodec.Hash(payload);

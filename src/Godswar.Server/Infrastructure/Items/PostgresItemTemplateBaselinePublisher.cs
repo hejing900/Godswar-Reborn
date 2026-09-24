@@ -21,9 +21,15 @@ internal static partial class PostgresItemTemplateBaselinePublisher
     private const long PublicationLockId = 0x4954454D53434F4E;
     // The revision hashes the complete manifest; this bounded provenance label
     // identifies the current additions without restating every prior family.
+    //
+    // It is also the lineage a published realm is checked against:
+    // PrepareV9PublicationAsync accepts a stored release only when its source is
+    // this label or a strict prefix of it. A deployed realm already carries every
+    // family below, so the shorter "pets-v5 ... client-catalog-v1" form this
+    // constant used to hold matched neither test and blocked startup.
     private const string PublicationSource =
-        "items-v9+pets-v5+nameplates-v1+warehouse-v1+opal-v1+" +
-        "client-catalog-v1";
+        "items-v9+pets-v7+nameplates-v1+warehouse-v1+opal-v1+holy-v5+" +
+        "holy-stones-v3+sockets-v2+ascension-v1+wonderland-v1+exp-pill-v1";
 
     public static async Task<ItemTemplatePublicationResult>
         EnsurePublishedAsync(
@@ -47,11 +53,12 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             cancellationToken);
         if (existing is { ManifestVersion: 9 })
         {
-            await VerifyPublishedV9ReleaseAsync(
-                connection,
-                transaction,
-                existing,
-                cancellationToken);
+            var releaseMatchesBaselines =
+                await VerifyPublishedV9ReleaseAsync(
+                    connection,
+                    transaction,
+                    existing,
+                    cancellationToken);
             var publishedHolySuit =
                 await ReadPublishedHolySuitPoliciesAsync(
                     connection,
@@ -117,7 +124,22 @@ internal static partial class PostgresItemTemplateBaselinePublisher
                     transaction,
                     existing.Revision,
                     cancellationToken);
-            if (hasClassSuitItems &&
+            // The published release is only reusable while it still matches the
+            // reviewed baselines. A baseline that grew (a newly reviewed stock
+            // item) leaves the sealed revision one entry short, so validating it
+            // against the current manifest would fail and take startup down with
+            // it. Falling through republishes instead: the code below computes a
+            // new revision from the current baselines and re-points the
+            // publication at it, which is the same path a manifest upgrade uses.
+            var matchesReviewedBaselines =
+                await PublishedRevisionMatchesReviewedBaselinesAsync(
+                    connection,
+                    transaction,
+                    existing,
+                    cancellationToken);
+            if (releaseMatchesBaselines &&
+                matchesReviewedBaselines &&
+                hasClassSuitItems &&
                 hasElementalContent &&
                 hasSocketSpells &&
                 hasHolyStoneMaterials &&
@@ -298,13 +320,49 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             created);
     }
 
+    /// <summary>
+    /// Whether every reviewed pet-item identity has reached the sealed release.
+    /// </summary>
+    /// <remarks>
+    /// This mirrors the invariant the reuse path validates
+    /// (<c>EnsurePetItemMutableTemplateCompatibilityAsync</c> compares the
+    /// published rows against the reviewed baseline by id). A baseline that
+    /// gained a newly reviewed item leaves the sealed release short by exactly
+    /// that item, which used to be fatal at startup; reporting false here routes
+    /// publication into the republish path instead, where a new revision is
+    /// computed from the current baselines and the publication is re-pointed.
+    /// </remarks>
+    private static async Task<bool> PublishedRevisionMatchesReviewedBaselinesAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        PublishedItemRevisionState release,
+        CancellationToken cancellationToken)
+    {
+        var reviewedIds = PetItemCompatibilityItemIds;
+        await using var command = new NpgsqlCommand("""
+            SELECT count(*)::integer
+            FROM public.item_template_content_definitions
+            WHERE revision = @revision
+              AND id = ANY(@itemIds);
+            """, connection, transaction);
+        command.Parameters.AddWithValue("revision", release.Revision);
+        command.Parameters.Add(new NpgsqlParameter(
+            "itemIds",
+            NpgsqlDbType.Array | NpgsqlDbType.Integer)
+        {
+            Value = reviewedIds
+        });
+        var actual = Convert.ToInt32(
+            await command.ExecuteScalarAsync(cancellationToken));
+        return actual == reviewedIds.Length;
+    }
+
     private static async Task<PublishedItemRevisionState?>
         TryReadPublishedRevisionAsync(
             NpgsqlConnection connection,
             NpgsqlTransaction transaction,
             CancellationToken cancellationToken)
-    {
-        await using (var command = new NpgsqlCommand("""
+    {        await using (var command = new NpgsqlCommand("""
                          SELECT publication.revision, revision.entry_count,
                                 revision.source, revision.manifest_version,
                                 revision.attribute_count,

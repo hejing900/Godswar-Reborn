@@ -50,6 +50,15 @@ internal static partial class PostgresSchemaMigrationCatalog
             )
             VALUES
                 (
+                    10238,
+                    'C2S',
+                    'PetDeleteRequest',
+                    'pets',
+                    'known',
+                    'Permanently destroys one owned pet.',
+                    'Eight-byte frame carrying only the uint32 pet ID. Captured 2026-09-24 23:57:38; the reference answered with pet-operation result code 3.'
+                ),
+                (
                     10239,
                     'C2S',
                     'PetTakeRequest',

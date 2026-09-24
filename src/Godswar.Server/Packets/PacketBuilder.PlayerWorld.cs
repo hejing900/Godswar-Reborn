@@ -115,7 +115,7 @@ internal static partial class PacketBuilder
         BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(8, 4), (uint)Math.Max(character.Id, 0));
         PacketText.WriteFixedAscii(packet.AsSpan(12, 32), character.Name);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(44, 4), Math.Max(1, character.CurrentHp));
-        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(48, 4), Math.Max(1, character.MaxHp));
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(48, 4), Math.Max(1, character.EffectiveMaxHp));
         packet[52] = character.Gender;
         packet[53] = character.Camp;
         BinaryPrimitives.WriteUInt16LittleEndian(

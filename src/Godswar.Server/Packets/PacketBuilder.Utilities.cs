@@ -127,6 +127,11 @@ internal static partial class PacketBuilder
 
         if (packet.Length >= fieldBase + 112)
         {
+            // The live maximums already carry every projection that raises them
+            // (the projection applier owns that, and the altar's HP/MP ceiling is
+            // folded in there), so they are read as they stand. Do not add a
+            // projection on top here: the calculated stats carry the same bonus and
+            // it would be counted twice.
             BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(fieldBase + 104, 4), character.MaxHp);
             BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(fieldBase + 108, 4), character.MaxMp);
         }

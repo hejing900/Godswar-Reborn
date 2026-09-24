@@ -201,6 +201,43 @@ nor the second vector of extended `10286` is a raw Growth Rate channel.
 The client calls `10103` both “Merged Spirit” and “Merge Spirit.” The item
 catalog name is retained as **Merged Spirit**.
 
+## Care attributes
+
+`character_pets` carries the three native care attributes: satiety `0..100`,
+amity `0..100`, and `remaining_lifetime` `0..1500`. The owned-pet bootstrap
+(`10237`) publishes all three, and opcode `10245` is the dedicated 16-byte live
+refresh: pet ID at `+4`, satiety at `+9`, amity at `+11` and `uint16` current
+lifetime at `+14`.
+
+The installed client ships **no decay rate**: the only client text about these
+attributes is the recovery description, and `Pet.ini`, `Pet_Confect.xml` and
+`Pet_Alter.xml` describe models, food types and merge curves instead. The
+project cadence therefore owns the drain:
+
+| Rule | Value |
+|---|---|
+| Summoned satiety drain | `2` points per `10` minutes |
+| Summoned lifetime drain | `2` points per `10` minutes |
+| Owner Merge activation cost | `40` amity |
+| Minimum amity to Merge | `40` (unchanged activation gate) |
+| Cannot be sent out | satiety `0` or lifetime `0` |
+
+The drain rides the existing per-session pet timer that already restores Merge
+energy every six seconds: the tick accumulates elapsed summoned time and only
+writes when a whole ten-minute interval is due, so a recalled pet, a player
+offline, or a pet that is not carried accrues nothing. Each committed drain
+bumps the pet revision in one ownership-fenced PostgreSQL transaction and then
+publishes `10245`. Call Out is refused with `PetCareExhausted` when either
+attribute is exhausted; Take still carries the pet but never summons it.
+Owner Merge spends its forty amity inside the same transaction that writes
+`contributes_to_character`, so a replayed command cannot charge twice.
+
+Recovery items remain unimplemented: `PetItemCatalog` already classifies food
+(`10000-10043`), wine (`10060-10061`) and Effective Water (`10090`), and the
+client descriptions give exact values (food `+10/+20/+40/+100` satiety and
+`+3/+6/+15/+40` amity, wine `+100`/`+20` amity, water `+100` lifetime), but no
+runtime path consumes them yet.
+
 ## Pet skill families
 
 The client has 1,655 runtime rows grouped into 67 named skill families. Runtime
@@ -361,3 +398,56 @@ unverified server fields such as pet energy.
 - `Localization/en_us/UI/Base/LuaText.lua`
 - `Localization/en_us/UI/XML/Pet*.xml`
 - `Localization/en_us/UI/XML/NpcFun/NpcFunPet.lua`
+
+## Discard (permanent pet destruction)
+
+Discarding destroys an owned pet outright, so it is a physical delete rather
+than a fourth presence state.
+
+Wire evidence, captured 2026-09-24 at 23:57:38 local time:
+
+```
+23:57:38.094  S2C 10023 {object 0x4bc2}      the client selects the pet
+23:57:38.096  C2S 10238  0800 fe2743930300   8-byte frame, uint32 pet id
+23:57:39.540  S2C 10166 {player status refresh}
+23:57:39.540  S2C 10244  0c00 0428 43930300 03000000
+                                             result frame, code 3
+```
+
+`10238` carries nothing but the pet id, and the reference answers with
+pet-operation result code 3 - the code the client reads as a completed discard.
+The request has no dialog step, so it is answered from the durable pet-command
+path directly rather than through a merchant-style flow.
+
+Semantics, all enforced in one transaction:
+
+- The pet row leaves `character_pets`. Every child table cascades
+  (`character_pet_skills`, `character_pet_stat_values`,
+  `character_pet_character_bonuses`, `character_pet_growth_previews`,
+  `character_pet_basic_savvy_previews`).
+- `monster_death_pet_experience` restricts with `NO ACTION`, so its rows for the
+  pet are cleared first. That table only records which monster deaths were
+  already settled, so nothing is lost: a destroyed pet can never be settled
+  again. The pet's own level, experience and stats live on `character_pets`.
+- The audit row is written before the delete. `pet_operation_audit.pet_id` is
+  `ON DELETE SET NULL`, so the entry survives as the only durable record that
+  the pet existed and how it ended, with `pet_id_snapshot` intact.
+- A **carried** pet is refused with `PetUnavailable`. It is the model the native
+  client draws and the source of the summoned skill passives, so the player
+  recalls it first.
+- A pet sealed into an item is refused as well; `sealed_pet_items` references it
+  with `ON DELETE RESTRICT`.
+
+A database needs migration `20260924_167_pet_delete_audit_operation` before a
+discard can be audited: `pet_operation_audit.operation` is constrained to a verb
+list, and the `delete` verb is added by replacing that constraint. The
+replacement restates **every** verb the earlier revisions contributed - the
+union lives in `PostgresSchemaMigrationCatalog.PetPresenceAudit.cs` and must
+stay in step with `PostgresSchemaMigrationCatalog.PetManagerUtility.cs`, whose
+`v8` revision is the widest before this one.
+
+Verify with `tools/verify_pet_delete_migration.py` (every earlier verb is still
+accepted) and `tools/verify_pet_discard_delete.py` (the delete removes the pet
+and its children, leaves siblings alone, and keeps the audit history). Both run
+inside a transaction that is rolled back.
+

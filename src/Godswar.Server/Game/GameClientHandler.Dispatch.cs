@@ -226,6 +226,9 @@ internal sealed partial class GameClientHandler
                 await HandleMallPurchaseAsync(packet, cancellationToken);
                 break;
             case Opcodes.NpcShopPurchase: await HandleCapitalNpcShopPurchaseAsync(packet, cancellationToken); break;
+            case Opcodes.QuestAppraisal:
+                await HandleQuestAppraisalAsync(packet, cancellationToken);
+                break;
             case Opcodes.QuestSelection:
                 await HandleQuestSelectionAsync(packet, cancellationToken);
                 break;
@@ -252,6 +255,12 @@ internal sealed partial class GameClientHandler
                 break;
             case Opcodes.PlayerInspectVisualRequest:
                 await HandlePlayerInspectVisualRequestAsync(packet, cancellationToken);
+                break;
+            case Opcodes.PetDeleteRequest:
+                await HandlePetPresenceRequestAsync(
+                    packet,
+                    PetPresenceOperation.Delete,
+                    cancellationToken);
                 break;
             case Opcodes.PetTakeRequest:
                 await HandlePetPresenceRequestAsync(
@@ -334,6 +343,10 @@ internal sealed partial class GameClientHandler
                 _enterUiReadyReceived = true;
                 Console.WriteLine($"[game] EnterUiReady character={_character?.Name ?? "<none>"}");
                 await SendPostEnterBootstrapAsync(cancellationToken);
+                // A guild member's client only knows its guild from the guild
+                // messages, so the roster is published here: the window then
+                // shows the guild without the player visiting the registrar.
+                await SendGuildWindowAsync(cancellationToken);
                 // A quest whose objectives are already met is published only now:
                 // the client crashed dereferencing npc zero while the frame arrived
                 // ahead of the world entry, and the reference only ever sends it in
@@ -346,14 +359,91 @@ internal sealed partial class GameClientHandler
             case 10192:
                 Console.WriteLine($"[game] ignored {Opcodes.Name(packet.Opcode)} opcode={packet.Opcode}");
                 break;
+            // The guild window asks for its guild every time it is opened or
+            // refreshed. The request carries no fields, so the answer is the
+            // whole guild again - base info plus the member rows, whose online
+            // flags are what the window counts for its "online / cap" line.
+            case Opcodes.ConsortiaInfoRequest:
+                Console.WriteLine(
+                    $"[guild] window request character={_character?.Name ?? "<none>"}");
+                await SendGuildWindowAsync(cancellationToken);
+                break;
             // The client sells with 10060, not the known-but-unused 10053.
             case Opcodes.SellItem:
                 await HandleSellItemRequestAsync(packet, cancellationToken);
                 break;
+            // The guild registrar's create request, read off the client.
+            case GuildRegistrarProtocol.CreateRequest:
+                await HandleGuildCreateRequestAsync(packet, cancellationToken);
+                break;
+            // The guild window's leave action, read off the client.
+            case Opcodes.ConsortiaExit:
+                await HandleGuildExitRequestAsync(packet, cancellationToken);
+                break;
+            // The guild window's proclamation edit, read off the client.
+            case Opcodes.ConsortiaText:
+                await HandleGuildTextRequestAsync(packet, cancellationToken);
+                break;
+            // The guild window's member management, read off the client.
+            case GuildMemberActionProtocol.DutyRequest:
+                await HandleGuildDutyRequestAsync(packet, cancellationToken);
+                break;
+            case GuildMemberActionProtocol.MemberDelRequest:
+                await HandleGuildMemberDelRequestAsync(packet, cancellationToken);
+                break;
             default:
                 Console.WriteLine(
                     $"[game] unknown {Opcodes.Name(packet.Opcode)} opcode={packet.Opcode} len={packet.Length} {packet.ToHexPreview()}");
+                // Pet-work request recovery: probe candidate work opcodes by
+                // naming the raw frame so the real one can be identified from
+                // a single in-game click instead of a guess.
+                if (packet.Opcode is >= 10240 and <= 10299)
+                {
+                    Console.WriteLine(
+                        $"[game] pet-probe opcode={packet.Opcode} " +
+                        $"len={packet.Length} " +
+                        $"frame={Convert.ToHexString(packet.Buffer)} " +
+                        $"payload={Convert.ToHexString(packet.Payload)}");
+                }
+                DumpUnknownPacketWords(packet);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Prints every word of a packet the server does not handle, so a wire format
+    /// can be read straight off the log.
+    /// </summary>
+    /// <remarks>
+    /// Protocol work needs the whole packet: the bounded preview above is enough to
+    /// recognise a packet, not to read its fields. This is instrumentation for
+    /// reading a format, so it is bounded and only runs for opcodes that reach the
+    /// default branch.
+    /// </remarks>
+    private static void DumpUnknownPacketWords(GamePacket packet)
+    {
+        const int Limit = 512;
+        var payload = packet.Payload;
+        var length = Math.Min(payload.Length, Limit);
+        Console.WriteLine(
+            $"[game] unknown-words opcode={packet.Opcode} payload={payload.Length}" +
+            (payload.Length > Limit ? $" (first {Limit} bytes)" : string.Empty));
+        for (var offset = 0; offset < length; offset += 16)
+        {
+            var span = payload.Slice(offset, Math.Min(16, length - offset));
+            var words = new List<string>();
+            for (var index = 0; index + sizeof(int) <= span.Length;
+                 index += sizeof(int))
+            {
+                words.Add(
+                    System.Buffers.Binary.BinaryPrimitives
+                        .ReadInt32LittleEndian(span.Slice(index, sizeof(int)))
+                        .ToString());
+            }
+
+            Console.WriteLine(
+                $"    +{offset:D4} {Convert.ToHexString(span)}  " +
+                $"[{string.Join(' ', words)}]");
         }
     }
 

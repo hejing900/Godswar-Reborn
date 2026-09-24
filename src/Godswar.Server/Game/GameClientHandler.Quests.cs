@@ -62,13 +62,23 @@ internal sealed partial class GameClientHandler
             }
 
             var objectives = StarterQuestObjectives.For(quest.QuestId);
-            // A quest can ask for several targets; the window counts one at a
-            // time, so the descriptor names the objective still open instead of
-            // the first one - otherwise a quest whose first target is done reads
-            // as finished and the client offers a hand-in the server refuses.
-            var slot = objectives.Count > 0
-                ? StarterQuestObjectives.ActiveSlot(objectives, quest.Progress)
-                : -1;
+            // Every target the quest names is published, not just the one still
+            // open: the client draws one line per filled slot, so sending only the
+            // active objective is what made a multi-target quest show a single
+            // line. The reference server's own answer for the two-target quest
+            // 1533 carries both targets, and the same parallel slots are used
+            // here. Progress travels per slot, so finishing the first target
+            // updates its line instead of hiding the rest.
+            var targets = new PacketBuilder.QuestSnapshotObjective[
+                objectives.Count];
+            for (var slot = 0; slot < objectives.Count; slot++)
+            {
+                targets[slot] = new PacketBuilder.QuestSnapshotObjective(
+                    objectives[slot].MonsterId,
+                    objectives[slot].Required,
+                    StarterQuestObjectives.Counter(quest.Progress, slot));
+            }
+
             entries.Add(new PacketBuilder.QuestSnapshotEntry(
                 step.QuestId,
                 await ResolveQuestNpcIdForSnapshotAsync(
@@ -77,11 +87,7 @@ internal sealed partial class GameClientHandler
                 await ResolveQuestNpcIdForSnapshotAsync(
                     step.ResponderKey,
                     cancellationToken),
-                slot >= 0 ? objectives[slot].MonsterId : 0u,
-                slot >= 0 ? objectives[slot].Required : 0,
-                slot >= 0
-                    ? StarterQuestObjectives.Counter(quest.Progress, slot)
-                    : 0));
+                Objectives: targets));
             if (entries.Count == MaximumPublishedQuests)
             {
                 break;
@@ -484,10 +490,17 @@ internal sealed partial class GameClientHandler
         Console.WriteLine(
             $"[quest] hand-in character={_character.Name} quest={rewarded.QuestId}");
 
+        // The durable quest experience appraisal scales this hand-in's
+        // experience. Monster rewards keep their own multiplier path: the
+        // appraisal is quest-only, which is what the client's own SM_L0_06 text
+        // promises ("完成任务时可额外获得10%的经验").
+        var rewardExperience = await ScaleQuestRewardExperienceAsync(
+            rewarded.Experience,
+            cancellationToken);
         var progression = await _store.ApplyMonsterKillRewardAsync(
             _account?.Id ?? 0,
             _character.Id,
-            rewarded.Experience,
+            rewardExperience,
             rewarded.TalentPoints,
             cancellationToken);
         var levelUps = progression?.LevelUps ?? [];
@@ -545,39 +558,7 @@ internal sealed partial class GameClientHandler
 
         if (levelUps.Count > 0)
         {
-            try
-            {
-                var refreshedProjection =
-                    await _characterRuntimeProjections
-                        .ReadCalculatedStatsAsync(
-                            _account?.Id ?? 0,
-                            _character.Id,
-                            cancellationToken);
-                if (refreshedProjection is not null)
-                {
-                    var refreshedStats =
-                        CharacterLoadSnapshotHydrator.MapCalculatedStats(
-                            refreshedProjection);
-                    lock (_character.VitalsSync)
-                    {
-                        var currentHp = _character.CurrentHp;
-                        var currentMp = _character.CurrentMp;
-                        refreshedStats.ApplyTo(_character);
-                        ApplyElementalPassiveStats(_character, refreshedStats);
-                        _character.CurrentHp =
-                            Math.Clamp(currentHp, 0, _character.MaxHp);
-                        _character.CurrentMp =
-                            Math.Clamp(currentMp, 0, _character.MaxMp);
-                        _character.MarkVitalsChanged();
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                Console.WriteLine(
-                    $"[quest] level-up stat refresh deferred " +
-                    $"character={_character.Name}: {ex.Message}");
-            }
+            await RefreshLevelUpStatsAsync(_character, cancellationToken);
         }
 
         _registry.UpdateCharacter(

@@ -120,6 +120,29 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 cancellationToken);
         }
 
+        if (PetCareItemPolicy.TryResolvePublished(
+                _itemContent.Templates,
+                checked((uint)item.PropId),
+                out var careItem))
+        {
+            return await ExecuteWithBagConsumableCooldownAsync(
+                connection,
+                transaction,
+                envelope.Subject.CharacterId,
+                command.KitBagSlot,
+                item,
+                activationCancellationToken => ApplyPetCareItemAsync(
+                    connection,
+                    transaction,
+                    envelope.Subject.CharacterId,
+                    command.KitBagSlot,
+                    item,
+                    careItem,
+                    character,
+                    activationCancellationToken),
+                cancellationToken);
+        }
+
         if (PetExperienceItemPolicy.TryResolve(
                 _itemContent.Templates,
                 checked((uint)item.PropId),

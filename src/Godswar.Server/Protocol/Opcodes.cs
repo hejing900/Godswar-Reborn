@@ -91,6 +91,13 @@ internal static class Opcodes
     public const ushort PlayerAcceptedQuests = 10090;
     public const ushort QuestActionPair = 10091;
     public const ushort QuestActionPairAck = 10092;
+    // The quest window's third tab ("经验加成" / Increase EXP gain) carries the
+    // 我要鉴定 ("Appraisal") button. The stock client sends a six-byte 10093
+    // whose two payload bytes were zero in all four captured clicks, and the
+    // reference server answers an eight-byte frame carrying one 32-bit value,
+    // also zero in every capture. See
+    // docs/quest-experience-appraisal-20260924.md.
+    public const ushort QuestAppraisal = 10093;
     // 10076 = the follow-up quest's detail, 10086 = the completed hand-in,
     // 10077 = "quests this npc gives" (each with an available flag) and
     // 10080 = "quests this npc receives". All four are rebuilt from the chain.
@@ -132,6 +139,34 @@ internal static class Opcodes
     public const ushort PartyReject = 10132;
     public const ushort PartyRefresh = 10133;
     public const ushort PartyDestroy = 10134;
+    // The consortia window family, taken from the client's own receive
+    // dispatcher: its byte table at 0x4ee900 maps each of these opcodes to a
+    // case that pushes the matching MSG_CONSORTIA_* name. 10136 is the create
+    // request the client sends (GuildRegistrarProtocol.CreateRequest).
+    public const ushort ConsortiaCreateResponse = 10137;
+    public const ushort ConsortiaBaseInfo = 10138;
+    public const ushort ConsortiaUpdateBaseInfo = 10139;
+    public const ushort ConsortiaUpdateBasePartInfo = 10140;
+    public const ushort ConsortiaUpdatePlacardInfo = 10141;
+    public const ushort ConsortiaUpdateBuildingInfo = 10142;
+    public const ushort ConsortiaMemberList = 10143;
+    public const ushort ConsortiaMemberOne = 10144;
+    public const ushort ConsortiaInvite = 10145;
+    public const ushort ConsortiaInviteConfirm = 10146;
+    public const ushort ConsortiaDismiss = 10147;
+    public const ushort ConsortiaResponse = 10148;
+    public const ushort ConsortiaExit = 10149;
+    public const ushort ConsortiaText = 10150;
+    public const ushort ConsortiaDuty = 10151;
+    public const ushort ConsortiaMemberDel = 10152;
+    public const ushort ConsortiaNote = 10154;
+    public const ushort ConsortiaElementList = 10157;
+    public const ushort ConsortiaAltarInfo = 10162;
+    // The guild window's own refresh request. The client sends it with an empty
+    // four-byte body every time the window is opened; its name lives in the
+    // client's receive table as an unhandled slot, so the number is what the
+    // observed traffic identifies.
+    public const ushort ConsortiaInfoRequest = 10179;
     public const ushort ServerNote = 10169;
     public const ushort DesignationInfo = 10196;
     public const ushort DesignationSelection = 10198;
@@ -170,9 +205,14 @@ internal static class Opcodes
     public const ushort MonsterClaimState = 10322;
     public const ushort PlayerInspectVisualRequest = 10279;
     public const ushort PetTakeRequest = 10239;
+    // Permanently discards an owned pet. Captured on the reference server at
+    // 2026-09-24 23:57:38 as an eight-byte frame carrying only the pet id; the
+    // server answered with pet-operation result code 3.
+    public const ushort PetDeleteRequest = 10238;
     public const ushort PetCallOutRequest = 10240;
     public const ushort PetRecallRequest = 10241;
     public const ushort PetOperationResult = 10244;
+    public const ushort PetCareState = 10245;
     public const ushort PetExperience = 10261;
     public const ushort PetToPetMergeRequest = 10268;
     public const ushort PetToPetMergeResult = 10269;
@@ -262,6 +302,7 @@ internal static class Opcodes
             QuestAccepted => nameof(QuestAccepted),
             QuestActionPair => nameof(QuestActionPair),
             QuestActionPairAck => nameof(QuestActionPairAck),
+            QuestAppraisal => nameof(QuestAppraisal),
             QuestNextDetail => nameof(QuestNextDetail),
             QuestMarkerList => nameof(QuestMarkerList),
             QuestHandInList => nameof(QuestHandInList),
@@ -315,6 +356,7 @@ internal static class Opcodes
             MonsterClaimState => nameof(MonsterClaimState),
             PlayerInspectVisualRequest => nameof(PlayerInspectVisualRequest),
             PetTakeRequest => nameof(PetTakeRequest),
+            PetDeleteRequest => nameof(PetDeleteRequest),
             PetCallOutRequest => nameof(PetCallOutRequest),
             PetRecallRequest => nameof(PetRecallRequest),
             PetOperationResult => nameof(PetOperationResult),
@@ -333,6 +375,7 @@ internal static class Opcodes
             PackedPetDetailResponse => nameof(PackedPetDetailResponse),
             PetLevelUpgradeRequest => nameof(PetLevelUpgradeRequest),
             PetLevelUpgrade => nameof(PetLevelUpgrade),
+            PetCareState => nameof(PetCareState),
             Zodiac => nameof(Zodiac),
             Walk => nameof(Walk),
             ServerTimeRequest => nameof(ServerTimeRequest),

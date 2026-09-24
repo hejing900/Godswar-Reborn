@@ -1,10 +1,13 @@
 sealed partial class PacketTransactionLog
 {
-    private async Task UpsertNpcSpawnAsync(CapturedNpcSpawnRecord spawn, DateTimeOffset capturedAt)
+    private async Task UpsertNpcSpawnAsync(
+        CapturedNpcSpawnRecord spawn,
+        CapturedNpcTemplateLocation location,
+        DateTimeOffset capturedAt)
     {
         await using var command = _dataSource.CreateCommand(UpsertNpcSpawnSql);
-        command.Parameters.AddWithValue("map_id", spawn.MapId);
-        command.Parameters.AddWithValue("scene_key", spawn.SceneKey);
+        command.Parameters.AddWithValue("map_id", location.MapId);
+        command.Parameters.AddWithValue("scene_key", location.SceneKey);
         command.Parameters.AddWithValue("npc_key", spawn.NpcKey);
         command.Parameters.AddWithValue("template_key", spawn.TemplateKey);
         command.Parameters.AddWithValue("object_id", (long)spawn.ObjectId);

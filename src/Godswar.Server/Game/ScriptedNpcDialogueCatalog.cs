@@ -233,19 +233,102 @@ internal sealed partial class GameClientHandler
             [1] = [5, 6, 3],
             [2] = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
             [4] = [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-            [3] = [203],
-            [5] = [205],
-            [6] = [206]
+            [3] = DescriptionStep(3),
+            [5] = DescriptionStep(5),
+            [6] = DescriptionStep(6)
         };
         for (var altar = 10; altar <= 30; altar++)
         {
-            steps[altar] = [200 + altar];
+            steps[altar] = DescriptionStep(altar);
         }
 
         return new ScriptedNpcDialogue(
             FunctionNumber: 5,
             OpeningMenu: [1, 2, 4],
             Steps: steps);
+    }
+
+    /// <summary>
+    /// One building's page: the description alone, exactly as the spec records it.
+    /// </summary>
+    /// <remarks>
+    /// The page's action buttons cannot be added here. The altar's script reuses
+    /// its numbers on every page (page 1's <c>1</c> is the basic buildings, page
+    /// 2's <c>1</c> is the guild footstone, page 3's <c>1</c> is "new building"),
+    /// and the client does not reset button positions between replies, so acting
+    /// on the description page needs the server to track which level the dialogue
+    /// is on - which <c>docs/NPC对话链路技术文本.md</c> §2.11 records as beyond
+    /// its specification and therefore not done. An attempt without that state
+    /// drew the actions on top of each other and left them on stale slots
+    /// (measured 2026-09-22).
+    /// </remarks>
+    /// <summary>
+    /// One building's page: the description alone, which is what this table can
+    /// say. The actions depend on whether the guild already has the building, so
+    /// the page is answered from the guild's state instead
+    /// (<c>TryHandleGuildAltarActionAsync</c>).
+    /// </summary>
+    private static int[] DescriptionStep(int building) => [200 + building];
+
+    /// <summary>
+    /// The entries the player has clicked to reach this request, in order.
+    /// </summary>
+    /// <remarks>
+    /// Measured 2026-09-22 on the guild altar: the request carries the whole path in
+    /// <c>+12</c>, <c>+16</c>, <c>+20</c> and <c>+24</c> - not "the previous entry
+    /// plus the one clicked". One session grew exactly that way:
+    /// <c>(1,-1,-1,-1)</c> for page one, <c>(1,6,-1,-1)</c> for the building on the
+    /// page it opened, <c>(1,6,4,-1)</c> for the action on that building's page, and
+    /// <c>(1,6,4,4)</c> for the amount on the page the action opened. The depth is
+    /// how many of the four are present, the clicked entry is the last of them and
+    /// its page is the one before it. Reading only the first two made every
+    /// third-level click look like a second-level one, so acting on a building
+    /// redrew the building page - and that page's numbers, taken one level deeper,
+    /// are the client's worship prompts.
+    /// </remarks>
+    private static int[] DialogPath(GamePacket packet)
+    {
+        var payload = packet.Payload;
+        var path = new List<int>(4);
+        for (var offset = 12; offset <= 24 && offset + 4 <= payload.Length; offset += 4)
+        {
+            var value = System.Buffers.Binary.BinaryPrimitives
+                .ReadInt32LittleEndian(payload.Slice(offset, 4));
+            if (value < 0)
+            {
+                break;
+            }
+
+            path.Add(value);
+        }
+
+        return [.. path];
+    }
+
+    /// <summary>Where a request carries the number typed into the input box.</summary>
+    private const int DialogAmountOffset = 0x38;
+
+    /// <summary>
+    /// The amount the player typed into the dialogue's own input box, or a
+    /// non-positive value when the request carries none.
+    /// </summary>
+    /// <remarks>
+    /// Measured 2026-09-23 on the guild altar: the click path stops at the client's
+    /// confirm entry, and the number typed into the box the page draws
+    /// (<c>NpcFun.xml</c>'s <c>BijouEditBox</c>, <c>MoneyEditBox</c> and
+    /// <c>NumEditBox</c>) travels on its own word at <c>+0x38</c>. Across every
+    /// captured submission that word was the request's only populated word past the
+    /// path - 10, 123, 5000, 12345, 100000 and 123123 were each read there - while
+    /// every request that carried no typed amount read -1 in it, which is what lets
+    /// a non-positive value mean "nothing was typed".
+    /// </remarks>
+    private static int DialogAmount(GamePacket packet)
+    {
+        var payload = packet.Payload;
+        return payload.Length >= DialogAmountOffset + 4
+            ? System.Buffers.Binary.BinaryPrimitives
+                .ReadInt32LittleEndian(payload.Slice(DialogAmountOffset, 4))
+            : 0;
     }
 
     private static readonly ScriptedNpcDialogue GuildAltarDialogue =
@@ -299,41 +382,23 @@ internal sealed partial class GameClientHandler
         BuildGuildMemberAdvisorDialogue();
 
     /// <summary>
-    /// The scripted dialogue an NPC answers with, or <see langword="null"/> when
-    /// the NPC is not one of them.
-    /// </summary>
-    private static ScriptedNpcDialogue? ResolveScriptedNpcDialogue(
-        NpcSpawnDefinition npc) => npc.NpcKey switch
-        {
-            "Athens_083" or "Sparta_083" => MysteriousElderDialogue,
-            "Athens_120" or "Sparta_120" => ProfessionMentorDialogue,
-            "Athens_139" or "Sparta_139" => PersonalHelperDialogue,
-            "Athens_072" or "Sparta_072" => EventTransporterDialogue,
-            "Athens_038" or "Sparta_039" => GuildQuestSupervisorDialogue,
-            "Athens_050" or "Sparta_050" => GuildAltarDialogue,
-            "Athens_051" or "Sparta_051" => GuildMemberAdvisorDialogue,
-            _ => null
-        };
-
-    /// <summary>
-    /// Opens a scripted NPC's function menu.
+    /// Opens a scripted NPC's function menu by advertising every function it owns.
     /// </summary>
     private async Task SendScriptedNpcDialogueMenuAsync(
         NpcSpawnDefinition npc,
-        ScriptedNpcDialogue dialogue,
+        Dictionary<int, ScriptedNpcDialogue> dialogues,
         CancellationToken cancellationToken)
     {
         await _session.SendAsync(
             PacketBuilder.NpcDialogOpenAck(
                 npc.InteractionId,
-                [dialogue.FunctionNumber],
+                [.. dialogues.Keys],
                 npc.NpcKey),
             cancellationToken,
             "ScriptedNpcDialogueMenu");
         Console.WriteLine(
             $"[npc] scripted dialogue open npc={npc.InteractionId} " +
-            $"key={npc.NpcKey} function={dialogue.FunctionNumber} " +
-            $"menu=[{string.Join(',', dialogue.OpeningMenu)}]");
+            $"key={npc.NpcKey} functions=[{string.Join(',', dialogues.Keys)}]");
     }
 
     /// <summary>
@@ -341,9 +406,14 @@ internal sealed partial class GameClientHandler
     /// sent, and logs every word of the request so a selector that lands in an
     /// unexpected word can be seen in the server log.
     /// </summary>
+    /// <remarks>
+    /// The client names the function it is replying for through the dialog index, so an
+    /// NPC advertising several functions is routed to the single entry owning that index.
+    /// An index no entry owns is left unanswered rather than guessed at.
+    /// </remarks>
     private async Task HandleScriptedNpcDialogueAsync(
         NpcSpawnDefinition npc,
-        ScriptedNpcDialogue dialogue,
+        Dictionary<int, ScriptedNpcDialogue> dialogues,
         GamePacket packet,
         int dialogIndex,
         int subId,
@@ -351,7 +421,10 @@ internal sealed partial class GameClientHandler
     {
         var payload = packet.Payload;
         var words = new List<string>();
-        for (var index = 0; index < payload.Length / 4 && index < 7; index++)
+        // Every word of the request: the typed amounts the dialogue's input boxes
+        // carry are further in than the click path, so a bounded dump would hide
+        // exactly the field being looked for.
+        for (var index = 0; index * 4 + 4 <= payload.Length; index++)
         {
             words.Add(
                 $"p{index * 4}=" +
@@ -363,6 +436,14 @@ internal sealed partial class GameClientHandler
             $"[npc] scripted dialogue words npc={npc.InteractionId} " +
             $"key={npc.NpcKey} generic={subId} dialog={dialogIndex} " +
             $"len={packet.Length} {string.Join(' ', words)}");
+        if (!dialogues.TryGetValue(dialogIndex, out var dialogue))
+        {
+            Console.WriteLine(
+                $"[npc] scripted dialogue unknown function npc={npc.InteractionId} " +
+                $"key={npc.NpcKey} dialog={dialogIndex}");
+            return;
+        }
+
         var selection = payload.Length >= 20
             ? System.Buffers.Binary.BinaryPrimitives
                 .ReadInt32LittleEndian(payload.Slice(16, 4))
@@ -382,6 +463,17 @@ internal sealed partial class GameClientHandler
                 selection,
                 dialogue.OpeningMenu,
                 cancellationToken);
+            return;
+        }
+
+        if (await TryHandleGuildAltarActionAsync(
+                npc,
+                dialogIndex,
+                DialogPath(packet),
+                DialogAmount(packet),
+                selection,
+                cancellationToken))
+        {
             return;
         }
 

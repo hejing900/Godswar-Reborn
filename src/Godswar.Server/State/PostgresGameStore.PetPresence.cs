@@ -150,6 +150,17 @@ internal sealed partial class PostgresGameStore
                     petId,
                     target.IsSummoned,
                     cancellationToken),
+            // A discard physically destroys the pet and must be replayed through
+            // the durable pet-command path, which owns the outbox receipt and
+            // clears the kill ledger first. This older per-operation helper has
+            // no caller for it, so answering "not found" is safer than silently
+            // deleting a row without that receipt.
+            PetPresenceOperation.Delete =>
+                Rejected(
+                    PetPresenceTransitionStatus.PetNotFound,
+                    petId,
+                    target.IsCarried,
+                    target.IsSummoned),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(operation),
                 operation,

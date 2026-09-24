@@ -167,6 +167,14 @@ internal sealed partial class GameClientHandler
                     pet),
                 cancellationToken,
                 "DurablePetRebirthProgressionRefresh");
+            // Rebirth commits a new pet rank, which can select a higher
+            // learned-skill stage for the summoned pet's owner passives.
+            if (!await SendPetSkillOwnerStatRefreshAsync(
+                    "DurablePetRebirthSkillSource",
+                    cancellationToken))
+            {
+                return false;
+            }
         }
         // 10273 increments the native completed-rebirth counter and is not
         // idempotent. A duplicate skips it and receives only narrow current

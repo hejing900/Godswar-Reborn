@@ -68,6 +68,8 @@ internal sealed partial class GameClientHandler
             IsReviewedPetExperienceBoostPotion(itemId);
         var isExperienceBoostPotion =
             ExperienceBoostPotionPolicy.IsReviewedItem(itemId);
+        var isPetCareItem =
+            PetCareItemPolicy.IsReviewedItem(itemId);
         var isReviewedPetSkillBook =
             PetSkillBookActivationPolicy.IsReviewedItem(itemId);
         var isReviewedPlayerSkillBook =
@@ -111,7 +113,7 @@ internal sealed partial class GameClientHandler
         var isPackedSealJade = itemId == PetItemCatalog.PackedSealJade;
         if (isPetEgg || isPetShedExpansion || isPetSkillCellItem ||
             isPetExperienceItem || isPetExperienceBoostPotion ||
-            isExperienceBoostPotion ||
+            isExperienceBoostPotion || isPetCareItem ||
             isReviewedPetSkillBook ||
             isReviewedPlayerSkillBook ||
             isPackedSealJade)
@@ -129,7 +131,9 @@ internal sealed partial class GameClientHandler
                                     ? "pet_experience_item"
                                     : isPetExperienceBoostPotion
                                         ? "pet_experience_boost_potion"
-                                        : isExperienceBoostPotion
+                                        : isPetCareItem
+                                            ? "pet_care_item"
+                                            : isExperienceBoostPotion
                                             ? "experience_boost_potion"
                                             : isReviewedPlayerSkillBook
                                         ? "player_skill_book_learn"

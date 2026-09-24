@@ -183,7 +183,7 @@ internal sealed class ClientTextCatalog
     /// the mark first, then fall back to UTF-8 and finally Latin-1 so a stray
     /// file cannot abort the whole scan (ASCII keys survive either way).
     /// </summary>
-    private static IEnumerable<string> ReadLines(string path)
+    internal static IEnumerable<string> ReadLines(string path)
     {
         var bytes = File.ReadAllBytes(path);
         string text;

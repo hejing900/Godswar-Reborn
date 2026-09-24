@@ -40,7 +40,7 @@ catch (ArgumentException ex)
     Console.Error.WriteLine("  --local-advertised-host <地址>");
     Console.Error.WriteLine("                             回写给客户端的目标地址，默认 127.1.1.110");
     Console.Error.WriteLine("  --out <文件>               抓包日志文件，默认 captures\\godswar-proxy-<时间>.log");
-    Console.Error.WriteLine("  --monster-map-id <地图号>  记录怪物刷怪点时必须显式指定地图号");
+    Console.Error.WriteLine("  --monster-map-id <地图号>  记录怪物刷怪点时必须显式指定地图号（NPC 不需要）");
     Console.Error.WriteLine("  --disable-db               不写数据库，只写文本日志");
     Console.Error.WriteLine("  --postgres-connection-string <连接串>");
     Console.Error.WriteLine("                             数据库连接串，默认连本机 godswar 库");
@@ -72,9 +72,10 @@ Console.WriteLine(packetLog is null
     : $"数据库：   写入 packet_transactions，会话 {packetLog.SessionId}");
 if (packetLog is not null)
 {
+    Console.WriteLine("刷怪记录： NPC 刷怪点全地图写入 npc_spawn_packets");
     Console.WriteLine(options.MonsterMapId is short monsterMapId
-        ? $"刷怪记录： 已指定地图 {monsterMapId}"
-        : "刷怪记录： 仅记录数据包；如需写入刷怪点请加 --monster-map-id");
+        ? $"          怪物刷怪点写入 monster_spawn_packets，已指定地图 {monsterMapId}"
+        : "          怪物刷怪点需加 --monster-map-id <地图号> 才记录");
 }
 Console.WriteLine();
 Console.WriteLine("请把游戏客户端连接到上面的登录端口，然后在游戏里操作需要抓取的功能。");
@@ -98,7 +99,11 @@ var game = RunListenerAsync(
     packetLog,
     cts.Token);
 
-await Task.WhenAll(login, game);
+var probeChannel = options.ProbePort > 0
+    ? ProbeChannel.RunAsync(options.ProbePort, cts.Token)
+    : Task.CompletedTask;
+
+await Task.WhenAll(login, game, probeChannel);
 
 // 顶层语句中只要出现 return 带值，就必须保证所有路径都返回值。
 return 0;
@@ -161,6 +166,70 @@ static async Task HandleConnectionAsync(
     var clientToServerCipher = new PacketCipher();
     var serverToClientCipher = new PacketCipher();
 
+    // One gate serialises every write to the server - the client's own frames and
+    // anything a probe injects - and it also protects the shared cipher, so the
+    // stream the server decrypts can never be interleaved mid-frame.
+    using var serverWriteGate = new SemaphoreSlim(1, 1);
+    using var clientWriteGate = new SemaphoreSlim(1, 1);
+    ProbeEndpoint? probe = null;
+    if (string.Equals(name, "GAME", StringComparison.Ordinal))
+    {
+        probe = new ProbeEndpoint(
+            name,
+            connectionId,
+            async (frames, token) =>
+            {
+                await serverWriteGate.WaitAsync(token);
+                try
+                {
+                    var total = 0;
+                    foreach (var frame in frames)
+                    {
+                        var raw = frame.ToArray();
+                        clientToServerCipher.Transform(raw);
+                        await serverStream.WriteAsync(raw, token);
+                        total += raw.Length;
+                    }
+
+                    await serverStream.FlushAsync(token);
+                    return total;
+                }
+                finally
+                {
+                    serverWriteGate.Release();
+                }
+            },
+            async (frames, token) =>
+            {
+                // The client direction carries server-authored frames - a teleport
+                // (10018), a notice, a status sync - and it is encrypted with the
+                // server-to-client cipher, whose pointer the receiving pump keeps
+                // in step. Padding keeps that pointer congruent modulo the cipher
+                // period, so the client's own stream still decrypts afterwards.
+                await clientWriteGate.WaitAsync(token);
+                try
+                {
+                    var total = 0;
+                    foreach (var frame in frames)
+                    {
+                        var raw = frame.ToArray();
+                        serverToClientCipher.Transform(raw);
+                        await clientStream.WriteAsync(raw, token);
+                        total += raw.Length;
+                    }
+
+                    await clientStream.FlushAsync(token);
+                    return total;
+                }
+                finally
+                {
+                    clientWriteGate.Release();
+                }
+            });
+        ProbeChannel.Register(probe);
+        log.Line($"{name} probe attached id={connectionId}");
+    }
+
     var clientToServer = PumpAsync(
         $"{name} C->S",
         clientStream,
@@ -174,7 +243,9 @@ static async Task HandleConnectionAsync(
         "C2S",
         clientEndPoint,
         targetEndPoint,
-        cancellationToken);
+        cancellationToken,
+        serverWriteGate,
+        probe: null);
 
     var serverToClient = PumpAsync(
         $"{name} S->C",
@@ -189,9 +260,16 @@ static async Task HandleConnectionAsync(
         "S2C",
         targetEndPoint,
         clientEndPoint,
-        cancellationToken);
+        cancellationToken,
+        clientWriteGate,
+        probe);
 
     await Task.WhenAny(clientToServer, serverToClient);
+    if (probe is not null)
+    {
+        ProbeChannel.Unregister(probe);
+    }
+
     client.Close();
     server.Close();
     log.Line($"{name} closed client={clientEndPoint}");
@@ -210,7 +288,9 @@ static async Task PumpAsync(
     string packetDirection,
     string sourceEndPoint,
     string destinationEndPoint,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    SemaphoreSlim? writeGate = null,
+    ProbeEndpoint? probe = null)
 {
     var buffer = new byte[64 * 1024];
     var packetAccumulator = new PacketFrameAccumulator();
@@ -226,27 +306,54 @@ static async Task PumpAsync(
             }
 
             var raw = buffer.AsSpan(0, read).ToArray();
-            var clear = raw.ToArray();
-            decodeCipher.Transform(clear);
-
-            var patchedClear = clearTransform?.Invoke(clear) ?? clear;
-            var outgoing = ReapplyPatchToRaw(raw, clear, patchedClear);
-            log.Chunk(direction, clear, raw);
-            if (packetLog is not null)
+            byte[] outgoing;
+            if (writeGate is not null)
             {
-                var chunkSequence = packetLog.NextChunkSequence();
-                var packets = packetAccumulator.Append(patchedClear, outgoing);
-                packetLog.Enqueue(
-                    packets,
-                    connectionId,
-                    connectionName,
-                    packetDirection,
-                    sourceEndPoint,
-                    destinationEndPoint,
-                    chunkSequence);
+                await writeGate.WaitAsync(cancellationToken);
             }
 
-            await output.WriteAsync(outgoing, cancellationToken);
+            try
+            {
+                var clear = raw.ToArray();
+                decodeCipher.Transform(clear);
+
+                var patchedClear = clearTransform?.Invoke(clear) ?? clear;
+                outgoing = ReapplyPatchToRaw(raw, clear, patchedClear);
+                log.Chunk(direction, clear, raw);
+                if (packetLog is not null || probe is not null)
+                {
+                    var chunkSequence = packetLog?.NextChunkSequence() ?? 0;
+                    var packets = packetAccumulator.Append(patchedClear, outgoing);
+                    if (packetLog is not null)
+                    {
+                        packetLog.Enqueue(
+                            packets,
+                            connectionId,
+                            connectionName,
+                            packetDirection,
+                            sourceEndPoint,
+                            destinationEndPoint,
+                            chunkSequence);
+                    }
+
+                    if (probe is not null)
+                    {
+                        foreach (var packet in packets)
+                        {
+                            probe.Observe(packet.ClearBytes);
+                        }
+                    }
+                }
+
+                await output.WriteAsync(outgoing, cancellationToken);
+            }
+            finally
+            {
+                if (writeGate is not null)
+                {
+                    writeGate.Release();
+                }
+            }
         }
     }
     catch (Exception ex) when (ex is IOException or SocketException or ObjectDisposedException or OperationCanceledException)
@@ -275,10 +382,27 @@ static byte[] RewriteLoginRedirect(
         var originalHost = hostField.TrimStart('#');
         var originalPort = BinaryPrimitives.ReadInt32LittleEndian(output.AsSpan(offset + 40, 4));
 
-        if (!string.IsNullOrWhiteSpace(originalHost) && originalPort > 0)
+        // Follow the server's advertised game endpoint only when it points at
+        // a different host. A single-host deployment advertises its own host
+        // with the game port, and following that here would make the proxy
+        // dial its own game listener instead of the server's real port; in
+        // that case the explicit --default-game-host/--default-game-port pair
+        // is the correct target.
+        if (!string.IsNullOrWhiteSpace(originalHost) &&
+            originalPort > 0 &&
+            !string.Equals(
+                originalHost,
+                options.LoginHost,
+                StringComparison.OrdinalIgnoreCase))
         {
             state.SetGameTarget(originalHost, originalPort);
             log.Line($"LOGIN redirect original=#{originalHost}:{originalPort}");
+        }
+        else
+        {
+            log.Line(
+                $"LOGIN redirect same-host=#{originalHost}:{originalPort} " +
+                "-> keeping the configured game target");
         }
 
         output.AsSpan(offset + 5, 35).Clear();

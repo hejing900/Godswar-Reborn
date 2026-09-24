@@ -2,7 +2,8 @@ param(
     [string]$OutputPath = (Join-Path $PSScriptRoot 'dist'),
     [ValidateSet('self-contained', 'runtime')]
     [string]$Mode = 'self-contained',
-    [switch]$NoVerify
+    [switch]$NoVerify,
+    [switch]$SkipGmCopy
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +36,15 @@ if ((Test-Path $existing) -and -not (Test-Path $target)) {
 
 $sizeMb = [math]::Round((Get-Item $exe).Length / 1MB, 2)
 Write-Host "完成：$exe（$sizeMb MB）"
+
+# The pet features ship under the operator-facing name. It is the same published
+# single-file payload, so both entry points stay in lockstep; the original
+# Godswar.LootTool.exe is left exactly where it was.
+if (-not $SkipGmCopy) {
+    $gmExe = Join-Path $OutputPath 'GM工具.exe'
+    Copy-Item $exe $gmExe -Force
+    Write-Host "完成：$gmExe（与上面是同一份发布物）"
+}
 
 if (-not $NoVerify) {
     Write-Host '正在自测这个 EXE（连数据库跑读写回环）...'

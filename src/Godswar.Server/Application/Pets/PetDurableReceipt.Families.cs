@@ -18,7 +18,8 @@ internal sealed partial record PetDurableReceipt
                 Status is PetDurableReceiptStatus.PresenceChanged or
                     PetDurableReceiptStatus.PetNotFound or
                     PetDurableReceiptStatus.PetUnavailable or
-                    PetDurableReceiptStatus.PetNotTaken,
+                    PetDurableReceiptStatus.PetNotTaken or
+                    PetDurableReceiptStatus.PetCareExhausted,
             CommandFamily.PetSkillUnlearn =>
                 Status is PetDurableReceiptStatus.PetSkillUnlearned or
                     PetDurableReceiptStatus.PetNotTaken or
@@ -95,6 +96,7 @@ internal sealed partial record PetDurableReceipt
             PetDurableReceiptStatus.PlayerSkillBookInvalidState or
             PetDurableReceiptStatus.PetNotTaken or
             PetDurableReceiptStatus.PetExperienceAdded or
+            PetDurableReceiptStatus.PetCareRestored or
             PetDurableReceiptStatus.PetExperienceBoostActivated or
             PetDurableReceiptStatus.PetExperienceRestrictedPetUnbound or
             PetDurableReceiptStatus.PetExperienceMaximumReached or

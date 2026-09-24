@@ -256,11 +256,11 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        // The scripted NPCs - the Mysterious Elder, the Profession Mentor, the
-        // Personal Helper and the Event Transporters - each own their whole window
-        // in one client script and carry no dialogue route, so they are answered
-        // here as well.
-        if (ResolveScriptedNpcDialogue(npc) is { } scriptedDialogue)
+        // The scripted NPCs own their whole window in client scripts and carry no
+        // dialogue route, so they are answered here as well. The registry lives in
+        // ScriptedNpcDialogueCatalog.Routing.cs, which is also what the open packet
+        // consults.
+        if (ResolveScriptedNpcDialogues(npc) is { } scriptedDialogue)
         {
             await HandleScriptedNpcDialogueAsync(
                 npc,

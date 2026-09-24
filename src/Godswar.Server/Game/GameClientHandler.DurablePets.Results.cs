@@ -251,6 +251,17 @@ internal sealed partial class GameClientHandler
             bool currentIsCarried,
             bool currentIsSummoned)
     {
+        // A discard is terminal and has no post-state to compare against: the
+        // pet it targets is gone, so currentPetExists is always false here and
+        // the carried/summoned ladder below would answer "recalled".
+        if (receipt.PresenceOperation ==
+            checked((byte)((byte)PetPresenceCommandOperation.Delete + 1)))
+        {
+            return receipt.Succeeded
+                ? PetOperationResultCode.DeleteSucceeded
+                : PetOperationResultCode.DeleteFailed;
+        }
+
         if (!receipt.Succeeded)
         {
             return receipt.PresenceOperation switch

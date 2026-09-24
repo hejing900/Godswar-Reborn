@@ -88,7 +88,17 @@ internal enum PetPresenceCommandOperation : byte
 {
     Take = 0,
     CallOut = 1,
-    Recall = 2
+    Recall = 2,
+
+    /// <summary>
+    /// Permanently destroys the pet (native opcode 10238).
+    /// </summary>
+    /// <remarks>
+    /// Appended rather than inserted: the enum's numeric value is persisted as
+    /// the receipt's <c>PresenceOperation</c> (always value + 1), so the first
+    /// three members must keep the ids earlier receipts already carry.
+    /// </remarks>
+    Delete = 3
 }
 
 internal readonly record struct PetPresenceTransitionCommand(

@@ -241,6 +241,8 @@ internal sealed partial class GameClientHandler
                 PetPresenceCommandOperation.CallOut,
             PetPresenceOperation.Recall =>
                 PetPresenceCommandOperation.Recall,
+            PetPresenceOperation.Delete =>
+                PetPresenceCommandOperation.Delete,
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
 

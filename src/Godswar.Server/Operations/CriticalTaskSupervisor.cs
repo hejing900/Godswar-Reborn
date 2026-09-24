@@ -16,7 +16,8 @@ internal enum CriticalTaskKind : byte
     PostgresReadiness = 12,
     RedisCoordination = 13,
     Reconciliation = 14,
-    LegacyInstanceOpalRecovery = 15
+    LegacyInstanceOpalRecovery = 15,
+    GuildAltarSettlement = 16
 }
 
 internal enum CriticalTaskState : byte

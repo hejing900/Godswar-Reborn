@@ -5,6 +5,7 @@ sealed partial class PacketTransactionLog : IAsyncDisposable
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly short? _monsterMapId;
+    private readonly NpcTemplateResolver? _npcTemplateResolver;
     private readonly Channel<PacketTransactionRecord> _queue =
         Channel.CreateUnbounded<PacketTransactionRecord>(new UnboundedChannelOptions { SingleReader = true });
     private readonly Dictionary<string, CapturedMonsterTemplate?> _monsterTemplateCache = new(StringComparer.Ordinal);
@@ -12,10 +13,15 @@ sealed partial class PacketTransactionLog : IAsyncDisposable
     private long _chunkSequence;
     private long _packetSequence;
 
-    private PacketTransactionLog(NpgsqlDataSource dataSource, Guid sessionId, short? monsterMapId)
+    private PacketTransactionLog(
+        NpgsqlDataSource dataSource,
+        Guid sessionId,
+        short? monsterMapId,
+        NpcTemplateResolver? npcTemplateResolver)
     {
         _dataSource = dataSource;
         _monsterMapId = monsterMapId;
+        _npcTemplateResolver = npcTemplateResolver;
         SessionId = sessionId;
         _writerTask = Task.Run(WriteLoopAsync);
     }
@@ -76,7 +82,8 @@ sealed partial class PacketTransactionLog : IAsyncDisposable
             await sessionCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        return new PacketTransactionLog(dataSource, sessionId, options.MonsterMapId);
+        var npcTemplateResolver = await NpcTemplateResolver.CreateAsync(dataSource);
+        return new PacketTransactionLog(dataSource, sessionId, options.MonsterMapId, npcTemplateResolver);
     }
 
     public long NextChunkSequence()
@@ -160,21 +167,31 @@ sealed partial class PacketTransactionLog : IAsyncDisposable
         command.Parameters.AddWithValue("notes", packet.Notes);
         await command.ExecuteNonQueryAsync();
 
-        if (TryParseCityNpcSpawn(packet, out var spawn))
+        if (TryReadSpawnTemplate(packet, out var spawnTemplate, out var spawnLength))
         {
-            await UpsertNpcSpawnAsync(spawn, packet.CapturedAt);
-        }
-        else if (TryParseMonsterSpawn(packet, out var monsterSpawn))
-        {
-            if (!_monsterMapId.HasValue)
+            if (NpcTemplateResolver.IsNpcTemplate(spawnTemplate))
             {
-                return;
+                // 地图号不写死在解析里：查 npc_spawn_definitions，覆盖全部地图。
+                // 解析不出来就跳过——绝不能退到怪物分支，否则 NPC 会被写进怪物表。
+                if (TryParseNpcSpawn(packet, spawnTemplate, spawnLength, out var npcSpawn))
+                {
+                    var location = _npcTemplateResolver is null
+                        ? null
+                        : await _npcTemplateResolver.ResolveAsync(npcSpawn.TemplateKey);
+                    if (location is not null)
+                    {
+                        await UpsertNpcSpawnAsync(npcSpawn, location.Value, packet.CapturedAt);
+                    }
+                }
             }
-
-            var template = await ResolveMonsterTemplateAsync(monsterSpawn.TemplateKey);
-            if (template is not null)
+            else if (_monsterMapId.HasValue &&
+                     TryParseMonsterSpawn(packet, spawnTemplate, spawnLength, out var monsterSpawn))
             {
-                await UpsertMonsterSpawnAsync(monsterSpawn, template.Value, packet.CapturedAt);
+                var template = await ResolveMonsterTemplateAsync(monsterSpawn.TemplateKey);
+                if (template is not null)
+                {
+                    await UpsertMonsterSpawnAsync(monsterSpawn, template.Value, packet.CapturedAt);
+                }
             }
         }
         else if (TryParseNpcDetailPacket(packet, out var detail))

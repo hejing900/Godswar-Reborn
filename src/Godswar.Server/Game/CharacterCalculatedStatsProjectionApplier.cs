@@ -30,7 +30,12 @@ internal static class CharacterCalculatedStatsProjectionApplier
             var effectiveMaximumHealth = ResolveEffectiveMaximumHealth(
                 liveCharacter,
                 persistedStats);
-            var maximumMana = Math.Max(0, persistedStats.MaxMp);
+            // The base is the character's own value: never read back the live
+            // ceiling as if it were the base, or each refresh adds the bonus again.
+            var baseMaximumMana = Math.Max(0, persistedStats.MaxMp);
+            var maximumMana = Math.Max(
+                0,
+                baseMaximumMana + GuildAltarBonusCache.For(liveCharacter.Id).MaxMp);
             var currentHealth = healthMode switch
             {
                 CharacterHealthProjectionMode.PreservePercentage =>
@@ -122,18 +127,49 @@ internal static class CharacterCalculatedStatsProjectionApplier
                 projectedStats.WeaponAuraEffect;
             liveCharacter.ArmorRank = projectedStats.ArmorRank;
             liveCharacter.ArmorAuraEffect = projectedStats.ArmorAuraEffect;
-            liveCharacter.CalculatedStats = projectedStats;
+            // The clean base goes back into the cache, never projectedStats. The
+            // ceiling bonuses live in the live fields above; storing a value that
+            // already carries them here makes the next refresh treat that value as
+            // the base and add the bonus again, which compounds on every refresh
+            // (measured: 177 mana growing by the altar's bonus each pass). This is
+            // the same rule the MaxHp/MaxMp lines above follow - keep the reusable
+            // projection passive-free.
+            liveCharacter.CalculatedStats = persistedStats;
             liveCharacter.MarkVitalsChanged();
         }
     }
 
+    /// <summary>
+    /// The character's live maximum health: its own value, the altar's ceiling
+    /// bonus, and the elemental passive.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The altar's ceiling bonus is added here, and only here.</b> The live
+    /// <see cref="GameCharacter.MaxHp"/> is what the recovery tick, healing, the
+    /// party health bars and the vitals clamps all read as "the maximum", so a
+    /// bonus that only reached the calculated stats would raise the number the
+    /// player sees while every one of those systems kept stopping at the old
+    /// ceiling - a maximum that can never be healed into.
+    /// </para>
+    /// <para>
+    /// It is read from the character's own projection rather than from
+    /// <paramref name="baseStats"/> because that parameter is the clean base the
+    /// altar bonus is deliberately kept out of; adding it to a value that already
+    /// carried it is what produced a doubled ceiling.
+    /// </para>
+    /// </remarks>
     public static int ResolveEffectiveMaximumHealth(
         GameCharacter character,
         CharacterStats baseStats)
     {
+        var withAltar = Math.Max(
+            1,
+            Math.Max(1, baseStats.MaxHp)
+                + GuildAltarBonusCache.For(character.Id).MaxHp);
         var passive = ElementalResonanceExecutionPolicy.ApplyPassiveBonuses(
             character.ElementalEquipment,
-            Math.Max(1, baseStats.MaxHp),
+            withAltar,
             movementSpeed: 0);
         return Math.Max(
             1,

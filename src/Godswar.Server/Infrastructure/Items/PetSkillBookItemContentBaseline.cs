@@ -74,8 +74,28 @@ internal static class PetSkillBookItemContentBaseline
             [5600, 5604, 5608, 5612, 5616, 5620])
     ];
 
+    /// <summary>
+    /// Book identities that the generated client catalogue stops short of, or
+    /// never carried: the final tier of the Spiky Armor family and the six
+    /// authored Vampiric tiers. Every value is transcribed from the installed
+    /// client's ItemBaseAttribute.xml row and EquipName.dat text.
+    /// </summary>
+    private static readonly ReviewedBook[] AdditionalBooks =
+    [
+        new(10745, 6, "Pet Skill: Spiky Armor VI", 6020),
+        new(16400, 1, "Pet Skill: Vampiric I", 6400),
+        new(16401, 2, "Pet Skill: Vampiric II", 6401),
+        new(16402, 3, "Pet Skill: Vampiric III", 6402),
+        new(16403, 4, "Pet Skill: Vampiric IV", 6403),
+        new(16404, 5, "Pet Skill: Vampiric V", 6404),
+        new(16405, 6, "Pet Skill: Vampiric VI", 6405)
+    ];
+
     public static IReadOnlyList<ItemTemplateSeed> ItemTemplates { get; } =
-        Families.SelectMany(CreateFamily).ToArray();
+        Families.SelectMany(CreateFamily)
+            .Concat(AdditionalBooks.Select(CreateBook))
+            .OrderBy(static seed => seed.Id)
+            .ToArray();
 
     private static IEnumerable<ItemTemplateSeed> CreateFamily(
         ReviewedFamily family)
@@ -88,42 +108,55 @@ internal static class PetSkillBookItemContentBaseline
 
         for (var index = 0; index < family.PetSkillIds.Count; index++)
         {
-            var itemId = family.FirstItemId + index;
-            var rank = checked((short)(index + 1));
-            var stats = new Dictionary<string, string>
-            {
-                ["ID"] = itemId.ToString(CultureInfo.InvariantCulture),
-                ["Type"] = ItemType,
-                ["Texture"] = Texture,
-                ["Icon"] = Icon,
-                ["Random"] = "0",
-                ["Distribution"] = "0,0",
-                ["Money"] = "0",
-                ["Overlap"] = "99",
-                ["Use"] = "1",
-                ["ItemType"] = rank == 1 ? "4" : "3",
-                ["PetSkill"] = family.PetSkillIds[index]
-                    .ToString(CultureInfo.InvariantCulture)
-            };
-            yield return new ItemTemplateSeed(
-                itemId,
-                ItemType,
-                $"Pet{itemId}",
+            yield return CreateBook(new ReviewedBook(
+                checked(family.FirstItemId + index),
+                checked((short)(index + 1)),
                 family.DisplayNames[index],
-                EquipmentSlot: 0,
-                ClassIds: [],
-                MinLevel: null,
-                MaxLevel: null,
-                Hand: null,
-                SkillFlag: null,
-                Texture,
-                Icon,
-                JsonSerializer.Serialize(stats));
+                family.PetSkillIds[index]));
         }
+    }
+
+    private static ItemTemplateSeed CreateBook(ReviewedBook book)
+    {
+        var stats = new Dictionary<string, string>
+        {
+            ["ID"] = book.ItemId.ToString(CultureInfo.InvariantCulture),
+            ["Type"] = ItemType,
+            ["Texture"] = Texture,
+            ["Icon"] = Icon,
+            ["Random"] = "0",
+            ["Distribution"] = "0,0",
+            ["Money"] = "0",
+            ["Overlap"] = "99",
+            ["Use"] = "1",
+            ["ItemType"] = book.Priority == 1 ? "4" : "3",
+            ["PetSkill"] = book.PetSkillId.ToString(
+                CultureInfo.InvariantCulture)
+        };
+        return new ItemTemplateSeed(
+            book.ItemId,
+            ItemType,
+            $"Pet{book.ItemId}",
+            book.DisplayName,
+            EquipmentSlot: 0,
+            ClassIds: [],
+            MinLevel: null,
+            MaxLevel: null,
+            Hand: null,
+            SkillFlag: null,
+            Texture,
+            Icon,
+            JsonSerializer.Serialize(stats));
     }
 
     private sealed record ReviewedFamily(
         int FirstItemId,
         IReadOnlyList<string> DisplayNames,
         IReadOnlyList<int> PetSkillIds);
+
+    private sealed record ReviewedBook(
+        int ItemId,
+        short Priority,
+        string DisplayName,
+        int PetSkillId);
 }

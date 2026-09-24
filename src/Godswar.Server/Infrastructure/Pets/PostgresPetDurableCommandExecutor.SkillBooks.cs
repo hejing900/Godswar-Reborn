@@ -49,7 +49,10 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             throw new InvalidDataException(
                 "The carried pet species has no pinned skill-family authority.");
         }
-        if (speciesCurve.FamilyType != book.FamilyType)
+        if (!PetSkillBookActivationPolicy.CanSpeciesLearn(
+                pet.SpeciesId,
+                speciesCurve.FamilyType,
+                book))
         {
             return FromSkillBookPet(
                 PetDurableReceiptStatus.PetSkillBookWrongSpecies,

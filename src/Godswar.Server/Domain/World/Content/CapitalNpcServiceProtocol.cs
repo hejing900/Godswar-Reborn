@@ -29,7 +29,29 @@ internal enum CapitalNpcServiceKind
     /// the window frame 10021 plus 10201/10248/10199, all keyed by window id 765.
     /// The second service on the same npc is dialog index 24.
     /// </remarks>
-    Mall
+    Mall,
+
+    // The Athens merchant quarter, captured 2026-09-24: fourteen npcs that
+    // answer a click with function number zero and then stream their stock
+    // straight after the client's 10068 open request. Nothing distinguishes them
+    // from each other at the protocol level - only the catalog differs - so each
+    // keeps its own kind and reads as the role its npc_text_templates name
+    // gives it. Eight price in bound gold, one in gold and five in silver,
+    // which is the currency byte each catalog's frames carry.
+    AthensWarriorEquipmentVendor,
+    AthensScholarEquipmentVendor,
+    AthensJewelryEquipmentVendor,
+    AthensArmorEquipmentVendor,
+    AthensWarriorSupplier,
+    AthensSkillMerchant,
+    AthensArmorMerchant,
+    AthensScholarSupplier,
+    AthensJewelryMerchant,
+    AthensAlchemyRecipeVendor,
+    AthensIngredientsVendor,
+    AthensForgingRecipeVendor,
+    AthensMythcraftingRecipeVendor,
+    AthensScholarshipRecipeVendor
 }
 
 internal enum CapitalNpcShopCurrency
@@ -108,11 +130,10 @@ internal static class CapitalNpcServiceProtocol
                 (CapitalNpcServiceKind?)CapitalNpcServiceKind.ExchangeMentor,
             ("Sparta_069", 5066u) or ("Athens_069", 5207u) =>
                 CapitalNpcServiceKind.TeachingManager,
-            // Athens_087 is one of the thirty-eight city npcs the capture never
-            // recorded, so it carries the published id here; the map normalizer
-            // moves it above the captured range because its published 5226 is the
-            // captured id of Athens_088, and this pair has to follow it.
-            ("Sparta_087", 5084u) or ("Athens_087", 5294u) =>
+            // Athens_087 is carried by the 2026-09-24 capture as npc 5225, so it
+            // now takes the reference's own interaction id like every other
+            // captured city npc.
+            ("Sparta_087", 5084u) or ("Athens_087", 5225u) =>
                 CapitalNpcServiceKind.BoundGoldVendor,
             ("Sparta_068", 5065u) or ("Athens_068", 5206u) =>
                 CapitalNpcServiceKind.BindingGoldShop,
@@ -128,7 +149,10 @@ internal static class CapitalNpcServiceProtocol
                 CapitalNpcServiceKind.PetMerchant,
             ("Sparta_034", 44345u) or ("Athens_036", 5175u) or
             ("Sparta_Newbie_004", 46565u) or
-            ("Athens_Newbie_004", 54453u) =>
+            // The capture places the Athens skill vendor on npc 5285 on map 2.
+            // It used to be keyed by the published ini id 54453, which
+            // CapturedNpcPlacementPolicy overwrites, so the shop never answered.
+            ("Athens_Newbie_004", 5285u) =>
                 CapitalNpcServiceKind.SkillVendor,
             ("Sparta_036", 5033u) or ("Athens_021", 5161u) =>
                 CapitalNpcServiceKind.PropsVendor,
@@ -140,6 +164,38 @@ internal static class CapitalNpcServiceProtocol
                 CapitalNpcServiceKind.LevelSealer,
             ("Sparta_074", 5071u) or ("Athens_074", 5212u) =>
                 CapitalNpcServiceKind.Mall,
+            // The Athens merchant quarter. Each key here is the npc the capture
+            // actually streamed stock from, and CapturedNpcPlacementPolicy gives
+            // that npc the capture's own object and interaction id, so the id in
+            // this arm is the one the client echoes back.
+            ("Athens_026", 5166u) =>
+                CapitalNpcServiceKind.AthensWarriorEquipmentVendor,
+            ("Athens_027", 5167u) =>
+                CapitalNpcServiceKind.AthensScholarEquipmentVendor,
+            ("Athens_028", 5168u) =>
+                CapitalNpcServiceKind.AthensJewelryEquipmentVendor,
+            ("Athens_029", 5169u) =>
+                CapitalNpcServiceKind.AthensArmorEquipmentVendor,
+            ("Athens_096", 5234u) =>
+                CapitalNpcServiceKind.AthensWarriorSupplier,
+            ("Athens_099", 5237u) =>
+                CapitalNpcServiceKind.AthensSkillMerchant,
+            ("Athens_102", 5240u) =>
+                CapitalNpcServiceKind.AthensArmorMerchant,
+            ("Athens_107", 5245u) =>
+                CapitalNpcServiceKind.AthensScholarSupplier,
+            ("Athens_108", 5246u) =>
+                CapitalNpcServiceKind.AthensJewelryMerchant,
+            ("Athens_121", 5259u) =>
+                CapitalNpcServiceKind.AthensAlchemyRecipeVendor,
+            ("Athens_122", 5260u) =>
+                CapitalNpcServiceKind.AthensIngredientsVendor,
+            ("Athens_135", 5273u) =>
+                CapitalNpcServiceKind.AthensForgingRecipeVendor,
+            ("Athens_136", 5274u) =>
+                CapitalNpcServiceKind.AthensMythcraftingRecipeVendor,
+            ("Athens_137", 5275u) =>
+                CapitalNpcServiceKind.AthensScholarshipRecipeVendor,
             _ => null
         };
 
@@ -192,7 +248,21 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.PetMerchant or
             CapitalNpcServiceKind.SkillVendor or
             CapitalNpcServiceKind.PointExchanger or
-            CapitalNpcServiceKind.PropsVendor;
+            CapitalNpcServiceKind.PropsVendor or
+            CapitalNpcServiceKind.AthensWarriorEquipmentVendor or
+            CapitalNpcServiceKind.AthensScholarEquipmentVendor or
+            CapitalNpcServiceKind.AthensJewelryEquipmentVendor or
+            CapitalNpcServiceKind.AthensArmorEquipmentVendor or
+            CapitalNpcServiceKind.AthensWarriorSupplier or
+            CapitalNpcServiceKind.AthensSkillMerchant or
+            CapitalNpcServiceKind.AthensArmorMerchant or
+            CapitalNpcServiceKind.AthensScholarSupplier or
+            CapitalNpcServiceKind.AthensJewelryMerchant or
+            CapitalNpcServiceKind.AthensAlchemyRecipeVendor or
+            CapitalNpcServiceKind.AthensIngredientsVendor or
+            CapitalNpcServiceKind.AthensForgingRecipeVendor or
+            CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
+            CapitalNpcServiceKind.AthensScholarshipRecipeVendor;
 
     public static bool IsSuppressedSpawn(NpcSpawnDefinition npc) =>
         (npc.NpcKey, npc.InteractionId) is
@@ -388,6 +458,26 @@ internal static class CapitalNpcServiceProtocol
                 CapitalNpcShopCurrency.BindingGold,
             CapitalNpcServiceKind.PetMerchant =>
                 CapitalNpcShopCurrency.Silver,
+            // Athens merchant quarter. The charge each one advertises is the
+            // currency byte its captured frames carry, so this table restates the
+            // capture rather than choosing a balance.
+            CapitalNpcServiceKind.AthensWarriorEquipmentVendor or
+            CapitalNpcServiceKind.AthensScholarEquipmentVendor or
+            CapitalNpcServiceKind.AthensJewelryEquipmentVendor or
+            CapitalNpcServiceKind.AthensArmorEquipmentVendor or
+            CapitalNpcServiceKind.AthensWarriorSupplier or
+            CapitalNpcServiceKind.AthensSkillMerchant or
+            CapitalNpcServiceKind.AthensArmorMerchant or
+            CapitalNpcServiceKind.AthensScholarSupplier or
+            CapitalNpcServiceKind.AthensIngredientsVendor =>
+                CapitalNpcShopCurrency.BindingGold,
+            CapitalNpcServiceKind.AthensJewelryMerchant =>
+                CapitalNpcShopCurrency.Gold,
+            CapitalNpcServiceKind.AthensAlchemyRecipeVendor or
+            CapitalNpcServiceKind.AthensForgingRecipeVendor or
+            CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
+            CapitalNpcServiceKind.AthensScholarshipRecipeVendor =>
+                CapitalNpcShopCurrency.Silver,
             _ => default
         };
         return service is
@@ -395,7 +485,21 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.BindingGoldShop or
             CapitalNpcServiceKind.PetMerchant or
             CapitalNpcServiceKind.SkillVendor or
-            CapitalNpcServiceKind.PointExchanger;
+            CapitalNpcServiceKind.PointExchanger or
+            CapitalNpcServiceKind.AthensWarriorEquipmentVendor or
+            CapitalNpcServiceKind.AthensScholarEquipmentVendor or
+            CapitalNpcServiceKind.AthensJewelryEquipmentVendor or
+            CapitalNpcServiceKind.AthensArmorEquipmentVendor or
+            CapitalNpcServiceKind.AthensWarriorSupplier or
+            CapitalNpcServiceKind.AthensSkillMerchant or
+            CapitalNpcServiceKind.AthensArmorMerchant or
+            CapitalNpcServiceKind.AthensScholarSupplier or
+            CapitalNpcServiceKind.AthensJewelryMerchant or
+            CapitalNpcServiceKind.AthensAlchemyRecipeVendor or
+            CapitalNpcServiceKind.AthensIngredientsVendor or
+            CapitalNpcServiceKind.AthensForgingRecipeVendor or
+            CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
+            CapitalNpcServiceKind.AthensScholarshipRecipeVendor;
     }
 
     public static bool TryGetShopCurrency(

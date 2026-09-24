@@ -12,15 +12,11 @@ internal sealed partial class GameClientHandler
     private const int WishingPoolLostBookPage = 24;
 
     /// <summary>
-    /// The Wishing Pool's third service, <c>NPC_FLAG_SYS_LUCKYGODS = 50</c>.
+    /// The divine wish's own page. Its dialogue and its economy live in
+    /// <c>GameClientHandler.LuckyGods.cs</c> and
+    /// <c>Application/LuckyGods/LuckyGodsWishPolicy.cs</c>.
     /// </summary>
     private const int WishingPoolLuckyGodsPage = 50;
-
-    /// <summary>
-    /// The divine wish's own gate: <c>NF_L0_L012</c> reports that a wish needs
-    /// level 55.
-    /// </summary>
-    private const int WishingPoolLuckyGodsMinimumLevel = 55;
 
     /// <summary>
     /// The lost-book page's opening answer, which is the reference server's own:
@@ -41,32 +37,4 @@ internal sealed partial class GameClientHandler
     /// (<c>NF_L0_BK601</c>). It is a result, so the window closes on it.
     /// </summary>
     private static readonly int[] WishingPoolLostBookNoBook = [601];
-
-    /// <summary>
-    /// The divine wish's first page: the rules line and the two gods to choose
-    /// between, whose buttons the script raises at <c>25,175</c> and
-    /// <c>25,195</c>, plus the claim entry at <c>25,215</c>.
-    /// </summary>
-    private static readonly int[] WishingPoolLuckyMenu = [100, 101, 1000];
-
-    /// <summary>
-    /// The line the script reports below level 55 (<c>NF_L0_L012</c>).
-    /// </summary>
-    private static readonly int[] WishingPoolLuckyLevelReply = [1001];
-
-    /// <summary>
-    /// The claim entry's answer for a player holding no prize. The script only
-    /// handles <c>201</c> off its first page, which is where the claim is clicked
-    /// from, and it prints <c>NF_L0_L016</c>.
-    /// </summary>
-    private static readonly int[] WishingPoolLuckyNoPrize = [201];
-
-    /// <summary>
-    /// The answer to picking a god. The wish's luck belongs to an economy this
-    /// server does not run, so the honest line is the script's own "the God you
-    /// have just selected is not in the mood to grant wishes at the moment", which
-    /// it computes as <c>8 + attempts * 10</c>. The number is the script's own
-    /// daily allowance of ten attempts (<c>NF_L0_L001</c>).
-    /// </summary>
-    private static readonly int[] WishingPoolLuckyNoWish = [108];
 }

@@ -203,6 +203,21 @@ internal static partial class PacketBuilder
                 BindingGoldShopCatalog.Value,
             CapitalNpcServiceKind.PointExchanger =>
                 PointExchangerShopCatalog.Value,
+            CapitalNpcServiceKind.AthensWarriorEquipmentVendor or
+            CapitalNpcServiceKind.AthensScholarEquipmentVendor or
+            CapitalNpcServiceKind.AthensJewelryEquipmentVendor or
+            CapitalNpcServiceKind.AthensArmorEquipmentVendor or
+            CapitalNpcServiceKind.AthensWarriorSupplier or
+            CapitalNpcServiceKind.AthensSkillMerchant or
+            CapitalNpcServiceKind.AthensArmorMerchant or
+            CapitalNpcServiceKind.AthensScholarSupplier or
+            CapitalNpcServiceKind.AthensJewelryMerchant or
+            CapitalNpcServiceKind.AthensAlchemyRecipeVendor or
+            CapitalNpcServiceKind.AthensIngredientsVendor or
+            CapitalNpcServiceKind.AthensForgingRecipeVendor or
+            CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
+            CapitalNpcServiceKind.AthensScholarshipRecipeVendor =>
+                GetCapturedAthensMerchantCatalogSource(service),
             _ => GetCapturedCapitalShopCatalogSource(service)
         };
 

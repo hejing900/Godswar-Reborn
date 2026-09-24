@@ -37,6 +37,7 @@ internal sealed partial class GameSessionRegistry
     private readonly GameplayRuntimeCatalogs _gameplayCatalogs;
     private readonly GameplayItemContent? _itemContent;
     private readonly TrainingDummyPolicy _trainingDummies;
+    private readonly GuildAltarSettlementStore? _guildAltarSettlements;
 
     public GameSessionRegistry(
         IGameStore? store = null,
@@ -53,8 +54,10 @@ internal sealed partial class GameSessionRegistry
         GameplayItemContent? itemContent = null,
         TrainingDummyPolicy? trainingDummies = null,
         ICharacterRuntimeProjectionReader?
-            characterRuntimeProjections = null)
+            characterRuntimeProjections = null,
+        GuildAltarSettlementStore? guildAltarSettlements = null)
     {
+        _guildAltarSettlements = guildAltarSettlements;
         _worldInstanceOptions = SnapshotWorldInstanceOptions(
             worldInstanceOptions);
         _medusaPeriodicDamageLedger = new(

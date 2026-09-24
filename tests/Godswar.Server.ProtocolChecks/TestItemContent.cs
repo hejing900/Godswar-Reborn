@@ -81,6 +81,10 @@ internal static class TestItemContent
                 static value => value.ToItemTemplateSeed()))
             .Concat(SocketSpellItemContentBaseline.ItemTemplates)
             .Concat(PetItemContentBaseline.ItemTemplates)
+            // The real publication carries the reviewed client-catalog family
+            // too, and several pet-care consumables live only there, so the
+            // fixture must mirror it or a published item looks absent.
+            .Concat(ClientCatalogItemContentBaseline.ItemTemplates)
             .Concat(ClassSuitItemContentBaseline.PromotionalInsignias);
         if (includeHolySuit)
         {

@@ -204,15 +204,25 @@ internal static partial class BackhaulSkillHandlerChecks
     private static void CheckReviveLandingCatalog()
     {
         Check.Equal(
-            1,
+            2,
             ReviveLandingCatalog.Captured.Count,
-            "revive landing catalog carries one capture-proven row");
+            "revive landing catalog carries both capture-proven rows");
         Check.True(
             ReviveLandingCatalog.TryResolve(
                 GameDefaults.AthensCapitalMap,
                 out var athens) &&
             athens is { MapId: 1, X: 20f, Z: -100f },
             "revive landing catalog resolves the captured Athens point");
+        // Captured 2026-09-25 00:13: the landing frame for Megara is
+        // 1C002227 A7000000 00006042 00000000 0000B042 12001200 01000000,
+        // which puts the character on map 18 at x = 56, z = 88. It shares no
+        // coordinate with the Athens point, so each map carries its own.
+        Check.True(
+            ReviveLandingCatalog.TryResolve(
+                MegaraMapId,
+                out var megara) &&
+            megara is { MapId: 18, X: 56f, Z: 88f },
+            "revive landing catalog resolves the captured Megara point");
         Check.True(
             !ReviveLandingCatalog.TryResolve(
                 GameDefaults.SpartaCapitalMap,

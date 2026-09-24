@@ -274,42 +274,65 @@ await SendKitBagRefreshAsync(cancellationToken);      // 背包刷新，书才�
 ```csharp
 var advanced = WishingPoolCatalog.IsAdvancedTier(grant.SkillLevel);
 if (advanced)
-    await BroadcastWishingPoolGrantAsync(grant.DisplayName, cancellationToken);
+    await BroadcastWishingPoolGrantAsync(grant.ItemId, cancellationToken);
 ```
 
 普通档（1–2 级）不广播。
 
-文案用**物品名**（`book.DisplayName`，来自 `skill_book_templates`），不是物品 id：
+文案**不是本服务端写的**，而是客户端自己的技能祝福广播渲染出来的，两个阵营各一句：
 
-```
-{角色名} got {书名} from the Wishing Pool!
-```
+| 阵营 | `character.Camp` | 渲染结果 |
+| --- | --- | --- |
+| 雅典 | `GameDefaults.AthensCamp` = `1` | `雅典玩家-{角色名}-受到神的祝福,获得: {技能名}` |
+| 斯巴达 | `GameDefaults.SpartaCamp` = `0` | `斯巴达玩家-{角色名}-受到神的青睐,获得: {技能名}` |
 
-### 6.1 通道与颜色
+客户端 `SrvMsg.lua` 的 type-0 分支拼接
+`skill_msg[realm] .. name .. skill_msg[blessing] .. skill_msg[item id]`，
+词表里 `1003 = "雅典玩家-"`／`1004 = "斯巴达玩家-"`、
+`1000 = "-受到神的祝福,获得: "`／`1001 = "-受到神的青睐,获得: "`，
+最后一段按**物品 id** 查 `skill_msg` 得到技能名（如 `5205` → `SkillBook283` → 高级圣光突刺）。
+所以服务端只发阵营、名字和物品 id，显示什么由客户端决定。
 
-`PacketBuilder.CenteredGreenAnnouncement`（`Packets/PacketBuilder.PythonNote.cs`）：
+### 6.1 报文结构
+
+`PacketBuilder.SkillBookBroadcast(name, camp, itemId)`（`Packets/PacketBuilder.SkillBroadcast.cs`），
+与居中公告共用同一个 137 字节 10038 骨架，但用 **type 0** 传参数串而不是 type 50 传正文：
 
 | 字段 | 值 |
 | --- | --- |
 | opcode | `10038`（`PythonNote`），定长 `137` 字节 |
-| `+4` | `50`（direct text type） |
+| `+4` | `0`（技能祝福 `SkillBroadcastBlessingType`） |
 | `+8` | `0`（居中频道 `CenterChannel`；个人频道是 `1`） |
-| `+9` / `+73` | 两段定长 64 字节 ASCII |
+| `+9` | 角色名，定长 64 字节 ASCII |
+| `+73` | 参数串，定长 64 字节 ASCII：雅典 `1003#1000#{物品id}`，斯巴达 `1004#1001#{物品id}` |
 
-着色用库存标记，绿字前缀 `|cFF00FF00`、末尾 `|cFFFFFFFF` 复位：
+参考服抓到的 18 条广播（角色 `Skrillex`、`K O P I K O`，
+物品 5200/5201/5205/5214/5216/5221/5237/5241/5242/5405/5408/5417/5420/5421/5422/5424/5438/5439）
+全部是**雅典**这一组，例如 5205 那条：
 
-```csharp
-return CenteredAnnouncement(CenteredGreenTextPrefix + message + CenteredTextColorReset);
+```
+890036270000000000536B72696C6C6578 00…00 3130303323313030302335323035 00…00
 ```
 
-正文上限 **106 个可打印 ASCII**（超出、含控制字符、含 `|c` 都会抛异常）。
-文本按 63 字节拆进两段，客户端拼接后渲染，拆分不影响可见文本。
+`#` 就是报文里的 `23`，所以参数串是 `1003#1000#5205`。
+斯巴达那组是同一个句子的另一半（词表里两两成对），除 `+73` 起的这两个词外与抓包完全一致。
+名字与参数都必须 ≤ 63 个可打印 ASCII 字节，超长、非 ASCII、物品 id 非正数、
+阵营不是 0/1 都会抛异常。
 
 ### 6.2 全领域投递
 
 `GameSessionRegistry.BroadcastToAllSessionsAsync` 遍历 `_sessions.Keys` 逐个发送，
 **不按地图/副本过滤**，所以收件人在哪张地图都能收到。
 单个会话异常（关闭、IO）被吞掉，不影响其余投递，返回投递成功数。
+
+投递标签为 `WishingPoolSkillBroadcast`。阵营由**发奖角色**决定，与收件人无关。
+
+### 6.3 回归校验
+
+`tests/Godswar.Server.ProtocolChecks/SkillBookBroadcastChecks.cs`
+把上面 2 条抓包原文逐字节钉死（`Skill book realm broadcast`），
+并断言斯巴达只在 `+73` 起的参数串前两个词不同（`1004`／`1001`），其余字节与雅典一致；
+改布局或写错阵营词表都会立刻红。
 
 ---
 
@@ -357,3 +380,109 @@ return CenteredAnnouncement(CenteredGreenTextPrefix + message + CenteredTextColo
 免费分支的 `RecordAsync` 位于发书**之后**，因此等级不足、冷却中、次数用完、背包已满
 这四种情况都**不消耗**当日次数，也不刷新 1 小时冷却。
 付费分支完全不读写配额表。
+
+---
+
+## 9. 神明许愿（功能号 `50`）的现行实现
+
+脚本 `NpcFunLuckyGods.lua`，键 `NF_L0_L001`…`NF_L0_L023`。代码位置：
+`Application/LuckyGods/LuckyGodsWishPolicy.cs`（阶梯与编码）、
+`Application/LuckyGods/LuckyGodsWishContracts.cs`（状态与接口）、
+`Infrastructure/LuckyGods/PostgresLuckyGodsWishStore.cs`、
+`Game/GameClientHandler.LuckyGods.cs`，迁移 `20260922_162_lucky_gods_wish_state`。
+
+### 9.1 玩法数值
+
+| 项 | 值 | 出处 |
+| --- | --- | --- |
+| 命中概率 | `80%`（`Random.Shared.Next(100) < 80`） | 服务端定的，客户端只说"神的心是多变的" |
+| 首次命中奖池 | `210000` | 服务端定的 |
+| 连对递增 | 每次 ×2；第 7 次直接落到封顶 | `NF_L0_L001` 原文"将当前奖励翻倍" |
+| 七连封顶 | `13490000` | 服务端定的 |
+| 每日次数 | `10` | `NF_L0_L001` 原文 |
+| 间隔 | `5` 分钟 | `NF_L0_L001`/`NF_L0_L017` 原文 |
+| 等级门槛 | `55` | `NF_L0_L012` 原文 |
+
+阶梯：`210000 / 420000 / 840000 / 1680000 / 3360000 / 6720000 / 13490000`。
+
+### 9.1.1 奖池的三条清空路径
+
+| 途径 | 实现 |
+| --- | --- |
+| **猜错任意一次** | `PoolAfter(0) = 0`，落错写入 `streak=0, pending_experience=0`，连击与奖池同时作废 |
+| 点「领取奖励」 | `ClaimAsync` 一条 CTE 语句原子取走：`picked`（`FOR UPDATE` 读旧值）→ `taken`（清零）→ 最后 `SELECT` 回 `picked` 看到的旧值 |
+| 每天 24 点（领域时区） | `RealmCalendar.GetDay` 取领域时区的**民历日期**，当地 00:00 换日；`ReadAsync` 见到旧日直接当"全新的一天"，未领的奖池随之作废（`NF_L0_L001`"第二天可就不算数啦"），不需要定时任务 |
+
+前两条不冲突：猜错管的是**当天之内**的连击与奖池，24 点管的是**跨天**未领的残留。
+
+**领奖不能用 `UPDATE … RETURNING pending_experience` 取值**：PostgreSQL 的
+`RETURNING` 返回的是** SET 之后**的行，`SET pending_experience = 0` 的那条语句
+`RETURNING` 永远给出 0 —— 奖池被清掉而代码以为"没东西可领"，经验一分不发。
+这个坑实测过一次：三次领奖日志全是 `taken=0`，而库里 `updated_at` 每次都被推前
+（说明 UPDATE 确实匹配到了有池的行）。
+
+**领奖也不能拆成"同一连接上先开 reader 再发第二条命令"**：奖池为空时那条分支在 reader
+未关闭前 `Rollback`，Npgsql 抛 `NpgsqlOperationInProgressException: A command is already
+in progress`，10069 变成 `[game-fault]` 并把连接断掉 —— 表现就是"池里没经验时点领取，
+客户端掉线"。合成一条 CTE 语句后既没有 reader 重叠，也仍是原子的。
+| 每天 24 点 | `RealmCalendar.GetDay` 取的是领域时区的**民历日期**，当地 00:00 换日；`ReadAsync` 见到旧日直接当"全新的一天"，昨日未领的奖池随之作废（`NF_L0_L001`"第二天可就不算数啦"），不需要定时任务 |
+
+**落错只断连击，不动奖池**：中奖后的池取
+`PoolAfterWin(现有池, 连击) = max(现有池, 阶梯[连击])`，因此奖池单调不减。
+早先的实现把落错当"清池"（`pool = PoolAfter(0) = 0`），于是"中一发→再点一发点错→
+点领取"必然报「你暂时还没有任何奖励」，这就是那次的 bug。
+
+**为什么封顶在第 7 次**：奖池是靠号本身送进客户端的（见 §9.2），第 7 次翻倍会得到
+`13440000`→编码 `134,400,002`，而若继续按 ×2 到第 8 次（`26,880,000`→`268,800,009`）
+仍在 32 位内，但客户端 `NF_L0_L022` 把"连续 7 次"写死成一条**结果**文本（带
+`EndMessage(true)`），第 7 连必须结束这一轮；同时 `13490000` 是人为设定的上限值。
+
+### 9.2 号码编码（客户端脚本的算式）
+
+| 发 | 客户端解出 | 句子 | 关窗 |
+| --- | --- | --- | --- |
+| `池×10+9` | `(SubID-9)/10` = 池 | `L004` + 池 + `L014`"你将获得 N 经验值…奖励翻倍" | 否，并画波塞冬按钮（25,135） |
+
+**中奖那一帧必须一次发三个号**：`[池×10+9, 104, 105]`。因为第一页之后 `101`
+（阿波罗）和 `1000`（领奖）已经没有分支了，能画这两个按钮的只有
+`% 100 == 4` 与 `% 100 == 5` 两族；只发中奖号的话，弹窗里就只有波塞冬一个按钮。
+落错与七连是 `EndMessage` 结果帧，只能单独发（结果和按钮同帧会让客户端整帧当结果直接关窗）。
+| `池×10+2` | `(SubID-2)/10` = 池 | `L022` + 池 + `L023`"连续7次…直接拿去吧" | 是 |
+| `剩余×10+8` | `(SubID-8)/10` = 剩余次数 | `L008` + 剩余 + `L015`"你今天还能许愿 N 次" | 是 |
+| `分钟×10+6` | `(SubID-6)/10` = 分钟 | `L017` + 分钟 + `L018`"请再过 N 分钟之后再来" | 是 |
+| `1001` / `104` / `201` | — | 等级不足 / 次数用完 / 暂无奖励 | 是 |
+| `剩余×10+7` | `(SubID-7)/10` = 剩余次数 | `L011` + 剩余 + `L015`"这些奖励你就拿去吧。你今天还能许愿 N 次" | 是 |
+
+**领奖成功后回尾 7，不回 `201`**：`L011` 是脚本里"见好就收、把奖励拿走"的那句，
+正是领取这个动作的语义；`201`（`L016` 暂无奖励）只在池子确实为空时回。
+| `100,101,1000` | — | 第一页：规则 + 两个神 + 领奖按钮 | 否 |
+
+`1001` 与 `104` 只在 `Index == 1` 有分支，所以**门槛必须在打开功能页时回答**；
+进了第二层再发这两个号会落到 `mod 100 == 1` 之外的其它家族。
+
+### 9.3 状态与领取
+
+一行一角色（`character_lucky_gods_wish`）：`usage_date` / `used_count` /
+`last_used_at` / `streak` / `pending_experience`。跨天读作全新的一天，
+未领的奖池随之作废（`NF_L0_L001`"第二天可就不算数啦"），因此**没有定时任务**。
+
+经验只在点领奖（`1000` 或 `…05` 家族）时发放：先
+`UPDATE … WHERE pending_experience > 0 RETURNING` 原子取走奖池，再
+`_store.ApplyMonsterKillRewardAsync`，然后升级包（`10030`，含全图广播）、
+`ExperienceGain`、状态帧，最后回尾 7 那一句（"这些奖励你就拿去吧…还剩 N 次"）。
+取走在先，所以中途失败只会让玩家少拿一份，
+不会重复发放。
+
+### 9.4 实测到的封包字段
+
+打开功能页的 `10069` 参数位实测是 **`-1`**（`2026-09-22`，npc `5071` page `50`），
+与 §2 抓包的 `{5212, 16, 16, -1}` 一致。因此路由规则是：`…05`/`1000` 当领奖，
+`100/101`、尾 `9`、`…04` 当猜测，**其余一律视为"打开这一页"**。曾经把打开判成
+`selection == 50`，结果打开请求落进"不认识就不回包"，整个页面空白。
+
+### 9.5 未验证项
+
+命中概率、阶梯金额、七连封顶都是服务端设定的玩法数值，原服真值未抓包；
+`页码 50 的应答号码配对`已按 §9.2 实装并由 `LuckyGodsWishPolicyChecks` 钉住编码与
+概率边界，但"原服是不是也回尾 9 家族"没有对照。
+

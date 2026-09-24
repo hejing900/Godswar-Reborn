@@ -27,8 +27,8 @@ internal static partial class PacketBuilder
         // MSG_PLAYERDETAIL copies wire offset 4 to GameData+0x25C. Thus the
         // native Money/Stone/BindingGold fields at +0x2CC/+0x2D0/+0x2DC map
         // to physical wire offsets 116/120/132 respectively.
-        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(PlayerDetailMaxHpOffset, 4), character.MaxHp);
-        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(PlayerDetailMaxMpOffset, 4), character.MaxMp);
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(PlayerDetailMaxHpOffset, 4), character.EffectiveMaxHp);
+        BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(PlayerDetailMaxMpOffset, 4), character.EffectiveMaxMp);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(PlayerDetailCurrentHpOffset, 4), character.CurrentHp);
         BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(PlayerDetailCurrentMpOffset, 4), character.CurrentMp);
         BinaryPrimitives.WriteInt32LittleEndian(

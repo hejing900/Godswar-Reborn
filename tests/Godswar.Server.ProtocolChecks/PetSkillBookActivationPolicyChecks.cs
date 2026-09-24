@@ -24,7 +24,11 @@ internal static class PetSkillBookActivationPolicyChecks
     {
         var items = TestItemContent.Catalog;
         var skills = PetLearnedSkillContentBaseline.Create();
-        Check.Equal(30, Expected.Length, "reviewed skill-book count");
+        Check.Equal(30, Expected.Length, "reviewed skill-book fixture count");
+        Check.Equal(
+            390,
+            PetSkillBookActivationPolicy.ReviewedBookCount,
+            "every stock skill book is reviewed");
         foreach (var expected in Expected)
         {
             Check.True(
@@ -44,15 +48,9 @@ internal static class PetSkillBookActivationPolicyChecks
                 $"reviewed skill book {expected.ItemId} is pinned exactly");
         }
 
-        Check.True(
-            !PetSkillBookActivationPolicy.IsReviewedItem(10_463) &&
-            !PetSkillBookActivationPolicy.IsReviewedItem(10_470) &&
-            !PetSkillBookActivationPolicy.TryResolve(
-                items,
-                skills,
-                10_470,
-                out _),
-            "unreviewed neighboring items fail closed");
+        CheckReviewedFamilyTotals(items, skills);
+        CheckSpeciesRestrictions(items, skills);
+        CheckUnreviewedItemsFailClosed(items, skills);
         CheckTamperedMetadataFailsClosed(items, skills);
         CheckReceiptRoundTrip(items, skills);
         CheckSoulContractTraitThreshold(skills);
@@ -65,6 +63,149 @@ internal static class PetSkillBookActivationPolicyChecks
             PetSkillFamilyCatalog.BookBackedFamilyCount == 58,
             "Wild Bump is included in the reviewed book-backed catalog");
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The two client-transcribed items that the generated catalogue stops
+    /// short of must resolve through the same activation path.
+    /// </summary>
+    private static void CheckReviewedFamilyTotals(
+        IItemTemplateCatalog items,
+        IPetLearnedSkillContentCatalog skills)
+    {
+        Check.True(
+            PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                10_745,
+                out var spikyArmor) &&
+            spikyArmor.FamilyType == 427 &&
+            spikyArmor.Priority == 6 &&
+            spikyArmor.RuntimeSkillId == 6_020,
+            "Spiky Armor VI resolves as the sixth tier of family 427");
+        Check.True(
+            PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                16_400,
+                out var vampiric) &&
+            vampiric.FamilyType == 428 &&
+            vampiric.Priority == 1 &&
+            vampiric.RuntimeSkillId == 6_400 &&
+            vampiric.RestrictedSpeciesId == 0,
+            "Vampiric I resolves as a shared family-428 book");
+    }
+
+    private static void CheckSpeciesRestrictions(
+        IItemTemplateCatalog items,
+        IPetLearnedSkillContentCatalog skills)
+    {
+        Check.Equal(
+            0,
+            PetSkillBookActivationPolicy.ResolveRestrictedSpeciesId(0),
+            "Vital Boost is shared by every species");
+        Check.Equal(
+            8,
+            PetSkillBookActivationPolicy.ResolveRestrictedSpeciesId(62),
+            "Dark Vengeance belongs to Ghost");
+        Check.Equal(
+            5,
+            PetSkillBookActivationPolicy.ResolveRestrictedSpeciesId(81),
+            "Concentration belongs to Easter Bunny");
+        Check.Equal(
+            40,
+            PetSkillBookActivationPolicy.ResolveRestrictedSpeciesId(423),
+            "Resolute Physique belongs to Kratortle");
+        Check.Equal(
+            44,
+            PetSkillBookActivationPolicy.ResolveRestrictedSpeciesId(427),
+            "Spiky Armor belongs to Hedgehog");
+        Check.Equal(
+            0,
+            PetSkillBookActivationPolicy.ResolveRestrictedSpeciesId(428),
+            "Vampiric is shared");
+
+        Check.True(
+            PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                10_464,
+                out var wildBump),
+            "the innate-family fixture resolves");
+        Check.True(
+            PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                10_510,
+                out var wildStrength),
+            "the foreign-family fixture resolves");
+        Check.True(
+            PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                10_745,
+                out var spikyArmor),
+            "the Hedgehog-family fixture resolves");
+        Check.True(
+            PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                16_405,
+                out var vampiricSix),
+            "the shared-family fixture resolves");
+        // A Kritox pet keeps its innate Wild Bump and may learn the shared
+        // Vampiric family, but never another species' exclusive family.
+        Check.True(
+            PetSkillBookActivationPolicy.CanSpeciesLearn(
+                25,
+                wildBump.FamilyType,
+                wildBump) &&
+            PetSkillBookActivationPolicy.CanSpeciesLearn(
+                25,
+                wildBump.FamilyType,
+                vampiricSix) &&
+            !PetSkillBookActivationPolicy.CanSpeciesLearn(
+                25,
+                wildBump.FamilyType,
+                wildStrength),
+            "a Kritox pet may learn its own and shared families only");
+        // A species change keeps every learned family and opens only the
+        // books of the species the pet now is.
+        Check.True(
+            PetSkillBookActivationPolicy.CanSpeciesLearn(
+                5,
+                62,
+                vampiricSix) &&
+            !PetSkillBookActivationPolicy.CanSpeciesLearn(
+                5,
+                62,
+                spikyArmor),
+            "after a species change only the new species' books open");
+        // Cupid is born with the Hedgehog family, so it must be able to
+        // advance that innate skill even though the client text names
+        // Hedgehog as the owning species.
+        Check.True(
+            PetSkillBookActivationPolicy.CanSpeciesLearn(
+                45,
+                427,
+                spikyArmor),
+            "an innate family stays learnable for its own species");
+    }
+
+    private static void CheckUnreviewedItemsFailClosed(
+        IItemTemplateCatalog items,
+        IPetLearnedSkillContentCatalog skills)
+    {
+        Check.True(
+            !PetSkillBookActivationPolicy.IsReviewedItem(10_199) &&
+            !PetSkillBookActivationPolicy.IsReviewedItem(10_746) &&
+            !PetSkillBookActivationPolicy.IsReviewedItem(16_406) &&
+            !PetSkillBookActivationPolicy.TryResolve(
+                items,
+                skills,
+                10_199,
+                out _),
+            "non-book neighbors fail closed");
     }
 
     private static void CheckSoulContractTraitThreshold(

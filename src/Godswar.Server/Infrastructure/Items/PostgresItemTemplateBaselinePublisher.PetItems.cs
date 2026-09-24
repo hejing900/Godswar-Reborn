@@ -272,15 +272,33 @@ internal static partial class PostgresItemTemplateBaselinePublisher
     {
         if (actual.Count != expected.Count)
         {
+            var expectedIds = expected.Select(static value => value.Id).ToHashSet();
+            var actualIds = actual.Select(static value => value.Id).ToHashSet();
+            var missing = expectedIds.Except(actualIds).OrderBy(static id => id);
+            var unexpected = actualIds.Except(expectedIds).OrderBy(static id => id);
+            Console.Error.WriteLine(
+                $"[item-content] pet-item count mismatch source={source} " +
+                $"actual={actual.Count} expected={expected.Count} " +
+                $"missing=[{string.Join(',', missing)}] " +
+                $"unexpected=[{string.Join(',', unexpected)}]");
             throw new InvalidOperationException(
                 $"Pet-item {source} contains {actual.Count} of " +
-                $"{expected.Count} reviewed templates.");
+                $"{expected.Count} reviewed templates. " +
+                $"missing=[{string.Join(',', missing)}] " +
+                $"unexpected=[{string.Join(',', unexpected)}]");
         }
 
         for (var index = 0; index < expected.Count; index++)
         {
             if (!DefinitionsEquivalent(actual[index], expected[index]))
             {
+                Console.Error.WriteLine(
+                    $"[item-content] pet-item definition conflict source=" +
+                    $"{source} at index={index} " +
+                    $"expectedId={expected[index].Id} " +
+                    $"actualId={actual[index].Id} " +
+                    $"expected=[{expected[index]}] " +
+                    $"actual=[{actual[index]}]");
                 throw new InvalidOperationException(
                     $"Pet item {expected[index].Id} conflicts with the " +
                     $"reviewed {source} definition.");

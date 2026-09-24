@@ -1,5 +1,6 @@
 using Godswar.Server.Application.Pets;
 using Godswar.Server.Application.Commands;
+using Godswar.Server.State;
 using Npgsql;
 
 namespace Godswar.Server.Infrastructure.Pets;
@@ -62,6 +63,30 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 pet,
                 envelope.Command.Operation);
         }
+        if (envelope.Command.Operation ==
+                PetPresenceCommandOperation.CallOut &&
+            !pet.CanBeSummoned)
+        {
+            return FromPet(
+                PetDurableReceiptStatus.PetCareExhausted,
+                pet,
+                envelope.Command.Operation);
+        }
+
+        // A discard destroys the row instead of changing it, so it never reaches
+        // the carried/summoned update below. The reference server answers a
+        // successful discard with result code 3 and the pet is gone from the
+        // next owned-pet bootstrap, which is what a physical delete gives.
+        if (envelope.Command.Operation ==
+            PetPresenceCommandOperation.Delete)
+        {
+            return await DeletePetAsync(
+                connection,
+                transaction,
+                envelope.Subject.CharacterId,
+                pet,
+                cancellationToken);
+        }
 
         var carried = pet.IsCarried;
         var summoned = pet.IsSummoned;
@@ -78,8 +103,10 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             carried = true;
             // Native Take selects a different companion immediately. Keep an
             // already-carried pet's current presentation unchanged so a
-            // repeated Take cannot create a duplicate summoned model.
-            summoned = isSwitchingCarriedPet || pet.IsSummoned;
+            // repeated Take cannot create a duplicate summoned model. A pet
+            // with no satiety or lifetime is still carried, never summoned.
+            summoned = (isSwitchingCarriedPet || pet.IsSummoned) &&
+                pet.CanBeSummoned;
         }
         else
         {
@@ -128,6 +155,108 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             IsSummoned: summoned,
             PresenceOperation:
                 checked((byte)((byte)envelope.Command.Operation + 1)));
+    }
+
+    /// <summary>
+    /// Permanently destroys one owned pet and everything hanging off it.
+    /// </summary>
+    /// <remarks>
+    /// The pet's own level, experience and stats live on <c>character_pets</c>,
+    /// so clearing the kill ledger below loses no progression: that table only
+    /// records which monster deaths were already settled, and a destroyed pet
+    /// can never be settled again. Every other child table cascades on delete.
+    /// <para>
+    /// Two states are refused rather than deleted out from under their owner.
+    /// The carried pet is the model the native client draws and the source of
+    /// the summoned skill passives, so the player recalls it first. A pet sealed
+    /// into an item is still referenced by <c>sealed_pet_items</c>, whose
+    /// foreign key restricts; the insert would fail anyway, so it is reported as
+    /// unavailable instead of surfacing a constraint error.
+    /// </para>
+    /// </remarks>
+    private async Task<PetTransition> DeletePetAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        int characterId,
+        LockedPet pet,
+        CancellationToken cancellationToken)
+    {
+        if (pet.IsCarried)
+        {
+            return FromPet(
+                PetDurableReceiptStatus.PetUnavailable,
+                pet,
+                PetPresenceCommandOperation.Delete);
+        }
+
+        await using (var sealedCheck = CreateCommand(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM public.sealed_pet_items
+                WHERE pet_id = @petId
+            );
+            """,
+            connection,
+            transaction))
+        {
+            sealedCheck.Parameters.AddWithValue("petId", pet.PetId);
+            if (Convert.ToBoolean(
+                    await sealedCheck.ExecuteScalarAsync(cancellationToken)))
+            {
+                return FromPet(
+                    PetDurableReceiptStatus.PetUnavailable,
+                    pet,
+                    PetPresenceCommandOperation.Delete);
+            }
+        }
+
+        await using (var clearLedger = CreateCommand(
+            """
+            DELETE FROM public.monster_death_pet_experience
+            WHERE pet_id = @petId;
+            """,
+            connection,
+            transaction))
+        {
+            clearLedger.Parameters.AddWithValue("petId", pet.PetId);
+            await clearLedger.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (var deletePet = CreateCommand(
+            """
+            DELETE FROM public.character_pets
+            WHERE id = @petId
+              AND user_id = @characterId
+              AND revision = @revision;
+            """,
+            connection,
+            transaction))
+        {
+            deletePet.Parameters.AddWithValue("petId", pet.PetId);
+            deletePet.Parameters.AddWithValue(
+                "characterId",
+                characterId);
+            deletePet.Parameters.AddWithValue("revision", pet.Revision);
+            var affected =
+                await deletePet.ExecuteNonQueryAsync(cancellationToken);
+            if (affected == 0)
+            {
+                throw new InvalidDataException(
+                    "The locked pet changed during the discard.");
+            }
+        }
+
+        return new(
+            PetDurableReceiptStatus.PresenceChanged,
+            PetId: pet.PetId,
+            PetLevel: pet.Level,
+            PetExperience: pet.Experience,
+            PetRevision: pet.Revision,
+            IsCarried: false,
+            IsSummoned: false,
+            PresenceOperation: checked((byte)(
+                (byte)PetPresenceCommandOperation.Delete + 1)));
     }
 
     private async Task<bool> ClearOtherCarriedPetsAsync(
@@ -218,7 +347,7 @@ internal sealed partial class PostgresPetDurableCommandExecutor
             SELECT
                 id, level, experience, activity_state, revision,
                 is_carried, is_summoned, initial_savvy_source_version,
-                contributes_to_character
+                contributes_to_character, satiety, remaining_lifetime
             FROM public.character_pets
             WHERE id = @petId
               AND user_id = @characterId
@@ -240,7 +369,9 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 reader.GetBoolean(5),
                 reader.GetBoolean(6),
                 reader.IsDBNull(7) ? null : reader.GetString(7),
-                reader.GetBoolean(8))
+                reader.GetBoolean(8),
+                reader.GetInt32(9),
+                reader.GetInt32(10))
             : null;
     }
 
@@ -269,5 +400,15 @@ internal sealed partial class PostgresPetDurableCommandExecutor
         bool IsCarried,
         bool IsSummoned,
         string? InitialSavvySourceVersion,
-        bool ContributesToCharacter);
+        bool ContributesToCharacter,
+        int Satiety,
+        int RemainingLifetime)
+    {
+        /// <summary>
+        /// A pet with no satiety or no lifetime left cannot be sent out. Take
+        /// still carries it; only the summon is refused.
+        /// </summary>
+        public bool CanBeSummoned =>
+            PetCareDecayPolicy.CanBeSummoned(Satiety, RemainingLifetime);
+    }
 }

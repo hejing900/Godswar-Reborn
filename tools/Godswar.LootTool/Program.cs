@@ -23,13 +23,28 @@ internal static class Program
         }
 
         if (args.Any(static arg =>
+                arg.Equals("--pet-check", StringComparison.OrdinalIgnoreCase)))
+        {
+            var publish = Array.FindIndex(args, static arg =>
+                    arg.Equals("--pet-check", StringComparison.OrdinalIgnoreCase)) switch
+            {
+                var index when index >= 0 && index + 1 < args.Length =>
+                    args[index + 1].Equals("publish", StringComparison.OrdinalIgnoreCase),
+                _ => false
+            };
+            AttachConsole(-1);
+            return PetCheck.RunAsync(publish).GetAwaiter().GetResult();
+        }
+
+        if (args.Any(static arg =>
                 arg.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
                 arg.Equals("-h", StringComparison.OrdinalIgnoreCase)))
         {
             AttachConsole(-1);
-            Console.WriteLine("Godswar 掉落表编辑工具");
+            Console.WriteLine("Godswar GM 工具（掉落表 + 宠物档位）");
             Console.WriteLine("  （无参数）                              打开图形界面");
-            Console.WriteLine("  --selftest                              只跑数据层自测，不开窗口");
+            Console.WriteLine("  --selftest                              只跑掉落数据层自测，不开窗口");
+            Console.WriteLine("  --pet-check                             只跑宠物数据层只读检查，不开窗口");
             Console.WriteLine("  --connection-string \"Host=...;Database=...\"  覆盖数据库连接串并记住");
             Console.WriteLine("  --client-root \"D:\\Godswar Origin\"        覆盖客户端目录并记住");
             return 0;

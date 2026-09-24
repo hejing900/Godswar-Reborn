@@ -146,10 +146,10 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        // The scripted NPCs own their whole window in one client script each, so
-        // they are answered before route resolution and leave the versioned
-        // dialogue baseline untouched.
-        if (ResolveScriptedNpcDialogue(npc) is { } scriptedDialogue)
+        // The scripted NPCs own their whole window in client scripts and carry no
+        // dialogue route, so they are answered before route resolution and leave the
+        // versioned dialogue baseline untouched.
+        if (ResolveScriptedNpcDialogues(npc) is { } scriptedDialogue)
         {
             await SendScriptedNpcDialogueMenuAsync(
                 npc,
@@ -177,6 +177,34 @@ internal sealed partial class GameClientHandler
                 $"[npc] dialog open branch=capital npc={npc.InteractionId} " +
                 $"key={npc.NpcKey}",
                 []);
+            return;
+        }
+
+        // The guild registrar does not open a dialogue page at all: the reference
+        // server answers with flags 0x80 and an empty function list, and the client
+        // then raises its own guild window. That window's create entry is checked
+        // locally - the shipped text "you need level 30" is the client's own, and a
+        // refused attempt sends nothing - so the server's whole part of the create
+        // conversation starts only once a character of level 30 or more tries.
+        // Captured from the reference server: 10067 {5187, 0x80, 0, "Athens_049"}.
+        if (IsGuildRegistrar(npc))
+        {
+            await _session.SendAsync(
+                PacketBuilder.NpcFunctionDialogOpenAck(
+                    npc.InteractionId,
+                    GuildRegistrarOpenFlags,
+                    packedDialog: 0,
+                    npc.NpcKey),
+                cancellationToken,
+                "GuildRegistrarDialogOpenAck");
+            Console.WriteLine(
+                $"[npc] guild registrar open npc={npc.InteractionId} " +
+                $"key={npc.NpcKey} flags=0x{GuildRegistrarOpenFlags:X}");
+            QuestFrameTrace.Append(
+                $"[npc] dialog open branch=guild-registrar " +
+                $"npc={npc.InteractionId} key={npc.NpcKey}",
+                []);
+            await SendGuildWindowAsync(cancellationToken);
             return;
         }
 
@@ -363,6 +391,21 @@ internal sealed partial class GameClientHandler
     /// with the function number.
     /// </summary>
     private const int FunctionListOpenFlags = 0x200;
+
+    /// <summary>
+    /// The dialog acknowledgement flags word the reference server sends for the
+    /// guild registrar. It is the whole of the server's part in opening that
+    /// window: the function list stays empty and no dialogue number follows, which
+    /// the capture of <c>10067 {5187, 0x80, 0, "Athens_049"}</c> shows.
+    /// </summary>
+    private const int GuildRegistrarOpenFlags = 0x80;
+
+    /// <summary>
+    /// Whether the NPC registers guilds. The client shows its own guild window for
+    /// him, so he is answered with the flags word instead of a dialogue.
+    /// </summary>
+    private static bool IsGuildRegistrar(NpcSpawnDefinition npc) =>
+        npc.NpcKey is "Athens_049" or "Sparta_049";
 
     /// <summary>
     /// Whether the NPC is one of the two endpoints of the Zeus gift event. Both
@@ -640,23 +683,12 @@ internal sealed partial class GameClientHandler
 
         if (page == WishingPoolLuckyGodsPage)
         {
-            // The divine wish. Its first page holds the rules and the two gods,
-            // and no later page holds a branch for either of them, so every later
-            // answer comes from one of the script's number families.
-            var luckyReply = selection switch
-            {
-                1000 => WishingPoolLuckyNoPrize,
-                100 or 101 => WishingPoolLuckyNoWish,
-                _ => _character is { } character &&
-                     character.Level < WishingPoolLuckyGodsMinimumLevel
-                        ? WishingPoolLuckyLevelReply
-                        : WishingPoolLuckyMenu
-            };
-            await SendWishingPoolPageAsync(
+            // The divine wish is its own service with its own durable state, so it
+            // is answered in the LuckyGods partial rather than on this page table.
+            await HandleLuckyGodsActionAsync(
                 npcId,
                 page,
-                luckyReply,
-                "WishingPoolLuckyGods",
+                selection,
                 cancellationToken);
             return;
         }
@@ -794,17 +826,24 @@ internal sealed partial class GameClientHandler
         if (advanced)
         {
             await BroadcastWishingPoolGrantAsync(
-                grant.DisplayName,
+                grant.ItemId,
                 cancellationToken);
         }
     }
 
     /// <summary>
-    /// Announces an ultimate skill book to the realm through the client's centred
-    /// announcement channel.
+    /// Announces an advanced skill book to the realm through the client's own
+    /// skill-blessing broadcast (opcode 10038, type 0).
     /// </summary>
+    /// <remarks>
+    /// The line is the client's: it renders its own
+    /// "雅典玩家-&lt;名字&gt;-受到神的祝福,获得: &lt;技能&gt;" for Athens and
+    /// "斯巴达玩家-&lt;名字&gt;-受到神的青睐,获得: &lt;技能&gt;" for Sparta from the
+    /// camp and the book's item id, which is the same frame the reference server
+    /// sends when a skill book is consumed (captured 2026-09-24).
+    /// </remarks>
     private async Task BroadcastWishingPoolGrantAsync(
-        string bookName,
+        int skillBookItemId,
         CancellationToken cancellationToken)
     {
         if (_character is null)
@@ -812,15 +851,26 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        var text =
-            $"{_character.Name} got {bookName} from the Wishing Pool!";
+        // The announcement is best effort: the book is already granted, so an
+        // unusable camp skips the line instead of failing the wish.
+        if (_character.Camp is not (GameDefaults.SpartaCamp or GameDefaults.AthensCamp))
+        {
+            Console.WriteLine(
+                "[wishing-pool] skill broadcast skipped: " +
+                $"unrecognized camp={_character.Camp}");
+            return;
+        }
+
         // Realm-wide, not map-wide: every session this process serves receives it,
         // whichever map the recipient is on. The personal channel is deliberately
         // not used - that one is a scrolling log line, not a centred banner.
         await _registry.BroadcastToAllSessionsAsync(
-            PacketBuilder.CenteredGreenAnnouncement(text),
+            PacketBuilder.SkillBookBroadcast(
+                _character.Name,
+                _character.Camp,
+                skillBookItemId),
             cancellationToken,
-            label: "WishingPoolBroadcast");
+            label: "WishingPoolSkillBroadcast");
     }
 
     private async Task SendWishingPoolPageAsync(

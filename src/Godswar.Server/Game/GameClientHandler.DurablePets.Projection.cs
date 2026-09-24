@@ -91,6 +91,16 @@ internal sealed partial class GameClientHandler
                 await PublishPetOwnerMergeStartedAsync(
                     activePet,
                     cancellationToken);
+                // The committed Merge spends amity, and the unite
+                // presentation never carries that field: publish the narrow
+                // care frame so the pet panel matches durable state.
+                await SendPetCareStateAsync(
+                    activePet.PetId,
+                    activePet.Satiety,
+                    activePet.Amity,
+                    activePet.RemainingLifetime,
+                    "PetOwnerMergeCareState",
+                    cancellationToken);
             }
             else
             {
@@ -349,6 +359,39 @@ internal sealed partial class GameClientHandler
                     cancellationToken,
                     "DurablePetExperienceRefresh");
             }
+            else if (receipt is
+                     {
+                         Status: PetDurableReceiptStatus.PetCareRestored,
+                         CareRestore: { IsValid: true } care
+                     })
+            {
+                // Care consumables have their own narrow originals: opcode
+                // 10245 carries satiety/amity/lifetime and 10278 carries the
+                // merge energy. Rebuilding the owned-pet list here would
+                // reset the client's active-pet selection for no reason.
+                await _session.SendAsync(
+                    PacketBuilder.PetCareState(
+                        care.PetId,
+                        care.Satiety,
+                        care.Amity,
+                        care.RemainingLifetime),
+                    cancellationToken,
+                    "DurablePetCareItemState");
+                await _session.SendAsync(
+                    PacketBuilder.PetEnergy(
+                        care.CurrentEnergy,
+                        care.MaximumEnergy),
+                    cancellationToken,
+                    "DurablePetCareItemEnergy");
+            }
+            else if (IsRejectedPetSkillBook(receipt.Status))
+            {
+                // A refused skill book changes nothing: the item is still in
+                // the bag and the pet keeps its exact skills and carry/summon
+                // presentation. Rebuilding the full pet list would disturb
+                // active-pet selection for no reason, so the kit-bag refresh
+                // above is the complete answer.
+            }
             else
             {
                 await _session.SendAsync(
@@ -441,6 +484,32 @@ internal sealed partial class GameClientHandler
                 cancellationToken,
                 "DurablePetPresenceResult");
 
+            // A discard has no post-state to reconcile: the pet is gone from the
+            // snapshot this projection already reloaded, so the ladder below
+            // would read "not carried, not summoned" and answer a Recall. Answer
+            // the discard, then republish the owned-pet list so the shed drops
+            // the slot the client is still drawing.
+            if (receipt.PresenceOperation ==
+                checked((byte)(
+                    (byte)PetPresenceCommandOperation.Delete + 1)))
+            {
+                await _session.SendAsync(
+                    PacketBuilder.PetOperationResult(
+                        checked((uint)receipt.PetId),
+                        result),
+                    cancellationToken,
+                    "DurablePetDeleteResult");
+                if (receipt.Succeeded)
+                {
+                    await PublishOwnedPetUtilityListAsync(
+                        pets,
+                        cancellationToken,
+                        "DurablePetDeleteOwnedList");
+                }
+
+                return true;
+            }
+
             // Take atomically selects and summons. Preserve the native Take,
             // then CallOut order so the old model is disposed before spawn.
             if (receipt.Succeeded &&
@@ -481,9 +550,23 @@ internal sealed partial class GameClientHandler
         return true;
     }
 
+    /// <summary>
+    /// Terminal skill-book rejections leave the pet untouched. They are kept
+    /// away from the owned-pet list rebuild, which would otherwise reset the
+    /// client's active-pet selection.
+    /// </summary>
+    private static bool IsRejectedPetSkillBook(
+        PetDurableReceiptStatus status) =>
+        status is
+            PetDurableReceiptStatus.PetSkillBookWrongSpecies or
+            PetDurableReceiptStatus.PetSkillBookAlreadyLearned or
+            PetDurableReceiptStatus.PetSkillBookPriorTierRequired or
+            PetDurableReceiptStatus.PetSkillBookTraitRequirementNotMet or
+            PetDurableReceiptStatus.PetSkillBookNoOpenSlot or
+            PetDurableReceiptStatus.PetSkillBookInvalidState;
+
     private static bool IsOwnerMergeReceipt(
         PetDurableReceiptStatus status) =>
         status is >= PetDurableReceiptStatus.OwnerMerged and
             <= PetDurableReceiptStatus.OwnerMergeCharmInvalid;
-
 }

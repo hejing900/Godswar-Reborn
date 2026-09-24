@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Godswar.Server.Application.Guilds;
 using Godswar.Server.Domain.World.Instances;
 
 namespace Godswar.Server.State;
@@ -200,6 +201,26 @@ internal sealed class GameCharacter
 
     [JsonIgnore]
     public CharacterStats? CalculatedStats { get; set; }
+
+    /// <summary>
+    /// The character's maximum health including every projection bonus.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MaxHp"/> is the live, effective ceiling: the projection applier
+    /// writes the character's own value plus anything that raises it (the altar's
+    /// HP ceiling, the elemental passive), so nothing here needs to add a bonus
+    /// again. Only the persisted base is kept elsewhere - it lives in the
+    /// character's own columns and in <see cref="CalculatedStats"/>.
+    /// </remarks>
+    [JsonIgnore]
+    public int EffectiveMaxHp => MaxHp;
+
+    /// <summary>
+    /// The character's maximum mana including every projection bonus. See
+    /// <see cref="EffectiveMaxHp"/>.
+    /// </summary>
+    [JsonIgnore]
+    public int EffectiveMaxMp => MaxMp;
 
     [JsonIgnore]
     public ElementalEquipmentProfile ElementalEquipment { get; private set; } =

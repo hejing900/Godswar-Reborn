@@ -108,6 +108,7 @@ internal sealed class CharacterStats
 
     public void ApplyTo(GameCharacter character)
     {
+        ArgumentNullException.ThrowIfNull(character);
         lock (character.VitalsSync)
         {
             character.MaxHp = Math.Max(1, MaxHp);
@@ -212,10 +213,32 @@ internal sealed class CharacterStats
         return (int)Math.Min(int.MaxValue, scaled / 10_000L);
     }
 
-    public static CharacterStats FromCharacter(GameCharacter character)
+    /// <summary>
+    /// The character's own attributes with no projection bonus of any kind, which
+    /// is what <see cref="GameCharacter.CalculatedStats"/> always holds.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The stored projection carries no altar bonus, by contract.</b> Every path
+    /// that writes that field writes a value that came from the database (through
+    /// <see cref="ApplyTo"/> or a snapshot mapper); none of them writes the result of
+    /// <see cref="FromCharacter"/>. That is what lets this read the field straight
+    /// and <see cref="FromCharacter"/> add the altar bonus exactly once.
+    /// </para>
+    /// <para>
+    /// Do not "normalise" this by subtracting a bonus: an earlier attempt did, and
+    /// because the field holds a clean base it subtracted a bonus that was never
+    /// there - a 1500 ceiling with a 4500 altar bonus was clamped to 1.
+    /// </para>
+    /// <para>
+    /// When the character has not been hydrated yet there is nothing but the live
+    /// character's own fields, which is what this falls back to.
+    /// </para>
+    /// </remarks>
+    public static CharacterStats FromCharacterBase(GameCharacter character)
     {
         ArgumentNullException.ThrowIfNull(character);
-        var baseline = character.CalculatedStats ?? new CharacterStats
+        return character.CalculatedStats ?? new CharacterStats
         {
             CharacterId = character.Id,
             AccountId = character.AccountId,
@@ -233,8 +256,19 @@ internal sealed class CharacterStats
             BasicAttackIntervalMilliseconds = 1500,
             BasicAttackRange = 1.7f
         };
+    }
+
+    public static CharacterStats FromCharacter(GameCharacter character)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        var baseline = FromCharacterBase(character);
         return MedusaTitleAttributePolicy.ApplyStrongestOwned(
             character.OwnedTitleIds,
-            baseline);
+            // Read by id rather than off the character: the bonus has to survive the
+            // session's character object being swapped for a freshly hydrated one
+            // (pet owner-Merge, un-merge, login).
+            CharacterStatsAltarBonus.Apply(
+                baseline,
+                GuildAltarBonusCache.For(character.Id)));
     }
 }

@@ -133,7 +133,7 @@ internal static partial class NpcActorPlacementCatalog
     ];
 
     private static readonly Lazy<IReadOnlyList<NpcActorPlacement>> Combined =
-        new(() => Athens.Concat(Sparta!).ToArray());
+        new(() => Athens.Concat(Sparta!).Concat(SecondaryCities!).ToArray());
 
     private static readonly Lazy<IReadOnlyDictionary<(short MapId, string NpcKey), NpcActorPlacement>> ByNpc =
         new(() => All.ToDictionary(

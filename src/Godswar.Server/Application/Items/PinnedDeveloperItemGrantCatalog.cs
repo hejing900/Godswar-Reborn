@@ -36,6 +36,10 @@ internal sealed partial class PinnedDeveloperItemGrantCatalog :
         _petConsumablesById;
     private readonly FrozenDictionary<string, DeveloperGrantMaterialDefinition>
         _petConsumablesByAlias;
+    private readonly FrozenDictionary<uint, DeveloperGrantMaterialDefinition>
+        _guildStonesById;
+    private readonly FrozenDictionary<string, DeveloperGrantMaterialDefinition>
+        _guildStonesByAlias;
 
     public PinnedDeveloperItemGrantCatalog(IItemTemplateCatalog templates)
     {
@@ -81,6 +85,13 @@ internal sealed partial class PinnedDeveloperItemGrantCatalog :
             static value => value.Grant);
         _petConsumablesByAlias = CreatePetConsumableAliases(petConsumables)
             .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+        var guildStones = CreateGuildStoneGrants(templates);
+        _guildStonesById = guildStones.ToFrozenDictionary(
+            static value => value.ItemId,
+            static value => value);
+        _guildStonesByAlias = CreateGuildStoneAliases(guildStones)
+            .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
     public bool TryResolveDeveloper(
@@ -91,7 +102,8 @@ internal sealed partial class PinnedDeveloperItemGrantCatalog :
         _socketSpellsById.TryGetValue(itemId, out item!) ||
         _costumesById.TryGetValue(itemId, out item!) ||
         _petShedsById.TryGetValue(itemId, out item!) ||
-        _petConsumablesById.TryGetValue(itemId, out item!);
+        _petConsumablesById.TryGetValue(itemId, out item!) ||
+        _guildStonesById.TryGetValue(itemId, out item!);
 
     public bool TryResolveDeveloper(
         string alias,
@@ -103,7 +115,8 @@ internal sealed partial class PinnedDeveloperItemGrantCatalog :
         _petShedsByAlias.TryGetValue(NormalizeAlias(alias), out item!) ||
         _petConsumablesByAlias.TryGetValue(
             NormalizeAlias(alias),
-            out item!);
+            out item!) ||
+        _guildStonesByAlias.TryGetValue(NormalizeAlias(alias), out item!);
 
     private static IReadOnlyList<PetShedDeveloperGrant>
         CreatePetShedGrants(IItemTemplateCatalog templates)

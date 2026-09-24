@@ -178,6 +178,9 @@ internal static class PetProtocolCheckCatalog
             PetSkillBookActivationPolicyChecks.CheckName,
             PetSkillBookActivationPolicyChecks.RunAsync),
         (
+            PetCareDecayChecks.CheckName,
+            PetCareDecayChecks.RunAsync),
+        (
             "Stock Pet Manager dialogue protocol",
             PetManagerProtocolChecks.RunAsync),
         (

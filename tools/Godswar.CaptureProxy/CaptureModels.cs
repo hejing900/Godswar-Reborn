@@ -1,12 +1,14 @@
 readonly record struct CapturedNpcSpawnRecord(
-    short MapId,
-    string SceneKey,
     string NpcKey,
     string TemplateKey,
     uint ObjectId,
     float X,
     float Z,
     byte[] Packet);
+
+readonly record struct CapturedNpcTemplateLocation(
+    short MapId,
+    string SceneKey);
 
 readonly record struct CapturedNpcDetailRecord(
     int Opcode,

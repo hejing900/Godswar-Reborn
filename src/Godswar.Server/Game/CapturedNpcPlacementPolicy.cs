@@ -64,10 +64,11 @@ internal static class CapturedNpcPlacementPolicy
     public static List<NpcSpawnDefinition> ApplyToMap(
         IReadOnlyList<NpcSpawnDefinition> npcs)
     {
-        var placed = new List<NpcSpawnDefinition>(npcs.Count);
-        var pending = new List<NpcSpawnDefinition>(npcs.Count);
+        var candidates = DropAbsentFromCapture(npcs);
+        var placed = new List<NpcSpawnDefinition>(candidates.Count);
+        var pending = new List<NpcSpawnDefinition>(candidates.Count);
         var usedIds = new HashSet<uint>();
-        foreach (var npc in npcs)
+        foreach (var npc in candidates)
         {
             if (AlreadyPublishedFromCapture.Contains(npc.MapId) ||
                 !CapturedNpcPlacements.TryFind(npc.NpcKey, out var captured))
@@ -122,6 +123,50 @@ internal static class CapturedNpcPlacementPolicy
         }
 
         return placed;
+    }
+
+    /// <summary>
+    /// Drops the NPCs a captured map does not have.
+    /// </summary>
+    /// <remarks>
+    /// A map the capture covers is the reference server's own content, so a row
+    /// the reference never placed there is ours, not its. Maps the capture does
+    /// not cover are left exactly as published: "the reference does not have it"
+    /// and "we never went there" are different statements, and only the first
+    /// justifies removing a row.
+    /// </remarks>
+    private static List<NpcSpawnDefinition> DropAbsentFromCapture(
+        IReadOnlyList<NpcSpawnDefinition> npcs)
+    {
+        var kept = new List<NpcSpawnDefinition>(npcs.Count);
+        if (npcs.Count == 0)
+        {
+            return kept;
+        }
+
+        // The list is one map's content, so its first row names the map.
+        var mapId = npcs[0].MapId;
+        if (!CapturedNpcPlacements.HasCaptureFor(mapId))
+        {
+            kept.AddRange(npcs);
+            return kept;
+        }
+
+        var capturedKeys = CapturedNpcPlacements.CapturedKeysFor(mapId);
+        foreach (var npc in npcs)
+        {
+            if (capturedKeys.Contains(npc.NpcKey))
+            {
+                kept.Add(npc);
+                continue;
+            }
+
+            Console.WriteLine(
+                $"[npc] dropped not-in-capture map={npc.MapId} key={npc.NpcKey} " +
+                $"object={npc.ObjectId}");
+        }
+
+        return kept;
     }
 
     private static NpcSpawnDefinition Place(

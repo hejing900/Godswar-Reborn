@@ -155,6 +155,12 @@ internal sealed class GameClientHandlerFactory(
             legacyInstanceOpalPayments:
                 postgresRuntime?.LegacyInstanceOpalPayments,
             wishingPoolUsage:
-                postgresRuntime?.WishingPoolUsage);
+                postgresRuntime?.WishingPoolUsage,
+            questAppraisal:
+                postgresRuntime?.QuestAppraisal,
+            luckyGodsWish:
+                postgresRuntime?.LuckyGodsWish,
+            guilds:
+                postgresRuntime?.Guilds);
     }
 }

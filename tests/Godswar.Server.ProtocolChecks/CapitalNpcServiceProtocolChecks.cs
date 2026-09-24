@@ -83,10 +83,10 @@ internal static partial class CapitalNpcServiceProtocolChecks
             ("Sparta_069", 5066, CapitalNpcServiceKind.TeachingManager),
             ("Athens_069", 5207, CapitalNpcServiceKind.TeachingManager),
             ("Sparta_087", 5084, CapitalNpcServiceKind.BoundGoldVendor),
-            // Athens_087 is one of the city npcs the capture never recorded, so the
-            // map normalizer moves its published 5226 - the captured id of
-            // Athens_088 - above the captured range and this pair follows it.
-            ("Athens_087", 5294, CapitalNpcServiceKind.BoundGoldVendor),
+            // Athens_087 is carried by the 2026-09-24 capture as npc 5225, so it
+            // takes the reference's own object and interaction id like every other
+            // captured npc instead of being renumbered above the captured range.
+            ("Athens_087", 5225, CapitalNpcServiceKind.BoundGoldVendor),
             ("Sparta_068", 5065, CapitalNpcServiceKind.BindingGoldShop),
             ("Athens_068", 5206, CapitalNpcServiceKind.BindingGoldShop),
             ("Sparta_084", 5081, CapitalNpcServiceKind.FestivalEnvoy),
@@ -101,6 +101,11 @@ internal static partial class CapitalNpcServiceProtocolChecks
             ("Athens_089", 5227, CapitalNpcServiceKind.PetMerchant),
             ("Sparta_034", 44345, CapitalNpcServiceKind.SkillVendor),
             ("Athens_036", 5175, CapitalNpcServiceKind.SkillVendor),
+            // The Athens newbie skill vendor is placed on map 2, where the
+            // capture renumbers it to 5285; keying it by the published ini id
+            // 54453 left the shop unanswerable.
+            ("Athens_Newbie_004", 5285, CapitalNpcServiceKind.SkillVendor),
+            ("Sparta_Newbie_004", 46565, CapitalNpcServiceKind.SkillVendor),
             ("Sparta_036", 5033, CapitalNpcServiceKind.PropsVendor),
             ("Athens_021", 5161, CapitalNpcServiceKind.PropsVendor),
             ("Sparta_077", 5074, CapitalNpcServiceKind.PointExchanger),
@@ -294,6 +299,76 @@ internal static partial class CapitalNpcServiceProtocolChecks
             ReadPrice(points[0], 15) == 20_000 &&
             points.SelectMany(ReadItemIds).All(static id => id != 14073),
             "Point Exchanger reproduces all 54 client-compatible captured records");
+
+        // The Athens merchant quarter, captured 2026-09-24. Each entry is the
+        // npc key and id, the frames it streams, the records those frames
+        // declare, the wire currency byte they carry and the balance that byte
+        // charges, and the first and last stock record - so a change to any
+        // catalog's contents, ordering or currency fails here.
+        (string Key, uint Npc, int Frames, int Records, byte ShopType,
+            CapitalNpcShopCurrency Charge, uint First, uint FirstPrice,
+            uint Last, uint LastPrice)[] athens =
+        [
+            ("Athens_026", 5166, 5, 63, 4, CapitalNpcShopCurrency.BindingGold,
+                1000, 58, 3006, 683),
+            ("Athens_027", 5167, 5, 63, 4, CapitalNpcShopCurrency.BindingGold,
+                1700, 58, 3006, 683),
+            ("Athens_028", 5168, 6, 76, 4, CapitalNpcShopCurrency.BindingGold,
+                3100, 58, 3612, 683),
+            ("Athens_029", 5169, 7, 91, 4, CapitalNpcShopCurrency.BindingGold,
+                2700, 58, 3612, 683),
+            ("Athens_096", 5234, 5, 63, 4, CapitalNpcShopCurrency.BindingGold,
+                1000, 58, 3006, 683),
+            ("Athens_099", 5237, 8, 86, 4, CapitalNpcShopCurrency.BindingGold,
+                5445, 1, 5208, 8500),
+            ("Athens_102", 5240, 6, 78, 4, CapitalNpcShopCurrency.BindingGold,
+                2100, 58, 3412, 683),
+            ("Athens_107", 5245, 5, 63, 4, CapitalNpcShopCurrency.BindingGold,
+                1700, 58, 3006, 683),
+            ("Athens_108", 5246, 2, 24, 2, CapitalNpcShopCurrency.Gold,
+                3100, 58, 3210, 654),
+            ("Athens_121", 5259, 5, 79, 3, CapitalNpcShopCurrency.Silver,
+                13000, 1856, 13074, 919855),
+            ("Athens_122", 5260, 8, 96, 4, CapitalNpcShopCurrency.BindingGold,
+                12800, 105, 12982, 2125),
+            ("Athens_135", 5273, 5, 76, 3, CapitalNpcShopCurrency.Silver,
+                13200, 1856, 13271, 634970),
+            ("Athens_136", 5274, 5, 80, 3, CapitalNpcShopCurrency.Silver,
+                13400, 1856, 13475, 764707),
+            ("Athens_137", 5275, 6, 93, 3, CapitalNpcShopCurrency.Silver,
+                13600, 1856, 13692, 634970)
+        ];
+        foreach (var (key, npc, frameCount, records, shopType, charge, first,
+                     firstPrice, last, lastPrice) in athens)
+        {
+            var resolved = CapitalNpcServiceProtocol.TryResolve(
+                Npc(key, npc), out var merchant);
+            Check.True(
+                resolved &&
+                CapitalNpcServiceProtocol.IsShop(merchant) &&
+                CapitalNpcServiceProtocol.TryGetShopCurrency(
+                    merchant, out var charged) &&
+                charged == charge,
+                $"Athens merchant {key} resolves to a shop charging its own balance");
+
+            // The frame advertises the balance its own listings charge, so the
+            // expected value follows the currency rather than being one number.
+            var balances = new CapitalNpcShopBalances(
+                Silver: 111, Gold: 222, BindingGold: 333);
+            var catalog = ReadCatalogFrames(PacketBuilder.CapitalNpcShopCatalog(
+                npc, balances, merchant));
+            var lastFrame = catalog[^1];
+            Check.True(
+                catalog.Count == frameCount &&
+                catalog.Sum(static frame => frame[10]) == records &&
+                catalog.All(frame => IsCatalogHeader(
+                    frame, npc, shopType, balances.Get(charge))) &&
+                ReadItemId(catalog[0], 0) == first &&
+                ReadPrice(catalog[0], 0) == firstPrice &&
+                ReadItemId(lastFrame, lastFrame[10] - 1) == last &&
+                ReadPrice(lastFrame, lastFrame[10] - 1) == lastPrice,
+                $"Athens merchant {npc} reproduces its {records} captured records");
+        }
 
         Check.True(
             CapitalNpcServiceProtocol.TryGetPointExchangerCurrency(

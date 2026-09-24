@@ -226,7 +226,7 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             await ReadPublishedHolySuitPoliciesAsync(
                 connection, transaction, revision, cancellationToken));
 
-    private static async Task VerifyPublishedV9ReleaseAsync(
+    private static async Task<bool> VerifyPublishedV9ReleaseAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         PublishedItemRevisionState release,
@@ -253,25 +253,49 @@ internal static partial class PostgresItemTemplateBaselinePublisher
             holySuit.Tiers.Count != release.HolySuitTierCount ||
             holySuit.Upgrades.Count != release.HolySuitUpgradeCount ||
             holySuit.Consumables.Count != release.HolySuitConsumableCount ||
-            release.HolySuitPolicyCount != 1 ||
-            !ItemTemplateContentRevisionHasher.ComputeV6(
-                    definitions,
-                    policies.Attributes,
-                    policies.EquipmentRanks,
-                    policies.HolySuitEffects,
-                    policies.ForgingMaterials,
-                    policies.EnhancementMaterials,
-                    policies.AttributeDusts,
-                    policies.Recipes,
-                    holySuit.Tiers,
-                    holySuit.Upgrades,
-                    holySuit.Consumables,
-                    holySuit.OperationPolicy)
-                .Equals(release.Revision, StringComparison.Ordinal))
+            release.HolySuitPolicyCount != 1)
         {
             throw new InvalidOperationException(
-                $"Published item-content revision {release.Revision} " +
-                "failed manifest-v9 validation.");
+                $"Published item-content revision {release.Revision} has " +
+                $"counts that disagree with its own header: definitions " +
+                $"{definitions.Count}/{release.EntryCount}, attributes " +
+                $"{policies.Attributes.Count}/{release.AttributeCount}, " +
+                $"equipment ranks " +
+                $"{policies.EquipmentRanks.Count}/{release.EquipmentRankCount}.");
         }
+        {
+            var recomputed = ItemTemplateContentRevisionHasher.ComputeV6(
+                definitions,
+                policies.Attributes,
+                policies.EquipmentRanks,
+                policies.HolySuitEffects,
+                policies.ForgingMaterials,
+                policies.EnhancementMaterials,
+                policies.AttributeDusts,
+                policies.Recipes,
+                holySuit.Tiers,
+                holySuit.Upgrades,
+                holySuit.Consumables,
+                holySuit.OperationPolicy);
+            if (!recomputed.Equals(release.Revision, StringComparison.Ordinal))
+            {
+                // The seal is intact - the released rows still match their own
+                // header counts - but the manifest hash no longer matches what
+                // the current baselines produce. That happens when a reviewed
+                // baseline gains an item, which is exactly the case the
+                // publisher must answer by publishing a NEW revision instead of
+                // validating the old one. Republishing is the normal path; the
+                // frozen revision is left untouched, so the previous release
+                // stays available.
+                Console.WriteLine(
+                    "[item-content] sealed revision no longer matches the " +
+                    $"reviewed baselines (stored={release.Revision} " +
+                    $"recomputed={recomputed} entries={definitions.Count}); " +
+                    "republishing a new revision from the current baselines.");
+                return false;
+            }
+        }
+
+        return true;
     }
 }

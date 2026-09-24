@@ -74,6 +74,12 @@ internal static class PetManagerPlanner
     public const int MaximumSpiritItems = 5;
     public const int MinimumPetMergeLevel = 30;
     public const int MinimumOwnerMergeAmity = 40;
+    /// <summary>
+    /// Amity spent by one committed Owner Merge activation. The client ships
+    /// no rate of its own, so this is the project cadence; the same value is
+    /// also the activation threshold.
+    /// </summary>
+    public const int OwnerMergeAmityCost = 40;
     public const int MaximumPetLevel = 120;
     public const int MaximumPetSkillCount =
         PetSkillSlotPolicy.MaximumLearnableSkillCells;

@@ -131,7 +131,17 @@ internal enum PetDurableReceiptStatus : byte
     WonderlandSackBagFull = 114,
     PlayerExperienceAdded = 115,
     PlayerExperienceMaximumReached = 116,
-    PetExperienceBoostActivated = 117
+    PetExperienceBoostActivated = 117,
+    /// <summary>
+    /// The pet has no satiety or no lifetime left, so it cannot be sent out.
+    /// </summary>
+    PetCareExhausted = 118,
+    /// <summary>
+    /// A reviewed pet-care consumable was fed to the summoned pet. Satiety,
+    /// amity, remaining lifetime, and merge energy were all raised inside the
+    /// same committed transaction that consumed the bag item.
+    /// </summary>
+    PetCareRestored = 119
 }
 
 internal sealed partial record PetDurableReceipt(
@@ -163,7 +173,8 @@ internal sealed partial record PetDurableReceipt(
     PetSkillLearnEvidence? SkillLearn = null,
     PlayerSkillLearnEvidence? PlayerSkillLearn = null,
     WonderlandSackOpenEvidence? WonderlandSack = null,
-    PlayerExperienceItemEvidence? PlayerExperience = null)
+    PlayerExperienceItemEvidence? PlayerExperience = null,
+    PetCareRestoreEvidence? CareRestore = null)
 {
     public bool Succeeded =>
         Status is PetDurableReceiptStatus.PlayerExperienceAdded or
@@ -184,6 +195,7 @@ internal sealed partial record PetDurableReceipt(
             PetDurableReceiptStatus.PetBasicSavvyPreviewed or
             PetDurableReceiptStatus.PetBasicSavvyAccepted or
             PetDurableReceiptStatus.PetExperienceAdded or
+            PetDurableReceiptStatus.PetCareRestored or
             PetDurableReceiptStatus.PetToPetMerged or
             PetDurableReceiptStatus.PetReborn or
             PetDurableReceiptStatus.PetSoulContractSigned or
@@ -226,7 +238,7 @@ internal sealed partial record PetDurableReceipt(
             PetLevel is < 0 or > 120 ||
             PetExperience < 0 ||
             PetRevision < 0 ||
-            PresenceOperation > 3 ||
+            PresenceOperation > 4 ||
             AggregateRevision < 0 ||
             string.IsNullOrWhiteSpace(AuditReference) ||
             AuditReference.Any(char.IsControl) ||
@@ -239,7 +251,7 @@ internal sealed partial record PetDurableReceipt(
             !MatchesWonderlandSackEvidence() ||
             !MatchesPlayerExperienceEvidence() ||
             (Family == CommandFamily.PetPresenceTransition) !=
-                (PresenceOperation is >= 1 and <= 3) ||
+                (PresenceOperation is >= 1 and <= 4) ||
             Status == PetDurableReceiptStatus.EggHatched &&
                 (PetId <= 0 || KitBagSlot < 0) ||
             Status == PetDurableReceiptStatus.PetCaptured &&
@@ -278,6 +290,14 @@ internal sealed partial record PetDurableReceipt(
                  !IsValidAcceptedBasicSavvyEvidence()) ||
             Status == PetDurableReceiptStatus.PetExperienceAdded &&
                 (PetId <= 0 || PetRevision <= 0 || KitBagSlot < 0) ||
+            Status == PetDurableReceiptStatus.PetCareRestored &&
+                (PetId <= 0 || PetRevision <= 0 || KitBagSlot < 0 ||
+                 !IsCarried ||
+                 CareRestore is not { IsValid: true } care ||
+                 care.PetId != PetId ||
+                 care.PetRevision != PetRevision) ||
+            CareRestore is not null &&
+                Status != PetDurableReceiptStatus.PetCareRestored ||
             Status == PetDurableReceiptStatus.PetToPetMerged &&
                 (PetId <= 0 || DeputyPetId <= 0 ||
                  PetId == DeputyPetId || PetRevision <= 0 ||

@@ -53,35 +53,68 @@ commas in rows `6020-6023`, misleading XML element names around
 `1420-1429`, and the reviewed repeated-metadata discrepancy in curve
 `3000-3004` are normalized deterministically.
 
-`Genre` and `Effect` remain distinct. `Add` and `Flag` are retained as opaque
-content fields because their combat meanings have not been proven. The owner
-stat projection is deliberately fail-closed to these reviewed passive
-families:
+`Genre` and `Effect` carry the same number in every row, and `Effect` selects
+the owner stat channel. `Add` is proven: `Add=1` applies the effect to the
+owner and `Add=2` applies it to the pet itself. Every owner effect the client
+uses is projected, and its scale follows the channel's existing convention
+(fraction-valued effects are stored in character basis points):
 
-| Family | Effect | Authoritative owner stat | Scaling |
-|---:|---:|---|---|
-| `408` | `19` | Ignore physical defense | value x 10,000 basis points |
-| `412` | `4` | Physical attack | integer value |
-| `413` | `2` | Hit rating | integer value |
-| `419` | `21` | Physical damage bonus | value x 10,000 basis points |
-| `423` | `0` | Maximum HP | integer value |
+| Effect | Client text | Channel | Scale |
+|---:|---|---|---|
+| `0` / `1` | player HP / MP | `max_hp` / `max_mp` | value |
+| `2` / `3` | hit / dodge | `hit` / `dodge` | value |
+| `4` / `5` | physical attack / defense | `physical_attack` / `physical_defense` | value |
+| `6` / `7` | magic attack / defense | `magic_attack` / `magic_defense` | value |
+| `8` / `9` | critical / critical resistance | `critical` / `critical_resistance` | value |
+| `10` | damage absorption | `damage_absorb` | value |
+| `13` / `14` | HP / MP recovery | `hp_recovery` / `mp_recovery` | value |
+| `15` / `16` | status hit / status dodge | `status_hit` / `status_resistance` | value |
+| `19` / `20` | ignore physical / magic defense | `ignore_physical_defense` / `ignore_magic_defense` | value x 10,000 |
+| `21` / `22` | physical / magic damage | `physical_damage_bonus` / `magic_damage_bonus` | value x 10,000 |
+| `23` / `24` | physical / magic appended damage | `physical_append_damage` / `magic_append_damage` | value |
+| `25` / `26` | critical damage percent / flat | `critical_damage_percent` / `critical_damage_flat` | value x 10,000 / value |
+| `29` / `30` | incoming physical / magic reduction | `physical_flat_absorption` / `magic_flat_absorption` | value |
+| `32` | incoming critical reduction | `critical_damage_flat_reduction` | value |
+| `34` | on-hit owner heal (Blood Chant, Extraction, Lifedrain) | `life_absorption_flat` | value |
+| `34` + family `428` | authored Vampiric percentage | `life_absorption` | value x 10,000 |
+| `37` | damage rebound percent | `damage_rebound` | value x 10,000 |
+| `38` | damage rebound flat | `damage_rebound_flat` | value |
 
 Family `413` is Platypus-exclusive Focus. Stock books `10530-10535` map to
 runtime tiers `4600/4604/4608/4612/4616/4620`; tiers II-VI require visible
 Accuracy Savvy `64/192/235/270/305`. At pet rank 100, Focus VI resolves its
 highest rank-90 step and adds `119` Hit Rating.
 
-Only active learned rows on the character's **carried** pet contribute. The
-pet need not be summoned or Owner-Merged, so Recall and Call Out do not change
-this passive source. Take/switch and hatch select a new source; Seal removes
-one. Owner Merge is a separate additive projection and never causes learned
+Only active learned rows on the character's **summoned** pet contribute. A
+carried but recalled pet supplies nothing, so Call Out adds the source and
+Recall removes it. Take/switch and hatch select a new source; Seal removes one.
+Owner Merge is a separate additive projection and never causes learned
 passives to be counted twice. All curve joins use the process-pinned learned
 skill publication, the persisted tier, and the highest rank step not above
 the authoritative pet rank. The client supplies none of those values.
 
-This stat-safe mapping does not invent proc triggers, targeting, damage,
-healing, cooldown, buff, or animation behavior for the other effect genres.
-They remain inert until their server semantics are proven.
+The stage thresholds are the client's own `Restrict[]` ranks: Dark Vengeance I
+(`808`) resolves `40` magic attack, `75` at pet rank 8, and `100` at pet rank
+19 for a summoned Ghost. A rank change from Rebirth or pet-to-pet Merge, a
+Take, a Call Out, a Recall, a learn, and an unlearn each republish the owner's
+calculated stats (`10167` then `10166`). The login restore calls the durable
+transition directly and publishes the complete status itself, so it needs no
+extra frames.
+
+Verified live on `2026-09-23`: `pet_presence_transition` commands `8470` and
+`8471` recalled and called out the summoned Ghost (`character_pets.id = 8`,
+rank `2.000000`) carrying Dark Vengeance I, and the owner's magic attack read
+exactly `40` higher while the pet was summoned and returned to its previous
+value after Recall. The same projection resolves `75` at rank 8 and `100` at
+rank 19 for that curve.
+
+The pet-self effects `43`-`48` (the six `符记` / Mark families `430`-`480`,
+which the client describes as raising the pet's **own** Agility, Strength,
+Accuracy, Technique, Wisdom and Luck) are deliberately **not** part of this
+owner-stat projection: they move the pet's own effective Savvy, its native
+Basic/Added wire split, and the owner-Merge contribution instead. The operator
+confirms that path is already effective, so it is left untouched here and was
+not re-verified in this change.
 
 Both items are direct right-click consumables using the shared client request
 opcode `10051`. The server classifies the locked authoritative bag item,
@@ -107,6 +140,64 @@ place and does not send slot-clear opcode `10052`. The stock client starts its
 own clock/cooldown overlay when the item is used, and preserving the item UI
 object lets that animation finish. A final consumed unit still receives
 `10052` before the empty-bag refresh so a stale icon cannot remain.
+
+## Stock skill books
+
+Every pet skill book the installed client ships is now learnable. The set is
+transcribed from `Settings/Sys/ItemBaseAttribute.xml` (the rows that carry a
+`PetSkill` attribute) and `Settings/Sys/Pet_Skill.xml` (`Type` is the family,
+`Priority` is the learned tier). The client repeats twelve exact rows
+(`10600-10605`, `10610-10615`), so its 402 book rows are **390 distinct item
+IDs** across **68 families**. `PetSkillBookActivationPolicy.ReviewedBookCount`
+and `SpeciesExclusiveFamilyCount` are fail-closed invariants of that set.
+
+A family is either shared by every pet or owned by exactly one species:
+
+- **24 shared families / 126 books.** No `PetInfo` text names a species.
+- **44 species-exclusive families / 264 books.** `Message_Pet.dat` states the
+  restriction in each `PetInfo<skill>` row as either `仅X可学` or `X的特有技能`,
+  and `UI/Base/text.lua` `PETTYPE<n>` names the species whose numeric identity
+  is `n`. All 44 names map onto species `1-44` with no unmapped row.
+
+The restriction is evaluated against the pet's **current** `species_id`, so a
+Magic Jade species change keeps every already-learned family and opens the new
+species' books. A pet may additionally always advance a family that is its own
+species starter skill, which keeps species `45` (Cupid, born with the Hedgehog
+family) able to advance that innate skill.
+
+Learning still requires the preceding tier, the family `Trait` threshold, an
+opened and empty cell, and one consumed book — all unchanged and still executed
+inside one PostgreSQL transaction with the durable receipt, inbox replay and
+learn evidence.
+
+Both family kinds were verified live on `2026-09-23` against `character_pet_skills`
+and `command_inbox` after a normal deployment:
+
+| Command | Book | Family | Result |
+|---:|---|---|---|
+| `8311` | `10231` Luck I | `480` shared | learned skill `2600` into cell 0 |
+| `8314` | `10210` Dark Vengeance I | `62` Ghost-exclusive | learned skill `808` into cell 1 |
+| `8332` | `10224` Blood Chant I | `340` shared | learned skill `2000` into cell 2 |
+
+The same session proves the refusal path: `10464` Wild Bump I (family `408`,
+Kritox-exclusive) was used on the Ghost five times (`8319`, `8320`, `8323`,
+`8324`, `8325`) and every attempt was rejected as
+`PetSkillBookWrongSpecies` without consuming the book and without recalling
+the pet. Before this change the allow-list held five families, so `10231`,
+`10224` and `10210` were all discarded as "not genuine equipment" and the
+learned-skill rule compared the book family against the pet's starter family,
+which no shared book could ever satisfy.
+
+Two content identities the generated client catalogue stops short of are
+published from `PetSkillBookItemContentBaseline`: `10745` (Spiky Armor VI) and
+the authored `16400-16405` Vampiric tiers. Publishing them advanced the item
+template revision to
+`D4FEF729173DAC258ED74A1D7DEBAA9B3DB71C77EC462BAE2233777951B0A07D` with 3,484
+items; the learned-skill publication is unchanged.
+
+A refused book leaves the pet untouched, so the projection answers it with the
+kit-bag refresh only. It deliberately skips owned-pet list opcode `10237`,
+which resets the client's active-pet selection.
 
 ## Innate talents
 
@@ -342,8 +433,7 @@ because no working-server evidence currently binds it to these NPCs.
 
 The menu and read-only pages are wired. Skill removal and direct right-click
 use of Pet Enhance Spring and Golden Apple Juice are verified and implemented.
-State-changing modal packet layouts for remaining skill-book actions have not
-yet been verified from an original-server capture.
-Those mutations therefore remain capture-gated: the server must not guess a
-request layout or consume an item until the exact packet shape and response
-ordering are proven.
+Skill-book learning uses the same direct right-click bag activation (opcode
+`10051`) and the same durable family; its request layout is therefore the one
+already captured, not a guessed modal. The remaining unimplemented surface is
+informational: a refused book produces no client-visible reason text.

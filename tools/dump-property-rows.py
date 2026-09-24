@@ -1,0 +1,85 @@
+"""Read each property row from its own jump-table entry.
+
+The panel's row bodies are only guaranteed to be correct when decoding starts at
+a jump-table target, so this walks the twenty-four entries and reports, per row,
+the value accessor it calls and the text key it prints.
+"""
+
+import struct
+import sys
+
+from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+
+EXE = r"D:\Godswar Origin\Origin.exe"
+JUMP_TABLE = 0x005B4B00
+ROWS = 24
+BASE_PROPERTY_ID = 0x044A0D
+
+
+def load_pe(path):
+    with open(path, "rb") as handle:
+        data = handle.read()
+    pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+    section_count = struct.unpack_from("<H", data, pe_offset + 6)[0]
+    optional_size = struct.unpack_from("<H", data, pe_offset + 20)[0]
+    optional = pe_offset + 24
+    magic = struct.unpack_from("<H", data, optional)[0]
+    image_base = (struct.unpack_from("<I", data, optional + 28)[0]
+                  if magic == 0x10B
+                  else struct.unpack_from("<Q", data, optional + 24)[0])
+    sections = []
+    table = optional + optional_size
+    for index in range(section_count):
+        entry = table + (index * 40)
+        name = data[entry:entry + 8].rstrip(b"\0").decode("ascii", "replace")
+        virtual_size, virtual_address, raw_size, raw_offset = struct.unpack_from(
+            "<IIII", data, entry + 8)
+        sections.append((name, virtual_address, virtual_size, raw_offset, raw_size))
+    return data, image_base, sections
+
+
+def build_image(data, image_base, sections):
+    size = max(virtual_address + max(virtual_size, raw_size)
+               for _, virtual_address, virtual_size, _, raw_size in sections)
+    image = bytearray(size)
+    for name, virtual_address, virtual_size, raw_offset, raw_size in sections:
+        chunk = data[raw_offset:raw_offset + raw_size]
+        image[virtual_address:virtual_address + len(chunk)] = chunk
+    return image
+
+
+def describe_literal(image, image_base, sections, va):
+    for name, virtual_address, virtual_size, raw_offset, raw_size in sections:
+        if virtual_address <= va - image_base < virtual_address + raw_size:
+            offset = raw_offset + (va - image_base - virtual_address)
+            end = offset
+            while 32 <= image[end] < 127:
+                end += 1
+            return image[offset:end].decode("ascii", "replace")
+    return "?"
+
+
+def main():
+    data, image_base, sections = load_pe(EXE)
+    image = build_image(data, image_base, sections)
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+
+    for index in range(ROWS):
+        target = struct.unpack_from(
+            "<I", image, JUMP_TABLE - image_base + index * 4)[0]
+        print(f"--- idx {index:2d}  property {BASE_PROPERTY_ID + index:#08x}  "
+              f"row {target:#x}")
+        chunk = bytes(image[target - image_base:target - image_base + 0x30])
+        for insn in md.disasm(chunk, target):
+            text = f"{insn.mnemonic} {insn.op_str}"
+            note = ""
+            if insn.mnemonic == "call" and insn.op_str.startswith("0x"):
+                note = "   <- accessor"
+            if insn.mnemonic == "push" and insn.op_str.startswith("0x"):
+                note = f"   <- key \"{describe_literal(image, image_base, sections, int(insn.op_str, 16))}\""
+            print(f"    {insn.address:#010x} {text}{note}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

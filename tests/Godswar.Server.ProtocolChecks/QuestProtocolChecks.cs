@@ -875,9 +875,9 @@ internal static class QuestProtocolChecks
             "the Sparta warehouse keeps its published appearance word");
 
         Check.Equal(
-            96,
+            125,
             CapturedNpcPlacements.CountFor(1),
-            "the capture holds 96 Athens city NPCs");
+            "the capture holds 125 Athens city NPCs");
         Check.True(
             CapturedNpcPlacements.CountFor(0) > 0,
             "the capture holds Sparta's city NPCs too");
@@ -886,25 +886,25 @@ internal static class QuestProtocolChecks
     }
 
     /// <summary>
-    /// Applying the capture to a map keeps every identity unique.
+    /// A captured map is the reference server's own content, so an NPC the
+    /// capture did not record there is dropped rather than renamed.
     /// </summary>
     /// <remarks>
-    /// The capture holds only 90 of Athens' 128 city npcs and our published ids for
-    /// the rest are one higher, so renumbering the captured subset alone landed one
-    /// npc on another's id - the published Athens_051 keeps 5190 while the captured
-    /// Athens_052 also becomes 5190. The catalog installs npcs with
-    /// <c>Dictionary.Add</c> on both id axes, so that duplicate threw and an Athens
-    /// login ended in a client disconnect while Sparta, whose city map is published
-    /// from the capture and skipped, was unaffected.
+    /// Athens_047 is a published row the capture never saw; Athens_052 is a
+    /// captured neighbour the reference placed on 5190. An earlier revision kept
+    /// 047 by moving it clear of 052, which is what a captured map used to need
+    /// before the reference became authoritative for it. A captured map no longer
+    /// renames anything: a row the reference never placed there is not its
+    /// content. Maps the capture does not cover are still returned untouched,
+    /// because "the reference has no such NPC" and "we never went there" are
+    /// different statements.
     /// </remarks>
     private static void CheckCapturedNpcPlacementUniqueness()
     {
-        // Athens_052 is captured as 5190; a published neighbour still holding 5190
-        // stands in for the thirty-eight uncaptured npcs.
-        NpcSpawnDefinition Published(string key, uint objectId) =>
+        NpcSpawnDefinition Published(short mapId, string scene, string key, uint objectId) =>
             new(
-                1,
-                "Athens",
+                mapId,
+                scene,
                 key,
                 $"{key}_Male18",
                 objectId,
@@ -917,11 +917,16 @@ internal static class QuestProtocolChecks
                 []);
 
         var placed = CapturedNpcPlacementPolicy.ApplyToMap(
-            [Published("Athens_051", 5190u), Published("Athens_052", 5191u)]);
+        [
+            Published(1, "Athens", "Athens_047", 5186u),
+            Published(1, "Athens", "Athens_052", 5191u)
+        ]);
 
-        Check.Equal(2, placed.Count, "both Athens npcs survive normalization");
-        var captured = placed.Single(npc => npc.NpcKey == "Athens_052");
-        var moved = placed.Single(npc => npc.NpcKey == "Athens_051");
+        var captured = placed.Single();
+        Check.Equal(
+            "Athens_052",
+            captured.NpcKey,
+            "the uncaptured Athens npc is dropped from a captured map");
         Check.Equal(
             5190u,
             captured.ObjectId,
@@ -930,22 +935,25 @@ internal static class QuestProtocolChecks
             captured.ObjectId,
             captured.InteractionId,
             "the captured Athens npc keeps one identity on both axes");
-        Check.True(
-            moved.ObjectId > 5190u && moved.ObjectId == moved.InteractionId,
-            "the uncaptured npc moves clear of the captured id");
-        Check.Equal(
-            2,
-            placed.Select(static npc => npc.ObjectId).Distinct().Count(),
-            "the map has no duplicate object ids");
-        Check.Equal(
-            2,
-            placed.Select(static npc => npc.InteractionId).Distinct().Count(),
-            "the map has no duplicate interaction ids");
 
-        // A map published from the capture is skipped, so a Sparta map is returned
-        // with the ids it came in with.
+        // A map the capture does not cover keeps every published row, ids included.
+        var uncovered = CapturedNpcPlacementPolicy.ApplyToMap(
+        [
+            Published(3, "Parnitha_1", "Parnitha_1_001", 5190u),
+            Published(3, "Parnitha_1", "Parnitha_1_002", 5191u)
+        ]);
+        Check.Equal(
+            2,
+            uncovered.Count,
+            "an uncovered map keeps all of its published npcs");
+        Check.True(
+            uncovered.All(static npc => npc.ObjectId == npc.InteractionId),
+            "an uncovered map keeps its published identities");
+
+        // A map published from the capture is skipped by the placement step, so a
+        // Sparta map is returned with the ids it came in with.
         var sparta = CapturedNpcPlacementPolicy.ApplyToMap(
-            [Published("Sparta_023", 47750u) with { MapId = 0, SceneKey = "Sparta" }]);
+            [Published(0, "Sparta", "Sparta_023", 47750u)]);
         Check.Equal(
             47750u,
             sparta.Single().ObjectId,
@@ -1087,24 +1095,27 @@ internal static class QuestProtocolChecks
                     giftBag.AsSpan(72 + (index * 72), 4)) == 0xFFFF_FFFFu),
             "quest 518 answer keeps its single captured gift bag");
 
-        // The objective area holds one target, so a multi-target quest leaves it
-        // empty: the capture answered 528 - two targets, Addiya and eight boxes -
-        // with kind 4 and a zero objective, like every other multi-target quest of
-        // that chain. Writing the first target there replaced the client's own
-        // objective list with a single line.
+        // A multi-target quest fills one slot per target. The older reading here
+        // was that a multi-target quest leaves the objective area empty because it
+        // "holds one target"; the reference server's own answer for the two-target
+        // Athens quest 1533 (captured 2026-09-24 20:57:27) carries kind 8 with
+        // monster 1414/1415 and count 20/20 in the first two slots, and leaving the
+        // area empty is what made the installed client draw a single line for a
+        // quest that asks for two targets. Quest 528 asks for one Addiya the
+        // Destroyer and eight Fake Treasures, so both slots are filled.
         var twoTargetQuest = PacketBuilder.QuestAnswer(5054, 5054, 528);
         Check.Equal(
-            4u,
+            8u,
             BinaryPrimitives.ReadUInt32LittleEndian(twoTargetQuest.AsSpan(20, 4)),
-            "quest 528 answer keeps the captured multi-target kind");
+            "quest 528 answer marks a multi-target kill quest");
         Check.Equal(
-            0u,
-            BinaryPrimitives.ReadUInt32LittleEndian(twoTargetQuest.AsSpan(28, 4)),
-            "quest 528 answer leaves the objective area empty as captured");
+            "D405FF03",
+            Convert.ToHexString(twoTargetQuest.AsSpan(32, 4)),
+            "quest 528 answer fills one monster slot per target");
         Check.Equal(
-            0u,
-            BinaryPrimitives.ReadUInt32LittleEndian(twoTargetQuest.AsSpan(48, 4)),
-            "quest 528 answer carries no required count");
+            "01000800",
+            Convert.ToHexString(twoTargetQuest.AsSpan(48, 4)),
+            "quest 528 answer fills one count slot per target");
 
         // No quest may wear another quest's rewards: 1522's captured answer carries
         // four free slots, and a quest the capture never answered (545) keeps them
@@ -1136,84 +1147,127 @@ internal static class QuestProtocolChecks
     /// </remarks>
     private static void CheckCapturedAthensSpawnPlans()
     {
+        // Athens now travels the way Sparta always did: its monsters are rows in
+        // the published monster revision, not a generated plan appended at
+        // runtime. These checks pin the same invariants the plan used to hold.
+        var published = MonsterContentBaselineV1.LoadDefinitions();
+        var byMap = published
+            .GroupBy(static row => row.MapId)
+            .ToDictionary(static group => group.Key, static group => group.ToArray());
+
         Check.Equal(
-            294,
-            AthensCityCapturedSpawnPlan.SpawnCount,
+            351,
+            byMap[1].Length,
             "the captured Athens city population keeps its reviewed size");
         Check.Equal(
-            330,
-            AthensNewbieCapturedSpawnPlan.SpawnCount,
+            904,
+            byMap[2].Length,
             "the captured Athens newbie population keeps its reviewed size");
-        Check.Equal(
-            (short)1,
-            AthensCityCapturedSpawnPlan.MapId,
-            "the city population belongs to Athens city");
-        Check.Equal(
-            (short)2,
-            AthensNewbieCapturedSpawnPlan.MapId,
-            "the newbie population belongs to the Athens newbie map");
 
-        (string TemplateKey, uint ObjectId, ushort Appearance, uint Tier,
-            uint MaximumHealth, float X, float Z, float Facing)[][] plans =
-        [
-            [.. AthensCityCapturedSpawnPlan.Spawns.Select(static row => (
-                row.TemplateKey, row.ObjectId, row.Appearance, row.Tier,
-                row.MaximumHealth, row.X, row.Z, row.Facing))],
-            [.. AthensNewbieCapturedSpawnPlan.Spawns.Select(static row => (
-                row.TemplateKey, row.ObjectId, row.Appearance, row.Tier,
-                row.MaximumHealth, row.X, row.Z, row.Facing))]
-        ];
-        var planMapIds = new short[] { 1, 2 };
-        for (var planIndex = 0; planIndex < plans.Length; planIndex++)
+        for (var mapId = 1; mapId <= 2; mapId++)
         {
-            var rows = plans[planIndex];
-            var mapId = planMapIds[planIndex];
+            var rows = byMap[(short)mapId];
             Check.Equal(
                 rows.Length,
                 rows.Select(static row => row.ObjectId).Distinct().Count(),
-                $"map {mapId} captured plan repeats no object id");
+                $"map {mapId} captured population repeats no object id");
             foreach (var row in rows)
             {
                 Check.True(
                     row.ObjectId > 0 &&
                     row.Tier > 0 &&
-                    row.MaximumHealth > 0 &&
+                    AppearanceWordOf(row) > 0 &&
+                    CurrentHealthOf(row) > 0 &&
                     float.IsFinite(row.X) &&
                     float.IsFinite(row.Z) &&
-                    float.IsFinite(row.Facing) &&
+                    float.IsFinite(FacingOf(row)) &&
                     !string.IsNullOrWhiteSpace(row.TemplateKey),
                     $"map {mapId} captured spawn {row.ObjectId} is complete");
             }
         }
 
         Check.True(
-            AthensCityCapturedSpawnPlan.Spawns.All(static row =>
-                row.ObjectId >= 10_457 && row.ObjectId <= 10_913),
+            byMap[1].All(static row => row.ObjectId >= 10_457 && row.ObjectId <= 10_913),
             "the city population keeps the reference's own object id block");
         Check.True(
-            AthensNewbieCapturedSpawnPlan.Spawns.All(static row =>
-                row.ObjectId >= 10_960 && row.ObjectId <= 12_060),
+            byMap[2].All(static row => row.ObjectId >= 10_914 && row.ObjectId <= 12_060),
             "the newbie population keeps the reference's own object id block");
 
-        // One pinned row per map: species, id, appearance word, tier, health.
-        var deer = AthensCityCapturedSpawnPlan.Spawns.Single(static row =>
-            row.ObjectId == 10_505);
+        // One pinned row per map: species, object id and the packet's own values.
+        var deer = byMap[1].Single(static row => row.ObjectId == 10_505);
         Check.True(
             deer.TemplateKey == "A_normal_deer_001" &&
-            deer.Appearance == 0x0212 &&
+            AppearanceWordOf(deer) == 0x0212 &&
             deer.Tier == 3 &&
-            deer.MaximumHealth == 283,
+            CurrentHealthOf(deer) == 283,
             "city spawn 10505 is the reference's Little Deer");
 
-        var boss = AthensNewbieCapturedSpawnPlan.Spawns.Single(static row =>
-            row.ObjectId == 11_955);
+        var boss = byMap[2].Single(static row => row.ObjectId == 11_955);
         Check.True(
             boss.TemplateKey == "C_boss_greecewarrior_001" &&
-            boss.Appearance == 0x0112 &&
+            AppearanceWordOf(boss) == 0x0112 &&
             boss.Tier == 200 &&
-            boss.MaximumHealth == 8_177_792,
+            CurrentHealthOf(boss) == 8_177_792,
             "newbie spawn 11955 is the reference's general");
+
+        // The maps the 2026-09-24/25 capture session added, each with the
+        // population and object-id block the reference's own frames carried.
+        // Maps 3 and 11 already shipped a partial population and grew; maps 9,
+        // 15, 18 and 19 are new to the server entirely.
+        (short MapId, int Count, uint MinId, uint MaxId)[] captured =
+        [
+            (3, 263, 12_061u, 12_758u),
+            (9, 308, 17_488u, 18_055u),
+            (11, 452, 18_742u, 19_433u),
+            (15, 273, 21_672u, 22_516u),
+            (18, 185, 23_962u, 24_543u),
+            (19, 185, 24_571u, 25_422u)
+        ];
+        foreach (var (mapId, count, minId, maxId) in captured)
+        {
+            Check.True(byMap.ContainsKey(mapId), $"map {mapId} has content");
+            var rows = byMap[mapId];
+            Check.Equal(
+                count,
+                rows.Length,
+                $"map {mapId} captured population keeps its reviewed size");
+            Check.Equal(
+                0,
+                rows.Length - rows.Select(static row => row.ObjectId)
+                    .Distinct().Count(),
+                $"map {mapId} captured population repeats no object id");
+            Check.True(
+                rows.All(row =>
+                    row.ObjectId >= minId &&
+                    row.ObjectId <= maxId),
+                $"map {mapId} spawns stay inside the reference's id block");
+            Check.True(
+                rows.All(row =>
+                    row.Tier > 0 &&
+                    AppearanceWordOf(row) > 0 &&
+                    CurrentHealthOf(row) > 0 &&
+                    float.IsFinite(row.X) &&
+                    float.IsFinite(row.Z) &&
+                    !string.IsNullOrWhiteSpace(row.TemplateKey)),
+                $"map {mapId} captured spawns are complete");
+        }
     }
+
+    /// <summary>
+    /// The appearance word a captured spawn's own 10020 frame carries: the low
+    /// 16 bits of the object-type word at packet offset +4 (0x0111/0x0211 for
+    /// city NPCs, 0x0012/0x0112/0x0212 for monsters).
+    /// </summary>
+    private static ushort AppearanceWordOf(CapturedMonsterSpawn row) =>
+        BinaryPrimitives.ReadUInt16LittleEndian(row.Packet.AsSpan(4, 2));
+
+    /// <summary>The hit points the captured frame recorded at packet offset +20.</summary>
+    private static uint CurrentHealthOf(CapturedMonsterSpawn row) =>
+        BinaryPrimitives.ReadUInt32LittleEndian(row.Packet.AsSpan(20, 4));
+
+    /// <summary>The facing the captured frame recorded at packet offset +40.</summary>
+    private static float FacingOf(CapturedMonsterSpawn row) =>
+        BinaryPrimitives.ReadSingleLittleEndian(row.Packet.AsSpan(40, 4));
 
     /// <summary>
     /// The mall's frames, checked against the reference capture's own bytes.

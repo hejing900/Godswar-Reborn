@@ -37,16 +37,12 @@ internal static class PostgresMonsterContentBaselinePublisher
             connection,
             transaction,
             cancellationToken);
-        var current = await ReadCurrentPublicationAsync(
-            connection,
-            transaction,
-            cancellationToken);
-        if (current is not null)
-        {
-            await transaction.CommitAsync(cancellationToken);
-            return current with { Created = false };
-        }
 
+        // The embedded baseline decides what should be published. A pointer to
+        // any other revision is stale and is upgraded below, so replacing the
+        // artifact is enough to publish new content. Returning early on "a
+        // publication exists" instead would pin the realm to whatever was
+        // published first and silently ignore every later capture.
         var mapIds = await ReadMapIdsAsync(
             connection,
             transaction,
@@ -65,6 +61,34 @@ internal static class PostgresMonsterContentBaselinePublisher
         {
             throw new InvalidDataException(
                 "The reviewed monster baseline failed publication validation.");
+        }
+
+        var current = await ReadCurrentPublicationAsync(
+            connection,
+            transaction,
+            cancellationToken);
+        if (current is not null &&
+            string.Equals(
+                current.Revision,
+                revision.Sha256,
+                StringComparison.Ordinal))
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return current with { Created = false };
+        }
+
+        if (await IsRevisionStoredAsync(
+                connection,
+                transaction,
+                revision,
+                cancellationToken))
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return new MonsterContentPublicationResult(
+                revision.Sha256,
+                revision.EntryCount,
+                MonsterContentBaselineV1.Source,
+                Created: false);
         }
 
         if (await InsertReleaseAsync(
@@ -99,7 +123,11 @@ internal static class PostgresMonsterContentBaselinePublisher
                              @revision,
                              now(),
                              @publisher
-                         );
+                         )
+                         ON CONFLICT (family) DO UPDATE
+                         SET revision = EXCLUDED.revision,
+                             published_at = EXCLUDED.published_at,
+                             publisher = EXCLUDED.publisher;
                          """,
                          connection,
                          transaction))
@@ -222,6 +250,44 @@ internal static class PostgresMonsterContentBaselinePublisher
         }
 
         return canonical.ToArray();
+    }
+
+    /// <summary>
+    /// Whether a revision and its full definition set are already stored.
+    /// </summary>
+    /// <remarks>
+    /// Re-running a publication that already landed must stay a no-op: the
+    /// pointer move below is what makes a revision live, and rewriting a release
+    /// that is already complete would only re-insert the same rows.
+    /// </remarks>
+    private static async Task<bool> IsRevisionStoredAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        WorldContentFamilyRevision revision,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT release.entry_count,
+                   (
+                       SELECT COUNT(*)::integer
+                       FROM monster_spawn_definitions definitions
+                       WHERE definitions.revision = release.revision
+                   )
+            FROM monster_content_revisions release
+            WHERE release.revision = @revision;
+            """,
+            connection,
+            transaction);
+        command.Parameters.AddWithValue(
+            "revision",
+            NpgsqlDbType.Varchar,
+            revision.Sha256);
+        await using var reader =
+            await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) &&
+               reader.GetInt32(0) == revision.EntryCount &&
+               reader.GetInt32(1) == revision.EntryCount;
     }
 
     private static async Task<bool> InsertReleaseAsync(

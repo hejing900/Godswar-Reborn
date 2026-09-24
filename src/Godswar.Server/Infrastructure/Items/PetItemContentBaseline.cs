@@ -30,6 +30,23 @@ internal static class PetItemContentBaseline
             Use: 1),
         new(10084, "Pet10084", "Mysterious Tuck Net", "900,936", 99,
             ItemType: 0, Skill: 4734, Use: 1),
+        // The three pet-care rows the cash mall and the bound-gold vendor both
+        // advertise (10023 and 10043 at 30, 10090 at 11) but this baseline
+        // never reviewed. The listing was visible and the purchase was refused
+        // because the purchase path reads the item from the released content.
+        // Every field is the installed client's own ItemBaseAttribute row:
+        //   <Pet10023 ID="10023" Icon="108,936" Money="0" Overlap="99" Use="1"
+        //             Skill="4721" ItemType="7" Food="2" Fill="100" Favor="40"/>
+        //   <Pet10043 ID="10043" Icon="684,972" Money="0" Overlap="99" Use="1"
+        //             Skill="4721" ItemType="7" Food="3" Fill="100" Favor="40"/>
+        //   <Pet10090 ID="10090" Icon="576,936" Money="0" Overlap="99" Use="1"
+        //             ItemType="8" Values="100"/>
+        new(10023, "Pet10023", "Roast Meat", "108,936", 99,
+            ItemType: 7, Skill: 4721, Use: 1, Food: 2, Fill: 100, Favor: 40),
+        new(10043, "Pet10043", "Royal Feast", "684,972", 99,
+            ItemType: 7, Skill: 4721, Use: 1, Food: 3, Fill: 100, Favor: 40),
+        new(10090, "Pet10090", "Pet Spring Water", "576,936", 99,
+            ItemType: 8, Values: 100, Use: 1),
         new(10099, "Pet10099", "Pet Enhance Spring", "648,936", 99, 5, Use: 1),
         new(10100, "Pet10100", "Golden Apple Juice", "504,936", 99, 1, Use: 1),
         new(10101, "Pet10101", "Strong Purge Potion", "612,936", 99),
@@ -99,6 +116,9 @@ internal static class PetItemContentBaseline
                 "Values",
                 item.Values.Value.ToString(CultureInfo.InvariantCulture));
         }
+        AddOptional(stats, "Food", item.Food);
+        AddOptional(stats, "Fill", item.Fill);
+        AddOptional(stats, "Favor", item.Favor);
         AddOptional(stats, "Use", item.Use);
         AddOptional(stats, "BindType", item.BindType);
         AddOptional(stats, "Skill", item.Skill);
@@ -160,5 +180,8 @@ internal static class PetItemContentBaseline
         short? Mode = null,
         short? Use = null,
         short? PetLimit = null,
-        string? Texture = null);
+        string? Texture = null,
+        short? Food = null,
+        short? Fill = null,
+        short? Favor = null);
 }

@@ -20,7 +20,11 @@ import sys
 CAPTURE_DIR = r"D:\Godswar Origin\npc-translation"
 OUTPUT = (r"D:\Godswar-Reborn-main\src\Godswar.Server\Infrastructure"
           r"\WorldContent\CapturedNpcPlacements.Generated.cs")
-MODEL_SUFFIX = re.compile(r"^([A-Za-z0-9]+_[0-9]+)_")
+# The NPC key is the template key up to its trailing model segment. The scene
+# key may itself contain underscores and non-numeric segments
+# (`Athens_Newbie_001_MaleVillager2`, `Marathon_All_013_FemMale7`), so a
+# `word_digits` model pattern silently drops every NPC on those maps.
+MODEL_SUFFIX = re.compile(r"^(?P<key>.+)_(?P<model>[A-Za-z0-9]+)$")
 
 
 def captured_maps():
@@ -42,7 +46,7 @@ def captured_maps():
                 if match_model is None:
                     continue
                 rows.append((
-                    match_model.group(1),
+                    match_model.group("key"),
                     template,
                     int(object_id),
                     int(low),
@@ -121,6 +125,30 @@ def emit(maps):
         "        ByMap.TryGetValue(mapId, out var placements)",
         "            ? placements.Length",
         "            : 0;",
+        "",
+        "    /// <summary>Whether the reference capture placed any NPC on a map.</summary>",
+        "    public static bool HasCaptureFor(short mapId) =>",
+        "        ByMap.ContainsKey(mapId);",
+        "",
+        "    /// <summary>The NPC keys the reference capture placed on a map.</summary>",
+        "    public static IReadOnlySet<string> CapturedKeysFor(short mapId)",
+        "    {",
+        "        if (!ByMap.TryGetValue(mapId, out var placements))",
+        "        {",
+        "            return EmptyKeys;",
+        "        }",
+        "",
+        "        var keys = new HashSet<string>(placements.Length, StringComparer.Ordinal);",
+        "        foreach (var placement in placements)",
+        "        {",
+        "            keys.Add(placement.NpcKey);",
+        "        }",
+        "",
+        "        return keys;",
+        "    }",
+        "",
+        "    private static readonly HashSet<string> EmptyKeys =",
+        "        new(StringComparer.Ordinal);",
         "",
         "    /// <summary>The captured placement of one NPC, when it was captured.</summary>",
         "    public static bool TryFind(string npcKey, out Placement placement) =>",

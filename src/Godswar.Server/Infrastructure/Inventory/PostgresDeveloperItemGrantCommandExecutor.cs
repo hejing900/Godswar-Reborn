@@ -378,6 +378,9 @@ internal sealed partial class PostgresDeveloperItemGrantCommandExecutor :
                     : PinnedDeveloperItemGrantCatalog
                         .IsPetConsumableDeveloperGrant(itemId)
                     ? "developer_pet_consumable_grant"
+                    : PinnedDeveloperItemGrantCatalog
+                        .IsGuildStoneDeveloperGrant(itemId)
+                    ? "developer_guild_stone_grant"
                     : "developer_empty_holy_box_grant");
             return true;
         }

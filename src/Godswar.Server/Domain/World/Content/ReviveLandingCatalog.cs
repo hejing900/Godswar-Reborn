@@ -20,16 +20,31 @@ internal static class ReviveLandingCatalog
     internal readonly record struct ReviveLanding(byte MapId, float X, float Z);
 
     /// <summary>
-    /// Captured 2026-09-15 on the reference server. A character killed in
-    /// Athens city (map 1) received the 28-byte landing frame
-    /// <c>1C002227 8F040000 0000A041 00000000 0000C8C2 01000100 01000000</c>:
-    /// object 1167 at x = 20, y = 0, z = -100 with the map in the high word of
-    /// +20. It revives on the map it died on.
-    /// See docs/death-revive-capture-20260915.md.
+    /// Captured landing points, one per map the character can die on. The
+    /// destination map and its coordinate are the reference's own: a character
+    /// revives on the map it died on, at that map's own revive point, and the
+    /// two captures below are far from each other and from any camp capital.
     /// </summary>
+    /// <remarks>
+    /// Athens city (map 1), captured 2026-09-15. A character killed there
+    /// received the 28-byte landing frame
+    /// <c>1C002227 8F040000 0000A041 00000000 0000C8C2 01000100 01000000</c>:
+    /// object 1167 at x = 20, y = 0, z = -100. See
+    /// docs/death-revive-capture-20260915.md.
+    /// <para>
+    /// Megara (map 18), captured 2026-09-25 at 00:13:20. A character killed
+    /// there answered the revive prompt with <c>C2S 10028 {a7, type 2}</c> and
+    /// the server returned
+    /// <c>1C002227 A7000000 00006042 00000000 0000B042 12001200 01000000</c>:
+    /// object 167 at x = 56, y = 0, z = 88. The word at +20 is the same field
+    /// in both frames and reads 0x0012 here against 0x0001 for Athens, which is
+    /// how the landing map is identified.
+    /// </para>
+    /// </remarks>
     private static readonly ReviveLanding[] Landings =
     [
-        new(MapId: 1, X: 20f, Z: -100f)
+        new(MapId: 1, X: 20f, Z: -100f),
+        new(MapId: 18, X: 56f, Z: 88f)
     ];
 
     /// <summary>Every capture-proven landing point, in capture order.</summary>

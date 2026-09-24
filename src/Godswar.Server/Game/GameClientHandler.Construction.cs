@@ -122,6 +122,12 @@ internal sealed partial class GameClientHandler
             legacyInstanceOpalPayments = null,
         Godswar.Server.Infrastructure.WishingPool
             .PostgresWishingPoolUsageStore? wishingPoolUsage = null,
+        Godswar.Server.Infrastructure.Quests
+            .PostgresQuestAppraisalStore? questAppraisal = null,
+        Godswar.Server.Application.LuckyGods
+            .ILuckyGodsWishStore? luckyGodsWish = null,
+        Godswar.Server.Infrastructure.Guilds
+            .PostgresGuildStore? guilds = null,
         TimeProvider? flameBlastTimeProvider = null)
     {
         if (backhaulSkillCastTime < TimeSpan.Zero)
@@ -238,6 +244,9 @@ internal sealed partial class GameClientHandler
         _legacyInstanceDailyEntries = legacyInstanceDailyEntries;
         _legacyInstanceOpalPayments = legacyInstanceOpalPayments;
         _wishingPoolUsage = wishingPoolUsage;
+        _questAppraisal = questAppraisal;
+        _luckyGodsWish = luckyGodsWish;
+        _guilds = guilds;
         _petOwnerMergeEnergyInterval =
             petOwnerMergeEnergyInterval ?? TimeSpan.FromSeconds(3);
         _petOwnerMergeRechargeInterval =

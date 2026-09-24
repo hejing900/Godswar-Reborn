@@ -9,7 +9,8 @@ sealed record Options(
     string OutputPath,
     string PostgresConnectionString,
     short? MonsterMapId,
-    bool DisableDatabaseLogging)
+    bool DisableDatabaseLogging,
+    int ProbePort)
 {
     private const string DefaultPostgresConnectionString =
         "Host=127.0.0.1;Port=5432;Database=godswar;Username=godswar;Password=godswar_dev_password;Pooling=true";
@@ -60,7 +61,8 @@ sealed record Options(
                     ?? Environment.GetEnvironmentVariable("GODSWAR_POSTGRES_CONNECTION_STRING")
                     ?? DefaultPostgresConnectionString),
             MonsterMapId: GetOptionalShort(values, "monster-map-id"),
-            DisableDatabaseLogging: GetBool(values, "disable-db", false));
+            DisableDatabaseLogging: GetBool(values, "disable-db", false),
+            ProbePort: GetInt(values, "probe-port", 7099));
     }
 
     private static int GetInt(Dictionary<string, string> values, string key, int fallback)

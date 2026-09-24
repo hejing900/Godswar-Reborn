@@ -23,30 +23,47 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+        PetDurableReceipt? receipt;
         if (packet.ClientOperationId is { } operationId &&
             petId != 0)
         {
-            await HandleDurablePetPresenceAsync(
+            receipt = await HandleDurablePetPresenceAsync(
                 PetCommandOperationIdentity.SecureClient(operationId),
                 petId,
                 operation,
                 cancellationToken);
-            return;
         }
-
-        if (petId == 0 ||
-            !AllowLegacyPlayerMutationFallback("pet_presence"))
+        else
         {
-            return;
+            if (petId == 0 ||
+                !AllowLegacyPlayerMutationFallback("pet_presence"))
+            {
+                return;
+            }
+
+            receipt = await HandleDurablePetPresenceAsync(
+                PetCommandOperationIdentity.RawLocalServer(
+                    Guid.NewGuid(),
+                    _commandConnectionId),
+                petId,
+                operation,
+                cancellationToken);
         }
 
-        await HandleDurablePetPresenceAsync(
-            PetCommandOperationIdentity.RawLocalServer(
-                Guid.NewGuid(),
-                _commandConnectionId),
-            petId,
-            operation,
-            cancellationToken);
+        // Call Out and Recall add or remove the one pet that supplies the
+        // summoned skill passives, so the owner's calculated stats are
+        // republished here. Take is refreshed by its own projection, which is
+        // the only place that can compare the previously carried pet, and the
+        // login restore calls the durable transition directly and publishes
+        // the complete status itself.
+        if (receipt is { Succeeded: true } &&
+            operation is PetPresenceOperation.CallOut or
+                PetPresenceOperation.Recall)
+        {
+            await SendPetSkillOwnerStatRefreshAsync(
+                "PetPresenceSkillSource",
+                cancellationToken);
+        }
     }
 
     private async Task RestorePersistedPetPresenceAsync(
@@ -180,6 +197,7 @@ internal sealed partial class GameClientHandler
         }
 
         StartPetOwnerMergeEnergyRecharge();
+        StartPetCareDecay();
 
         Console.WriteLine(
             $"[pet] presence restored character={_character.Name} pet={petId} summoned={carried.IsSummoned}");

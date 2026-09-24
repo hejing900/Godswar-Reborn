@@ -13,6 +13,7 @@ internal sealed class MainForm : Form
 {
     private readonly LootToolSettings _settings = LootToolSettings.Load();
     private readonly LootStore _store = new();
+    private readonly PetPanel _petPanel = new();
     private readonly ConnectionPanel _connection = new();
     private readonly TextBox _filterBox = new();
     private readonly ComboBox _filterMode = new();
@@ -43,7 +44,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Godswar 掉落表编辑工具";
+        Text = "Godswar GM 工具（掉落表 + 宠物档位）";
         Width = 1420;
         Height = 880;
         StartPosition = FormStartPosition.CenterScreen;
@@ -79,6 +80,7 @@ internal sealed class MainForm : Form
         }
 
         await _store.DisposeAsync();
+        await _petPanel.DisposeAsync();
         base.OnFormClosing(e);
     }
 
@@ -96,7 +98,18 @@ internal sealed class MainForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
 
         root.Controls.Add(_connection, 0, 0);
-        root.Controls.Add(BuildBody(), 0, 1);
+        var tabs = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Point(14, 6)
+        };
+        var lootPage = new TabPage("怪物掉落表");
+        lootPage.Controls.Add(BuildBody());
+        var petPage = new TabPage("宠物档位");
+        petPage.Controls.Add(_petPanel);
+        tabs.TabPages.Add(lootPage);
+        tabs.TabPages.Add(petPage);
+        root.Controls.Add(tabs, 0, 1);
         _statusLabel.Dock = DockStyle.Fill;
         _statusLabel.TextAlign = ContentAlignment.MiddleLeft;
         _statusLabel.Text = "请先填写连接信息，点「连接数据库」，再点「一键读取数据」。";
@@ -431,6 +444,7 @@ internal sealed class MainForm : Form
             _store.Connect(_settings.BuildConnectionString());
             _connection.SetStatus("连接正常", healthy: true);
             await ReadAllAsync();
+            await ConnectPetPanelAsync();
         }
         catch (Exception ex)
         {
@@ -449,6 +463,25 @@ internal sealed class MainForm : Form
     }
 
     /// <summary>The "one click read": monster list, item catalogue, names.</summary>
+    /// <summary>
+    /// The pet tab reads its own connection so a pet-specific problem (missing
+    /// bounds table, pet content not published in this database) can never break
+    /// the loot workflow that shipped first.
+    /// </summary>
+    private async Task ConnectPetPanelAsync()
+    {
+        try
+        {
+            await _petPanel.ConnectAndReadAsync(
+                _settings.BuildConnectionString(),
+                _settings.ClientRoot);
+        }
+        catch (Exception ex)
+        {
+            _petPanel.SetStatus($"宠物页读取失败：{ex.Message}");
+        }
+    }
+
     private async Task ReadAllAsync()
     {
         if (!_store.IsConnected)
@@ -468,6 +501,14 @@ internal sealed class MainForm : Form
             ApplyChineseNames();
             await LoadItemsAsync();
             RefreshMonsterGrid();
+            try
+            {
+                await _petPanel.ReadAsync();
+            }
+            catch (Exception ex)
+            {
+                _petPanel.SetStatus($"宠物页读取失败：{ex.Message}");
+            }
 
             var configured = _monsters.Count(static m => m.HasLootTable);
             _connection.SetStatus("连接正常", healthy: true);

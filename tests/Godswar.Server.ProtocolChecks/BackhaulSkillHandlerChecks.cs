@@ -20,6 +20,7 @@ internal static partial class BackhaulSkillHandlerChecks
     private const int CharacterId = 4_013;
     private const uint LocalPlayerObjectId = 0x00001448;
     private const byte PeloponneseMapId = 13;
+    private const byte MegaraMapId = 18;
 
     private static readonly DateTimeOffset TestTime =
         new(2026, 7, 27, 9, 10, 11, TimeSpan.Zero);

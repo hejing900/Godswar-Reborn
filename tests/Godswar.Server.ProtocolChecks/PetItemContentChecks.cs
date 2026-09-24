@@ -87,6 +87,9 @@ internal static partial class PetItemContentChecks
                 "Petlimit",
                 expected.PetLimit,
                 expected.Id);
+            AssertOptionalStat(stats, "Food", expected.Food, expected.Id);
+            AssertOptionalStat(stats, "Fill", expected.Fill, expected.Id);
+            AssertOptionalStat(stats, "Favor", expected.Favor, expected.Id);
             AssertOptionalStat(
                 stats,
                 "PetSkill",
@@ -101,7 +104,10 @@ internal static partial class PetItemContentChecks
                 (expected.Skill is null ? 0 : 1) +
                 (expected.Mode is null ? 0 : 1) +
                 (expected.PetLimit is null ? 0 : 1) +
-                (expected.PetSkill is null ? 0 : 1),
+                (expected.PetSkill is null ? 0 : 1) +
+                (expected.Food is null ? 0 : 1) +
+                (expected.Fill is null ? 0 : 1) +
+                (expected.Favor is null ? 0 : 1),
                 stats.EnumerateObject().Count(),
                 $"pet item {expected.Id} has no invented stats");
         }
@@ -131,8 +137,95 @@ internal static partial class PetItemContentChecks
         CheckSpecialPetShedDeveloperGrant();
         CheckPetConsumableDeveloperGrants();
         CheckMagicJadeItems(seeds);
+        CheckPetCareItems();
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The pet-care consumables that the reviewed client-catalog family
+    /// publishes must resolve, and the rules that depend only on the client's
+    /// own numbers are asserted directly. Eleven further rows are transcribed
+    /// from the same client table but are not in a published revision yet, so
+    /// they must resolve as absent rather than throw.
+    /// </summary>
+    private static void CheckPetCareItems()
+    {
+        uint[] published =
+        [
+            4_060, 4_061, 4_062,
+            10_002, 10_022, 10_042, 10_060,
+            // Reviewed and republished so the mall and bound-gold
+            // listings of them can actually complete a purchase.
+            10_023, 10_043, 10_090
+        ];
+        foreach (var itemId in published)
+        {
+            Check.True(
+                PetCareItemPolicy.TryResolvePublished(
+                    TestItemContent.Catalog,
+                    itemId,
+                    out var resolved) &&
+                resolved.ItemId == itemId,
+                $"pet-care item {itemId} resolves from pinned official content");
+        }
+
+        Check.True(
+            PetCareItemPolicy.TryResolvePublished(
+                TestItemContent.Catalog,
+                10_060,
+                out var mellowWine) &&
+            mellowWine.Kind == PetCareItemEffectKind.Amity &&
+            mellowWine.Amity == 100,
+            "the mellow wine grants 100 amity and no satiety");
+
+        Check.True(
+            PetCareItemPolicy.TryResolvePublished(
+                TestItemContent.Catalog,
+                4_062,
+                out var holyWater) &&
+            PetCareItemPolicy.ResolveEnergyGrant(holyWater, 100) == 95 &&
+            PetCareItemPolicy.ResolveEnergyGrant(holyWater, 200) == 190,
+            "energy waters grant a fraction of the pet's own maximum");
+
+        // An unpublished reviewed row must be left alone, never resolved and
+        // never an exception: the bag router has to fall through untouched.
+        foreach (var itemId in PetCareItemPolicy.Items)
+        {
+            if (published.Contains(itemId))
+            {
+                continue;
+            }
+            Check.True(
+                PetCareItemPolicy.IsReviewedItem(itemId) &&
+                !PetCareItemPolicy.TryResolvePublished(
+                    TestItemContent.Catalog,
+                    itemId,
+                    out _),
+                $"unpublished pet-care item {itemId} resolves as absent");
+        }
+
+        // The mismatched-food-kind rule is fixed by PETDP_X0_19 and is
+        // asserted on the published third tier, which shares the fourth
+        // tier's Food/Fill/Favor shape.
+        Check.True(
+            PetCareItemPolicy.TryResolvePublished(
+                TestItemContent.Catalog,
+                10_002,
+                out var mushroom) &&
+            PetCareItemPolicy.ResolveSatiety(
+                mushroom,
+                PetCareItemPolicy.GrassFoodKind) == 40 &&
+            PetCareItemPolicy.ResolveSatiety(
+                mushroom,
+                PetCareItemPolicy.MeatFoodKind) == 20 &&
+            PetCareItemPolicy.ResolveAmity(
+                mushroom,
+                PetCareItemPolicy.GrassFoodKind) == 15 &&
+            PetCareItemPolicy.ResolveAmity(
+                mushroom,
+                PetCareItemPolicy.MeatFoodKind) == 0,
+            "the wrong food kind grants half satiety and no amity");
     }
 
     private static void CheckPetConsumableDeveloperGrants()
@@ -278,8 +371,18 @@ internal static partial class PetItemContentChecks
             bindType: "1",
             skill: "4720",
             mode: "4"),
+        // Stock pet-care consumables. Values are the client's own
+        // ItemBaseAttribute rows: Food kind 1 grass / 2 meat / 3 meal,
+        // Fill satiety, Favor amity; the wines carry Favor only and the
+        // lifetime spring carries Values.
+        E(10023, "Pet10023", "Roast Meat", "108,936", "99",
+            use: "1", itemType: "7", skill: "4721", food: "2", fill: "100", favor: "40"),
+        E(10043, "Pet10043", "Royal Feast", "684,972", "99",
+            use: "1", itemType: "7", skill: "4721", food: "3", fill: "100", favor: "40"),
         E(10084, "Pet10084", "Mysterious Tuck Net", "900,936", "99",
             use: "1", itemType: "0", skill: "4734"),
+        E(10090, "Pet10090", "Pet Spring Water", "576,936", "99",
+            use: "1", itemType: "8", values: "100"),
         E(10099, "Pet10099", "Pet Enhance Spring", "648,936", "99", "1", "5"),
         E(10100, "Pet10100", "Golden Apple Juice", "504,936", "99", "1", "1"),
         E(10101, "Pet10101", "Strong Purge Potion", "612,936", "99"),
@@ -311,7 +414,8 @@ internal static partial class PetItemContentChecks
         E(11004, "Pet11004", "Charm: Merge", "864,936", "1", use: "1", itemType: "21", skill: "4721"),
         E(11015, "Pet11015", "Pet Gender Reverser", "72,900", "1",
             texture: "./Localization/en_us/UI/Texture/Icon.gwo"),
-        .. CreateExpectedMagicJadeItems()
+        .. CreateExpectedMagicJadeItems(),
+        .. CreateExpectedVampiricBookItems()
     ];
 
     private static ExpectedItem E(
@@ -328,7 +432,10 @@ internal static partial class PetItemContentChecks
         string? mode = null,
         string? petLimit = null,
         string? petSkill = null,
-        string? texture = null) =>
+        string? texture = null,
+        string? food = null,
+        string? fill = null,
+        string? favor = null) =>
         new(
             id,
             nameKey,
@@ -343,7 +450,10 @@ internal static partial class PetItemContentChecks
             mode,
             petLimit,
             petSkill,
-            texture);
+            texture,
+            food,
+            fill,
+            favor);
 
     private sealed record ExpectedItem(
         int Id,
@@ -359,5 +469,8 @@ internal static partial class PetItemContentChecks
         string? Mode,
         string? PetLimit,
         string? PetSkill,
-        string? Texture);
+        string? Texture,
+        string? Food = null,
+        string? Fill = null,
+        string? Favor = null);
 }
