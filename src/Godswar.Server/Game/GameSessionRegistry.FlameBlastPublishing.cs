@@ -58,6 +58,16 @@ internal sealed partial class GameSessionRegistry
             recipient.Context.Session, [result.HealthMutation!.Value], cancellationToken);
         if (lease is null) return;
         var packets = new List<ReadOnlyMemory<byte>>();
+        // The damage number has to be admitted while the viewer still has the
+        // monster. A lethal pass retires the object, and a removal (or respawn)
+        // that arrives first makes the client drop the number for the very hit
+        // that killed it, which is what the single-target path already avoids.
+        var caster = ReferenceEquals(recipient.Context.Session, source.Context.Session)
+            ? LocalPlayerObjectId : source.Context.ObjectId;
+        // Recurring Flame Blast retains generic skill250 without recasting.
+        // Its low result byte selects the actual normal/critical number font.
+        packets.Add(PacketBuilder.SkillDamage(caster, result.ObjectId, (byte)resolution.Outcome,
+            resolution.CapturedDamageValue, skillId: 250, result.Monster.X, result.Monster.Z));
         if (lease.ReconciliationObjectIds.Count > 0)
         {
             packets.Add(PacketBuilder.RemoveWorldObjects(lease.ReconciliationObjectIds.ToArray()));
@@ -67,15 +77,6 @@ internal sealed partial class GameSessionRegistry
             foreach (var monster in lease.ReconciliationMonsters.Where(monster => monster.IsMoving))
                 packets.Add(PacketBuilder.MonsterMovementStart(monster.ObjectId,
                     monster.X, monster.Y, monster.Z, monster.VelocityX, monster.VelocityY, monster.VelocityZ));
-        }
-        else
-        {
-            var caster = ReferenceEquals(recipient.Context.Session, source.Context.Session)
-                ? LocalPlayerObjectId : source.Context.ObjectId;
-            // Recurring Flame Blast retains generic skill250 without recasting.
-            // Its low result byte selects the actual normal/critical number font.
-            packets.Add(PacketBuilder.SkillDamage(caster, result.ObjectId, (byte)resolution.Outcome,
-                resolution.CapturedDamageValue, skillId: 250, result.Monster.X, result.Monster.Z));
         }
         var bytes = new byte[packets.Sum(packet => packet.Length)];
         var offset = 0;

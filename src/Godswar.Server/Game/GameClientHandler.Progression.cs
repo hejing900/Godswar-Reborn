@@ -20,6 +20,11 @@ internal sealed partial class GameClientHandler
         // reward lands is the reward path's business, but the kill happened.
         await RecordQuestKillAsync(damageResult, CancellationToken.None);
 
+        // The Lelantine Farm scores its own kills. Its credit is independent of
+        // the ordinary reward gate, since the activity's published rule counts a
+        // kill rather than the experience it paid.
+        await RecordFarmKillAsync(damageResult, CancellationToken.None);
+
         var rewardPolicy = _gameplayCatalogs.MonsterRewards;
         var rewardEligible = MonsterRewardCatalog.IsEligible(
             damageResult.Monster,

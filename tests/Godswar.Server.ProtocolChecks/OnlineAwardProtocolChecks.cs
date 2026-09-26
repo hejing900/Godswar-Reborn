@@ -17,7 +17,7 @@ internal static class OnlineAwardProtocolChecks
     {
         Check.True(
             OnlineAwardProtocol.DialogIndex == 49 &&
-            OnlineAwardProtocol.AthensNpcId == 5271 &&
+            OnlineAwardProtocol.PublishedAthensNpcId == 5271 &&
             OnlineAwardProtocol.SpartaNpcId == 5129 &&
             OnlineAwardProtocol.InitialRequestSubId == -1 &&
             OnlineAwardProtocol.SuccessSubId == 102 &&

@@ -108,6 +108,12 @@ internal sealed partial class GameClientHandler
                 "authoritative target resolution.");
         }
 
+        // The accepted ground cast now owns its recurring field. The field
+        // keeps the frozen source, the ground centre and the skill definition;
+        // it never reserves mana, a cooldown or a new intonation again.
+        StartFlameBlastField(CaptureFlameBlastFieldSource(character, combat),
+            combat, areaCenterX, areaCenterZ);
+
         var hits = decision.Hits;
         var misses = decision.Resolutions.Count(static resolved =>
             !resolved.Resolution.Hit);

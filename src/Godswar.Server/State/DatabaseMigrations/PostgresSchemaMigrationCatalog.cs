@@ -352,6 +352,8 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateGuildAltarWorshipSettlement(),
         CreatePetCareConsumableTemplates(),
         CreateQuestExperienceAppraisal(),
-        CreatePetPresenceDeleteOperation()
+        CreatePetPresenceDeleteOperation(),
+        CreateLelantineFarmPoints(),
+        CreateLelantineFarmPersonalScores()
     ];
 }

@@ -41,9 +41,9 @@ internal static class Program
                 arg.Equals("-h", StringComparison.OrdinalIgnoreCase)))
         {
             AttachConsole(-1);
-            Console.WriteLine("Godswar GM 工具（掉落表 + 宠物档位）");
+            Console.WriteLine("Godswar GM 工具（利兰丁农场 + 掉落表 + 宠物档位）");
             Console.WriteLine("  （无参数）                              打开图形界面");
-            Console.WriteLine("  --selftest                              只跑掉落数据层自测，不开窗口");
+            Console.WriteLine("  --selftest                              只跑掉落/宠物/农场数据层自检，不开窗口");
             Console.WriteLine("  --pet-check                             只跑宠物数据层只读检查，不开窗口");
             Console.WriteLine("  --connection-string \"Host=...;Database=...\"  覆盖数据库连接串并记住");
             Console.WriteLine("  --client-root \"D:\\Godswar Origin\"        覆盖客户端目录并记住");

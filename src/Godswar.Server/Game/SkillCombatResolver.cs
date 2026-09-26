@@ -170,7 +170,7 @@ internal static class SkillCombatResolver
     public static uint CalculateDamage(GameCharacter character, SkillCombatDefinition skill)
     {
         var attacker = CombatCharacterStatsAdapter.FromCharacter(character);
-        return AuthoredCombatPveCurrent.ResolveSkillDamageForOutcome(
+        return AuthoredPlayerPveCurrent.ResolveSkillDamageForOutcome(
             attacker,
             target: default,
             skill.Property,
@@ -192,7 +192,7 @@ internal static class SkillCombatResolver
             CombatCharacterStatsAdapter.ApplyRuntimeAttackerModifiers(
                 CombatCharacterStatsAdapter.FromCharacter(character),
                 runtimeModifiers);
-        return AuthoredCombatPveCurrent.ResolveSkillDamage(
+        return AuthoredPlayerPveCurrent.ResolveSkillDamage(
             attacker,
             target,
             skill.Property,

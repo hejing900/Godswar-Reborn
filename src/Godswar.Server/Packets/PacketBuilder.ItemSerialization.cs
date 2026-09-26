@@ -34,7 +34,7 @@ internal static partial class PacketBuilder
         WriteNullableInt32(record.Slice(8, 4), item.Attribute2);
         WriteNullableInt32(record.Slice(12, 4), item.Attribute3);
         WriteNullableInt32(record.Slice(16, 4), item.Attribute4);
-        WriteNullableInt32(record.Slice(20, 4), item.Attribute5);
+        WriteNullableInt32(record.Slice(20, 4), FifthOrdinaryAttribute(item));
         record[24] = ClampByte(item.Quality);
         record[25] = ClampByte(item.Grade);
         record[26] = ClampByte(item.Bound);
@@ -69,7 +69,7 @@ internal static partial class PacketBuilder
         WriteNullableInt32(record.Slice(8, 4), item.Attribute2);
         WriteNullableInt32(record.Slice(12, 4), item.Attribute3);
         WriteNullableInt32(record.Slice(16, 4), item.Attribute4);
-        WriteNullableInt32(record.Slice(20, 4), item.Attribute5);
+        WriteNullableInt32(record.Slice(20, 4), FifthOrdinaryAttribute(item));
         record[24] = ClampByte(item.Quality);
         record[25] = ClampByte(item.Grade);
         record[26] = ClampByte(item.Bound);
@@ -188,13 +188,49 @@ internal static partial class PacketBuilder
         WriteNullableInt32(record.Slice(8, 4), item.Attribute2);
         WriteNullableInt32(record.Slice(12, 4), item.Attribute3);
         WriteNullableInt32(record.Slice(16, 4), item.Attribute4);
-        WriteNullableInt32(record.Slice(20, 4), item.Attribute5);
+        WriteNullableInt32(record.Slice(20, 4), FifthOrdinaryAttribute(item));
         record[24] = ClampByte(item.Quality);
         record[25] = ClampByte(item.Grade);
         record[26] = ClampByte(item.Bound);
         record[27] = ClampByte(item.Stack);
         WriteItemExtension(record, item);
     }
+
+    /// <summary>
+    /// The attribute a qualifying Class Suit item shows in its fifth ordinary
+    /// attribute slot.
+    /// </summary>
+    /// <remarks>
+    /// A Class Suit III/IV item may carry a profession-specific attribute in
+    /// <c>class_attribute1</c> beside its ordinary ones. The client's own item
+    /// template already lists that attribute id in <c>MainAttribute</c> and
+    /// renders it from an ordinary slot, but only the dedicated <c>+52</c>
+    /// extension ever carried the value, so the panel showed four attributes
+    /// while the world appearance already advertised five. The class attribute
+    /// therefore fills the fifth slot when it is free. An item without one, and
+    /// one whose fifth slot is already taken, keeps its ordinary four.
+    /// </remarks>
+    private static bool UsesClassSuitFifthAttribute(CompactItemEntry item)
+    {
+        if (!ClassSuitConversionCatalog.TryResolveSuit(
+                item.Id,
+                out _,
+                out var tier) ||
+            tier is not (ClassSuitTier.TierIII or ClassSuitTier.TierIV) ||
+            item.Grade is < 1 or > 25 ||
+            !item.ClassAttribute1.HasValue ||
+            !ElementalAttributeCatalog.HasCanonicalDedicatedAttributeShape(item))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static int? FifthOrdinaryAttribute(CompactItemEntry item) =>
+        item.Attribute5 ?? (UsesClassSuitFifthAttribute(item)
+            ? item.ClassAttribute1
+            : null);
 
     private static void WriteItemExtension(Span<byte> record, CompactItemEntry item)
     {

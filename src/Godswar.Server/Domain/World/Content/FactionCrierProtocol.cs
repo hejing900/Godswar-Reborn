@@ -54,7 +54,13 @@ internal static class FactionCrierProtocol
     public const int DialogIndex = 15;
     public const int ActionPacketBytes = 92;
     public const int FunctionArgumentCount = 18;
-    public const uint AthensNpcId = 5194;
+    // The client is handed the capture's own id: CapturedNpcPlacementPolicy
+    // renumbers Athens' city npcs from the published catalog to the capture, and
+    // the client echoes back whatever it was handed. The published dialogue
+    // baseline still carries the catalog's value, so both are accepted until the
+    // content is republished.
+    public const uint AthensNpcId = 5193;
+    public const uint PublishedAthensNpcId = 5194;
     public const uint PublishedSpartaNpcId = 5052;
     public const uint SourceSpartaNpcId = 5054;
     public const int FirstItemArgumentIndex = 6;
@@ -69,6 +75,7 @@ internal static class FactionCrierProtocol
     public static bool IsEndpoint(string npcKey, uint npcId) =>
         (npcKey, npcId) is
             ("Athens_055", AthensNpcId) or
+            ("Athens_055", PublishedAthensNpcId) or
             ("Sparta_055", PublishedSpartaNpcId) or
             ("Sparta_055", SourceSpartaNpcId);
 

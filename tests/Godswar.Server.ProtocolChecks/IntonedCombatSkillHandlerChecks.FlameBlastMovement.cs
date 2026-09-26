@@ -28,8 +28,8 @@ internal static partial class IntonedCombatSkillHandlerChecks
         Check.True(entering.Take(2).All(monster => InFlameField(monster, -3)) &&
             !InFlameField(entering[2], -3),
             "two live monsters enter the original field while the third stays outside");
-        var hits = await AdvanceAndReadFlameAsync(fixture, clock, TimeSpan.FromSeconds(4), 1);
-        Check.True(hits > 0, "a later pulse acquires monsters absent from the initial placement");
+        var pulse = await AdvanceAndReadFlameAsync(fixture, clock, TimeSpan.FromSeconds(1));
+        Check.True(pulse.Damage > 0, "a later pulse acquires monsters absent from the initial placement");
 
         fixture.Character.PositionX = 20;
         fixture.Registry.UpdateCharacter(fixture.Socket.Session, fixture.Character,
@@ -37,10 +37,11 @@ internal static partial class IntonedCombatSkillHandlerChecks
         AdvanceFlameAiUntil(fixture, ref aiTime, snapshots =>
             snapshots.All(monster => !InFlameField(monster, -3)));
         var before = FlameMonsterHealth(fixture);
-        Check.Equal(0, await AdvanceAndReadFlameAsync(fixture, clock, TimeSpan.FromSeconds(4), 1),
+        var excluded = await AdvanceAndReadFlameAsync(fixture, clock, TimeSpan.FromSeconds(1));
+        Check.True(excluded.Damage == 0,
             "monsters that leave the field are excluded from its next pulse");
         Check.True(before.SequenceEqual(FlameMonsterHealth(fixture)) &&
-            fixture.Character.CurrentHp == 50 + hits * FlameHealing,
+            fixture.Character.CurrentHp == 50 + pulse.Targets * FlameHealing,
             "neither a former target nor the caster's new position creates phantom damage or healing");
     }
 

@@ -36,7 +36,7 @@ internal static class TransporterProtocolChecks
         (string Key, uint Id, int[] Menu)[] endpoints =
         [
             ("Sparta_042", 5039, [1, 3, 2, 8, 9, 10]),
-            ("Athens_041", 5180, [4, 6, 5, 7, 9, 10]),
+            ("Athens_041", 5179, [4, 6, 5, 7, 9, 10]),
             ("Mycenae_All_013", 59721, [1088, 1089, 1090])
         ];
 
@@ -75,12 +75,12 @@ internal static class TransporterProtocolChecks
             ("Sparta_042", 5039, 0, 8, 14, 70),
             ("Sparta_042", 5039, 0, 9, 8, 100),
             ("Sparta_042", 5039, 0, 10, 9, 130),
-            ("Athens_041", 5180, 1, 4, 2, 1),
-            ("Athens_041", 5180, 1, 5, 3, 40),
-            ("Athens_041", 5180, 1, 6, 11, 30),
-            ("Athens_041", 5180, 1, 7, 12, 70),
-            ("Athens_041", 5180, 1, 9, 8, 100),
-            ("Athens_041", 5180, 1, 10, 9, 130),
+            ("Athens_041", 5179, 1, 4, 2, 1),
+            ("Athens_041", 5179, 1, 5, 3, 40),
+            ("Athens_041", 5179, 1, 6, 11, 30),
+            ("Athens_041", 5179, 1, 7, 12, 70),
+            ("Athens_041", 5179, 1, 9, 8, 100),
+            ("Athens_041", 5179, 1, 10, 9, 130),
             ("Mycenae_All_013", 59721, 6, 1088, 7, 1),
             ("Mycenae_All_013", 59721, 6, 1089, 20, 1),
             ("Mycenae_All_013", 59721, 6, 1090, 10, 1)
@@ -177,11 +177,11 @@ internal static class TransporterProtocolChecks
             !TransporterProtocol.TryResolveDestination(
                 "Sparta_042", 5039, 1, 1, 1, emptyPath, out _) &&
             !TransporterProtocol.TryResolveDestination(
-                "Athens_041", 5180, 1, 1, 1, emptyPath, out _) &&
+                "Athens_041", 5179, 1, 1, 1, emptyPath, out _) &&
             !TransporterProtocol.TryResolveDestination(
                 "Sparta_042", 5039, 0, 1, 11, emptyPath, out _) &&
             !TransporterProtocol.TryResolveDestination(
-                "Athens_041", 5180, 1, 1, 11, emptyPath, out _) &&
+                "Athens_041", 5179, 1, 1, 11, emptyPath, out _) &&
             !TransporterProtocol.TryResolveDestination(
                 "Mycenae_All_013", 59721, 6, 1, 11, emptyPath, out _),
             "wrong dialogs, maps, endpoints, and excluded sub-ID 11 fail closed");

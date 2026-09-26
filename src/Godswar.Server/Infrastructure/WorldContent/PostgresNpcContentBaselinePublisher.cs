@@ -15,7 +15,7 @@ internal static class PostgresNpcContentBaselinePublisher
 {
     private const int PublicationLockNamespace = 1_193_657_936;
     private const int PublicationLockKey = 1_448_298_801;
-    private const string Publisher = "server-baseline-v7";
+    private const string Publisher = "server-baseline-v8";
 
     public static async Task<NpcContentPublicationResult>
         EnsurePublishedAsync(
@@ -52,7 +52,7 @@ internal static class PostgresNpcContentBaselinePublisher
             cancellationToken);
         if (current is not null && string.Equals(
                 current.Revision,
-                NpcContentBaselineV7.ExpectedRevision,
+                NpcContentBaselineV8.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             await transaction.CommitAsync(cancellationToken);
@@ -82,28 +82,32 @@ internal static class PostgresNpcContentBaselinePublisher
             !string.Equals(
                 current.Revision,
                 NpcContentBaselineV6.ExpectedRevision,
+                StringComparison.Ordinal) &&
+            !string.Equals(
+                current.Revision,
+                NpcContentBaselineV7.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                "The published NPC revision is neither a reviewed V1-V6 " +
-                "predecessor nor the reviewed V7 release.");
+                "The published NPC revision is neither a reviewed V1-V7 " +
+                "predecessor nor the reviewed V8 release.");
         }
 
         var mapIds = await ReadMapIdsAsync(
             connection,
             transaction,
             cancellationToken);
-        var definitions = NpcContentBaselineV7.LoadDefinitions();
+        var definitions = NpcContentBaselineV8.LoadDefinitions();
         var canonical = await ValidateAndCanonicalizeAsync(
             mapIds,
             definitions,
             cancellationToken);
         var revision = WorldContentRevisionHasher.HashNpcs(canonical);
         if (revision.EntryCount !=
-                NpcContentBaselineV7.ExpectedEntryCount ||
+                NpcContentBaselineV8.ExpectedEntryCount ||
             !string.Equals(
                 revision.Sha256,
-                NpcContentBaselineV7.ExpectedRevision,
+                NpcContentBaselineV8.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(

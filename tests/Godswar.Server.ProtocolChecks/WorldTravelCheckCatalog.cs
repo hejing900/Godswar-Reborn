@@ -89,6 +89,12 @@ internal static class WorldTravelCheckCatalog
             WarehouseHandlerChecks.RunArenaSupportAsync),
         (
             BattlefieldSchedulePolicyChecks.CheckName,
-            BattlefieldSchedulePolicyChecks.RunAsync)
+            BattlefieldSchedulePolicyChecks.RunAsync),
+        (
+            LelantineFarmProtocolChecks.CheckName,
+            LelantineFarmProtocolChecks.RunAsync),
+        (
+            LelantineFarmShopChecks.CheckName,
+            LelantineFarmShopChecks.RunAsync)
     ];
 }

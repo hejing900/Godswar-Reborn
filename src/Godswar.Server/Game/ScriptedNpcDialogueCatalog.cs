@@ -322,7 +322,7 @@ internal sealed partial class GameClientHandler
     /// every request that carried no typed amount read -1 in it, which is what lets
     /// a non-positive value mean "nothing was typed".
     /// </remarks>
-    private static int DialogAmount(GamePacket packet)
+    internal static int DialogAmount(GamePacket packet)
     {
         var payload = packet.Payload;
         return payload.Length >= DialogAmountOffset + 4

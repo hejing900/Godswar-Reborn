@@ -159,6 +159,21 @@ internal static partial class PostgresMigrationFoundationChecks
         "20260916_152_wonderland_chest_claims",
         "20260916_153_wonderland_boss_loot_claims",
         "20260916_154_monster_combat_balance",
-        "20260916_155_bloodfang_pet_species"
+        "20260916_155_bloodfang_pet_species",
+        "20260916_156_wishing_pool_usage_state",
+        "20260916_157_guild_state",
+        "20260916_158_guild_buildings",
+        "20260916_159_guild_content",
+        "20260916_160_character_guild_duty",
+        "20260916_161_character_guild_duty_backfill",
+        "20260922_162_lucky_gods_wish_state",
+        "20260923_163_guild_altar_worship",
+        "20260923_164_guild_worship_impact",
+        "20260923_165_guild_altar_worship_settlement",
+        "20260924_152_pet_care_consumable_templates",
+        "20260924_166_quest_experience_appraisal",
+        "20260924_167_pet_delete_audit_operation",
+        "20260926_200_lelantine_farm_points",
+        "20260926_210_lelantine_farm_personal_scores"
     ];
 }

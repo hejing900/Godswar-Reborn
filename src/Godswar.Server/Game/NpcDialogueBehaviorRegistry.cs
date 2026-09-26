@@ -36,6 +36,13 @@ internal static class NpcDialogueBehaviorRegistry
     private static readonly int[] InstanceCallerMenu =
         InstanceCallerProtocol.InitialMenuSubIds.ToArray();
 
+    /// <summary>
+    /// The farm's Returning Helper offers exactly the one capital teleport the
+    /// stock <c>NpcFunTranmit</c> index-1 menu carries for it.
+    /// </summary>
+    private static readonly int[] LelantineFarmTeleportMenu =
+        LelantineFarmProtocol.FarmReturnMenuSubIds;
+
     public static bool IsAllowed(
         NpcSpawnDefinition npc,
         NpcDialogueRouteDefinition route)
@@ -153,6 +160,22 @@ internal static class NpcDialogueBehaviorRegistry
                     DuelArenaTransporterProtocol.InitialMenuSubIds)),
             NpcDialogueBehavior.DuelArenaServices =>
                 DuelArenaServiceProtocol.IsAllowed(npc, route),
+            NpcDialogueBehavior.FarmReturnTeleporter =>
+                route.DialogIndex == LelantineFarmProtocol.TeleportDialogIndex &&
+                HasExactMenu(route, LelantineFarmTeleportMenu) &&
+                LelantineFarmProtocol.IsReturningHelper(npc.NpcKey) &&
+                LelantineFarmProtocol.TryResolve(
+                    npc.NpcKey,
+                    npc.InteractionId,
+                    out _),
+            NpcDialogueBehavior.Farm =>
+                route.DialogIndex == LelantineFarmProtocol.FarmDialogIndex &&
+                HasExactMenu(route, LelantineFarmProtocol.CaptainMenuSubIds) &&
+                LelantineFarmProtocol.IsAdvanceTroopCaptain(npc.NpcKey) &&
+                LelantineFarmProtocol.TryResolve(
+                    npc.NpcKey,
+                    npc.InteractionId,
+                    out _),
             _ => false
         };
     }

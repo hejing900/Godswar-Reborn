@@ -17,6 +17,14 @@ NPC对话链路技术文档以总结（后续可添加所有NPC对话链路根�
 经验加成道具技术文档以总结（目前以添加宠物，人物经验，工会总体没做，专长没做）.
 
 荣誉，徽记，奖章以实现，相关NPC以实现.
+利兰丁农场活动捐献积分广播都已经实现（结束奖励，怪物刷新未实现）.
+修复部分宠物无法使用.
+修复范围技能秒杀怪物时没有伤害显示.
+修复炎域技能没有后续伤害，现在持续10秒1秒一次伤害.
+修复第五属性无法显示.
+修复宠物收回会影响祭坛的BUG.
+
+The Lelantine Farm event donation point broadcast is implemented (end rewards and monster respawn are not implemented). The issue where some pets could not be used is fixed. The missing damage display when an area skill one-shots monsters is fixed. The Flame Field skill now deals follow-up damage for 10 seconds, once per second. The fifth attribute now displays correctly. The bug where recalling a pet affected the guild altar is fixed.
 宠物所有技能，所有功能已经实现，创建工会建筑，供奉，加成以实现.
 
 All pet skills and all pet features are implemented; guild building creation, worship, and bonuses are implemented.
@@ -277,6 +285,11 @@ Implemented:
 - Raw-authentication retirement: checked-in defaults reject raw startup; the unsafe original-client path now requires the explicit loopback-only `legacy-raw` Docker profile. The playable `7FB43C8D...BA07F9` Origin plus deterministic secure Net `A26096B0...D50AA4` pair passed exact offline gates, but is not installed or live re-accepted. An Origin hash is compatibility metadata rather than authentication or anti-cheat ([B14 evidence](docs/data-architecture-b14-raw-auth-retirement-20260731.md)).
 - Pets: all pet skills and all pet features are implemented, including learned-skill activation from pet skill books, innate talents, rebirth, care/decay, owner merge, discard/delete, presence audit, and durable pet persistence
 - Guilds: guild building creation, worship, and bonuses are implemented, including the guild registrar, buildings, member duties, donations, proclamation, guild text, and altar worship with settlement and decay ([guild system](docs/工会系统技术文档.md), [pet skills/talents](docs/pet-skills-talents.md))
+- Lelantine Farm event: donation point broadcast is implemented. End-of-event rewards and monster respawn are not implemented ([record](docs/lelantine-farm-defense-20260926.md))
+- Pets: fixed the issue where some pets could not be used, and fixed the bug where recalling a pet affected the guild altar
+- Combat: fixed the missing damage display when an area skill one-shots monsters
+- Flame Field: follow-up damage is now applied for 10 seconds, once per second
+- Items: fixed the fifth attribute not displaying
 
 The multiplayer, NPC, and captured-monster synchronization above is server-side. It does not require game client code changes; a client already configured to connect to this server can use it as-is. The patches below cover separate extended-grade, rank, aura, talent, and native client-stability work.
 

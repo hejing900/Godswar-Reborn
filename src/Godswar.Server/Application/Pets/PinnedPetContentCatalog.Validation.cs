@@ -1,3 +1,5 @@
+using Godswar.Server.State;
+
 namespace Godswar.Server.Application.Pets;
 
 internal sealed partial class PinnedPetContentCatalog
@@ -90,7 +92,11 @@ internal sealed partial class PinnedPetContentCatalog
 
         foreach (var value in aptitudes)
         {
+            // An aptitude outside the authoritative ladder has no defined
+            // talent rule, so it is rejected as invalid content here rather
+            // than resolved.
             if (value.Aptitude is < 1 or > byte.MaxValue ||
+                !PetAptitudeCatalog.TryGet(value.Aptitude, out _) ||
                 string.IsNullOrWhiteSpace(value.NameKey) ||
                 string.IsNullOrWhiteSpace(value.DisplayName) ||
                 value.MinimumTotalGrowth <= 0m ||
@@ -134,11 +140,7 @@ internal sealed partial class PinnedPetContentCatalog
     }
 
     private static short ExpectedInnateTalentMask(short aptitude) =>
-        aptitude >= 14
-            ? (short)31
-            : aptitude >= 10
-                ? (short)26
-                : (short)0;
+        PetInnateTalentPolicy.Resolve((PetAptitude)aptitude);
 
     private static void ValidateProfiles(
         PetSpeciesContentDefinition[] species,

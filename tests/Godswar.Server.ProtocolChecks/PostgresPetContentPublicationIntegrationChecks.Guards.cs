@@ -115,11 +115,9 @@ internal static partial class PostgresPetContentPublicationIntegrationChecks
             upgraded.Revision == currentRevision &&
             loaded.Revision.Source == PetContentBaseline.Source &&
             loaded.Aptitudes.All(static aptitude =>
-                aptitude.InnateTalentMask == (aptitude.Aptitude >= 14
-                    ? 31
-                    : aptitude.Aptitude >= 10
-                        ? 26
-                        : 0)) &&
+                aptitude.InnateTalentMask ==
+                    PetInnateTalentPolicy.Resolve(
+                        (PetAptitude)aptitude.Aptitude)) &&
             loaded.TryGetNativeProfile(
                 speciesId: 1,
                 aptitude: (short)PetAptitude.Calm,

@@ -50,10 +50,17 @@ internal static partial class IntonedCombatSkillHandlerChecks
         Check.Equal(0, hits, "a valid empty ground placement initially hits no monsters");
         await WaitForFlameTimersAsync(fixture, clock, 1);
         CheckFlameEventDomains(fixture);
-        for (var ordinal = 1; ordinal <= 4; ordinal++)
-            Check.Equal(0, await AdvanceAndReadFlameAsync(fixture, clock,
-                    TimeSpan.FromSeconds(4), expectedFields: ordinal == 4 ? 0 : 1),
+        var pulsesBefore = fixture.Handler.FlameBlastPulsesApplied;
+        for (var ordinal = 1; ordinal <= 10; ordinal++)
+        {
+            var pulse = await AdvanceAndReadFlameAsync(fixture, clock,
+                TimeSpan.FromSeconds(1));
+            Check.True(pulse.Targets == 0 && pulse.Damage == 0,
                 "an empty field survives its earlier empty pulses without fictitious healing");
+        }
+        await WaitForFlameRetirementAsync(fixture, clock);
+        Check.Equal(9, fixture.Handler.FlameBlastPulsesApplied - pulsesBefore,
+            "an empty field still delivers every scheduled pass before it retires");
         Check.Equal(InitialMana - 180, fixture.Character.CurrentMp,
             "empty placement is paid once, independent of target acquisition");
     }
@@ -95,7 +102,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
                 break;
         }
         var beforeHp = fixture.Character.CurrentHp;
-        clock.Advance(TimeSpan.FromSeconds(4));
+        clock.Advance(TimeSpan.FromSeconds(1));
         await WaitForFlameTimersAsync(fixture, clock, 0);
         Check.True(before.SequenceEqual(FlameMonsterHealth(fixture)) &&
             fixture.Character.CurrentHp == beforeHp && fixture.Socket.Available == 0,
@@ -109,7 +116,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
         await CastAndReadInitialFlameAsync(fixture, 3);
         await WaitForFlameTimersAsync(fixture, clock, 1);
         var before = FlameMonsterHealth(fixture);
-        clock.Advance(TimeSpan.FromSeconds(21));
+        clock.Advance(TimeSpan.FromSeconds(11));
         await WaitForFlameTimersAsync(fixture, clock, 0);
         Check.True(before.SequenceEqual(FlameMonsterHealth(fixture)) && fixture.Socket.Available == 0,
             "a stalled handler cannot replay all expired ground damage in one catch-up burst");

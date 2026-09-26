@@ -26,7 +26,8 @@ internal sealed partial class GameClientHandler
             return _registry.IsCurrentFlameBlastSource(source);
 
         using var elementalAuthority = CapturePveElementalCommitAuthority(character);
-        if (elementalAuthority is null || !_registry.IsCurrentFlameBlastSource(source)) return false;
+        if (elementalAuthority is null || !_registry.IsCurrentFlameBlastSource(source))
+            return false;
         var candidates = captured.Where(monster => monster.IsSpawned && monster.IsAlive &&
                 _registry.IsMonsterVisibleTo(_session, monster.ObjectId, monster.SpawnGeneration) &&
                 SkillCombatResolver.IsWithinArea(centerX, centerZ, monster.X, monster.Z, combat))

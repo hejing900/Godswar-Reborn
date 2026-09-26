@@ -40,7 +40,14 @@ internal sealed record InstanceCallerEntryDestination(
 /// </summary>
 internal static class InstanceCallerProtocol
 {
-    public const uint AthensNpcId = 5199;
+    // The client is handed the capture's own id: CapturedNpcPlacementPolicy
+    // renumbers Athens' city npcs from the published catalog to the capture, and
+    // the client echoes back whatever it was handed. The published dialogue
+    // baseline still carries the catalog's value, and the npc content tables are
+    // append-only (a changed row needs a new revision), so both ids are accepted
+    // until the content is republished.
+    public const uint AthensNpcId = 5198;
+    public const uint PublishedAthensNpcId = 5199;
     public const uint SpartaNpcId = 5057;
     public const int DialogIndex = 9;
     public const int WonderlandResultDialogIndex = 3;
@@ -110,6 +117,7 @@ internal static class InstanceCallerProtocol
     public static bool IsEndpoint(string npcKey, uint interactionId) =>
         (npcKey, interactionId) is
             ("Athens_060", AthensNpcId) or
+            ("Athens_060", PublishedAthensNpcId) or
             ("Sparta_060", SpartaNpcId);
 
     public static bool TryGetMedusaPage(

@@ -37,6 +37,13 @@ internal sealed partial class GameClientHandler : IClientHandler
     private readonly ISealedPetSnapshotReader? _sealedPetSnapshots;
     private readonly IWorldBossAreaControlStore _worldBossAreaControl;
     private readonly IWorldBossRespawnReader _worldBossRespawns;
+
+    /// <summary>
+    /// The Lelantine Farm's donation and kill ledgers. A profile without durable
+    /// gameplay state gets the unsupported implementation, which refuses every
+    /// write instead of quietly crediting an unrecorded score.
+    /// </summary>
+    private readonly ILelantineFarmPointsStore _farmPoints;
     private readonly IWorldContentReader _worldContent;
     private readonly GameplayRuntimeCatalogs _gameplayCatalogs;
     private readonly GameplayItemContent? _itemContent;

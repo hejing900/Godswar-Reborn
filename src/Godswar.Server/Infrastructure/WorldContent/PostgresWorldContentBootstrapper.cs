@@ -5,6 +5,54 @@ namespace Godswar.Server.Infrastructure.WorldContent;
 
 internal static class PostgresWorldContentBootstrapper
 {
+    /// <summary>
+    /// Runs the NPC content publication and re-raises any failure with its
+    /// message printed verbatim.
+    /// </summary>
+    /// <remarks>
+    /// The structured startup-failure record the runtime writes carries only the
+    /// exception type, so a refused publication reports "invalid data" without
+    /// saying which of its several validations said no. The message is printed
+    /// here so the reason survives in the container log.
+    /// </remarks>
+    private static async Task<NpcContentPublicationResult>
+        PublishNpcContentAsync(
+            string connectionString,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await PostgresNpcContentBaselinePublisher
+                .EnsurePublishedAsync(connectionString, cancellationToken);
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine(
+                "[npc-content] publication refused: " +
+                $"{error.GetType().Name}: {error.Message}");
+            throw;
+        }
+    }
+
+    private static async Task<NpcDialoguePublicationResult>
+        PublishNpcDialogueAsync(
+            string connectionString,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await PostgresNpcDialogueBaselinePublisher
+                .EnsurePublishedAsync(connectionString, cancellationToken);
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine(
+                "[npc-dialogue] publication refused: " +
+                $"{error.GetType().Name}: {error.Message}");
+            throw;
+        }
+    }
+
     public static async Task<IWorldContentReader> LoadAsync(
         string connectionString,
         CancellationToken cancellationToken = default)
@@ -13,9 +61,7 @@ internal static class PostgresWorldContentBootstrapper
             connectionString,
             cancellationToken);
         var publication =
-            await PostgresNpcContentBaselinePublisher.EnsurePublishedAsync(
-                connectionString,
-                cancellationToken);
+            await PublishNpcContentAsync(connectionString, cancellationToken);
         Console.WriteLine(
             publication.Created
                 ? "[npc-content] published reviewed database baseline " +
@@ -25,9 +71,7 @@ internal static class PostgresWorldContentBootstrapper
                   $"revision={publication.Revision} " +
                   $"entries={publication.EntryCount}");
         var dialoguePublication =
-            await PostgresNpcDialogueBaselinePublisher.EnsurePublishedAsync(
-                connectionString,
-                cancellationToken);
+            await PublishNpcDialogueAsync(connectionString, cancellationToken);
         Console.WriteLine(
             dialoguePublication.Created
                 ? "[npc-dialogue] published reviewed database baseline " +

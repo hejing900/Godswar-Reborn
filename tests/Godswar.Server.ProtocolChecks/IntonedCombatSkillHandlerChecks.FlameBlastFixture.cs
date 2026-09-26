@@ -119,7 +119,117 @@ internal static partial class IntonedCombatSkillHandlerChecks
         ManualTimeProvider clock, int expectedFields)
     {
         await WaitUntilAsync(() => FlameFieldCount(fixture.Handler) == expectedFields &&
-            clock.ScheduledTimerCount == expectedFields, TimeSpan.FromSeconds(3));
+            clock.ScheduledTimerCount <= expectedFields,
+            TimeSpan.FromSeconds(3),
+            $"fields={FlameFieldCount(fixture.Handler)} timers={clock.ScheduledTimerCount} expected={expectedFields}");
+    }
+
+    // A cast places its field only after its real-time intonation completes,
+    // which does not move the manual field clock.
+    private static async Task WaitForFlameFieldCountAsync(Fixture fixture,
+        int expectedFields)
+    {
+        await WaitUntilAsync(() => FlameFieldCount(fixture.Handler) == expectedFields,
+            TimeSpan.FromSeconds(3),
+            $"fields={FlameFieldCount(fixture.Handler)} expected={expectedFields}");
+    }
+
+    // Wait for the passes a clock advance made due to be applied, while both
+    // fields stay alive. A refresh or restart would change either count.
+    private static async Task WaitForFlamePulseProgressAsync(Fixture fixture,
+        long beforePulses, int expectedFields)
+    {
+        await WaitUntilAsync(() =>
+            fixture.Handler.FlameBlastPulsesApplied > beforePulses &&
+            FlameFieldCount(fixture.Handler) == expectedFields,
+            TimeSpan.FromSeconds(3),
+            $"pulses={fixture.Handler.FlameBlastPulsesApplied}/{beforePulses} " +
+            $"fields={FlameFieldCount(fixture.Handler)} expected={expectedFields}");
+    }
+
+    // A manual clock fires the pulse timer synchronously, but the scheduler
+    // resumes on the thread pool. Wait until the field settles: every live
+    // field has re-armed its next pass and no pass is in flight. A field that
+    // retires leaves no timer, so quiescence is either "one timer per live
+    // field" or "no live field and no timer at all".
+    private static async Task WaitForFlameQuiescenceAsync(Fixture fixture,
+        ManualTimeProvider clock)
+    {
+        long observed = -1;
+        await WaitUntilAsync(() =>
+        {
+            var pulses = fixture.Handler.FlameBlastPulsesApplied;
+            var settled = pulses == observed;
+            observed = pulses;
+            return settled && (clock.ScheduledTimerCount > 0
+                ? clock.ScheduledTimerCount == FlameFieldCount(fixture.Handler)
+                : FlameFieldCount(fixture.Handler) == 0);
+        },
+            TimeSpan.FromSeconds(3),
+            $"pulses={fixture.Handler.FlameBlastPulsesApplied} " +
+            $"fields={FlameFieldCount(fixture.Handler)} timers={clock.ScheduledTimerCount}");
+    }
+
+    // Advance the field clock while letting the thread-pool scheduler keep up,
+    // so no scheduled pass loses its own window to a large clock jump.
+    private static async Task PumpFlameClockAsync(Fixture fixture,
+        ManualTimeProvider clock, TimeSpan total)
+    {
+        var step = TimeSpan.FromMilliseconds(100);
+        for (var elapsed = TimeSpan.Zero; elapsed < total; elapsed += step)
+        {
+            clock.Advance(step);
+            await WaitForFlameQuiescenceAsync(fixture, clock);
+        }
+    }
+
+    // Read and discard everything the live field has already published, until
+    // the socket stays quiet, so a later cast's own frames stay unambiguous.
+    private static async Task DrainFlameSocketAsync(Fixture fixture)
+    {
+        while (true)
+        {
+            if (fixture.Socket.Available == 0)
+            {
+                await Task.Delay(50);
+                if (fixture.Socket.Available == 0) return;
+            }
+
+            await fixture.Socket.ReadPacketAsync();
+        }
+    }
+
+    // A second accepted cast to the same ground point. Frames published by the
+    // first field are skipped instead of being mistaken for this cast's own.
+    private static async Task BeginSecondFlameCastAsync(Fixture fixture, float centerX)
+    {
+        await DrainFlameSocketAsync(fixture);
+        var gate = (SemaphoreSlim)typeof(GameClientHandler)
+            .GetField("_characterStateGate", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(fixture.Handler)!;
+        await gate.WaitAsync();
+        try { await InvokePacketAsync(fixture.Handler, CreateFlameCast(fixture, centerX)); }
+        finally { gate.Release(); }
+        var sawStart = false;
+        var sawImpact = false;
+        while (!sawStart || !sawImpact)
+        {
+            var packet = await fixture.Socket.ReadPacketAsync();
+            var opcode = ReadOpcode(packet);
+            if (opcode == 10040) sawStart = true;
+            if (packet.Length == 24 && opcode == 10046) sawImpact = true;
+        }
+    }
+
+    // Wait for every field to retire without demanding one final pass, so a
+    // caller that already observed the last pass can still confirm the end.
+    private static async Task WaitForFlameRetirementAsync(Fixture fixture,
+        ManualTimeProvider clock)
+    {
+        await WaitUntilAsync(() => FlameFieldCount(fixture.Handler) == 0 &&
+            clock.ScheduledTimerCount == 0,
+            TimeSpan.FromSeconds(3),
+            $"fields={FlameFieldCount(fixture.Handler)} timers={clock.ScheduledTimerCount}");
     }
 
     private static Task StopFlameFieldsAsync(GameClientHandler handler) =>

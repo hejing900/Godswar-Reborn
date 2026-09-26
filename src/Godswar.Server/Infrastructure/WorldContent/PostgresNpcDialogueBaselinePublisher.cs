@@ -20,14 +20,14 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
 {
     private const int PublicationLockNamespace = 1_193_657_936;
     private const int PublicationLockKey = 1_448_298_802;
-    private const string Publisher = "server-baseline-v23-manifest-v1";
+    private const string Publisher = "server-baseline-v24-manifest-v1";
 
     public static string CurrentReleaseRevision =>
         WorldContentRevisionHasher.HashNpcDialogueRelease(
             new WorldContentFamilyRevision("npc-dialogues",
-                NpcDialogueBaselineV23.ExpectedRevision,
-                NpcDialogueBaselineV23.ExpectedHashedEntryCount),
-            NpcDialogueBaselineV23.ExpectedSpawnRevision).Sha256;
+                NpcDialogueBaselineV24.ExpectedRevision,
+                NpcDialogueBaselineV24.ExpectedHashedEntryCount),
+            NpcDialogueBaselineV24.ExpectedSpawnRevision).Sha256;
 
     public static async Task<NpcDialoguePublicationResult>
         EnsurePublishedAsync(
@@ -77,10 +77,10 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             cancellationToken);
         if (!string.Equals(
                 spawnRevision.Revision,
-                NpcDialogueBaselineV23.ExpectedSpawnRevision,
+                NpcDialogueBaselineV24.ExpectedSpawnRevision,
                 StringComparison.Ordinal) ||
             spawnRevision.EntryCount !=
-                NpcDialogueBaselineV23.ExpectedTextCount)
+                NpcDialogueBaselineV24.ExpectedTextCount)
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline does not target the " +
@@ -92,20 +92,20 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             // A sealed publication must remain independent of mutable seed
             // tables after its initial construction.
             var published = new WorldContentFamilyRevision("npc-dialogues",
-                current.Revision, NpcDialogueBaselineV23.ExpectedHashedEntryCount);
+                current.Revision, NpcDialogueBaselineV24.ExpectedHashedEntryCount);
             await VerifyStoredReleaseAsync(connection, transaction, published,
                 spawnRevision.Revision, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return current with { Created = false };
         }
 
-        var texts = NpcDialogueBaselineV23.ApplyTextOverrides(
+        var texts = NpcDialogueBaselineV24.ApplyTextOverrides(
             await ReadOfficialNpcTextsAsync(
                 connection,
                 transaction,
                 spawnRevision.Revision,
                 cancellationToken));
-        var routes = NpcDialogueBaselineV23.CreateRoutes();
+        var routes = NpcDialogueBaselineV24.CreateRoutes();
         var payload = ValidateBaseline(texts, routes);
         var revision = WorldContentRevisionHasher.HashNpcDialogueRelease(
             payload, spawnRevision.Revision);
@@ -159,13 +159,13 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         IReadOnlyList<NpcTextDefinition> texts,
         IReadOnlyList<NpcDialogueRouteDefinition> routes)
     {
-        if (texts.Count != NpcDialogueBaselineV23.ExpectedTextCount ||
-            routes.Count != NpcDialogueBaselineV23.ExpectedRouteCount ||
-            NpcDialogueBaselineV23.Profiles.Length !=
-                NpcDialogueBaselineV23.ExpectedProfileCount ||
-            NpcDialogueBaselineV23.Profiles.Sum(
+        if (texts.Count != NpcDialogueBaselineV24.ExpectedTextCount ||
+            routes.Count != NpcDialogueBaselineV24.ExpectedRouteCount ||
+            NpcDialogueBaselineV24.Profiles.Length !=
+                NpcDialogueBaselineV24.ExpectedProfileCount ||
+            NpcDialogueBaselineV24.Profiles.Sum(
                 static profile => profile.InitialMenuSubIds.Length) !=
-                NpcDialogueBaselineV23.ExpectedMenuEntryCount)
+                NpcDialogueBaselineV24.ExpectedMenuEntryCount)
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline has unexpected counts.");
@@ -228,10 +228,10 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         var revision =
             WorldContentRevisionHasher.HashNpcDialogues(texts, routes);
         if (revision.EntryCount !=
-                NpcDialogueBaselineV23.ExpectedHashedEntryCount ||
+                NpcDialogueBaselineV24.ExpectedHashedEntryCount ||
             !string.Equals(
                 revision.Sha256,
-                NpcDialogueBaselineV23.ExpectedRevision,
+                NpcDialogueBaselineV24.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
@@ -378,11 +378,11 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         new(
             revision,
             spawnRevision,
-            NpcDialogueBaselineV23.ExpectedTextCount,
-            NpcDialogueBaselineV23.ExpectedProfileCount,
-            NpcDialogueBaselineV23.ExpectedRouteCount,
-            NpcDialogueBaselineV23.ExpectedMenuEntryCount,
-            NpcDialogueBaselineV23.Source,
+            NpcDialogueBaselineV24.ExpectedTextCount,
+            NpcDialogueBaselineV24.ExpectedProfileCount,
+            NpcDialogueBaselineV24.ExpectedRouteCount,
+            NpcDialogueBaselineV24.ExpectedMenuEntryCount,
+            NpcDialogueBaselineV24.Source,
             Created);
 
     private static bool IsSupportedPreviousRevision(string revision) =>
@@ -489,5 +489,48 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
                     NpcDialogueBaselineV22.ExpectedRevision,
                     NpcDialogueBaselineV22.ExpectedHashedEntryCount),
                 NpcDialogueBaselineV22.ExpectedSpawnRevision).Sha256,
+            StringComparison.Ordinal) ||
+        // V23 was the release actually stored in the database before the farm
+        // release existed, in both its raw form and its dependency-bound form.
+        // Leaving V23 out of this list makes the publisher refuse to start
+        // against any database that already holds it.
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV23.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            WorldContentRevisionHasher.HashNpcDialogueRelease(
+                new WorldContentFamilyRevision("npc-dialogues",
+                    NpcDialogueBaselineV23.ExpectedRevision,
+                    NpcDialogueBaselineV23.ExpectedHashedEntryCount),
+                NpcDialogueBaselineV23.ExpectedSpawnRevision).Sha256,
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            NpcDialogueBaselineV24.ExpectedRevision,
+            StringComparison.Ordinal) ||
+        // The first V24 publication carried the farm window's seven-entry root
+        // menu before the capture's own four-entry page replaced it. That
+        // revision is still what a database published before this change holds,
+        // so it has to stay readable as a predecessor.
+        string.Equals(
+            revision,
+            "79FD9053BA332B3EB671D2751FD03768266038907B9503CFE7DF1D923BFDA340",
+            StringComparison.Ordinal) ||
+        // The second V24 publication, which moved the farm's shop npcs off the
+        // dialogue routes. A database published from the build before this one
+        // still holds it.
+        string.Equals(
+            revision,
+            "6B0D5A359A6AC77726F515D9FE1F82F860F63B621140E12F83E52D2F5BDFCE2D",
+            StringComparison.Ordinal) ||
+        string.Equals(
+            revision,
+            WorldContentRevisionHasher.HashNpcDialogueRelease(
+                new WorldContentFamilyRevision("npc-dialogues",
+                    NpcDialogueBaselineV24.ExpectedRevision,
+                    NpcDialogueBaselineV24.ExpectedHashedEntryCount),
+                NpcDialogueBaselineV24.ExpectedSpawnRevision).Sha256,
             StringComparison.Ordinal);
 }

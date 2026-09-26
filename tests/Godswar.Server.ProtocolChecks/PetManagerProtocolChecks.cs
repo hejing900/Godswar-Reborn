@@ -24,7 +24,9 @@ internal static class PetManagerProtocolChecks
                 new[] { 100, 101 }),
             "point-reset dialogue exposes savvy and growth reset choices");
         Check.True(
-            PetManagerProtocol.IsEndpoint("Athens_088", 5227) &&
+            PetManagerProtocol.IsEndpoint("Athens_088", PetManagerProtocol.AthensNpcId) &&
+            PetManagerProtocol.IsEndpoint(
+                "Athens_088", PetManagerProtocol.PublishedAthensNpcId) &&
             PetManagerProtocol.IsEndpoint("Sparta_088", 5085) &&
             PetManagerProtocol.IsEndpoint("Sparta_088", 5087),
             "published and source Pet Manager endpoints remain compatible");

@@ -55,10 +55,12 @@ internal static class BattlefieldTransporterProtocolChecks
             .ToArray();
         Check.True(
             BattlefieldTransporterProtocol.SpartaNpcId == 5053 &&
-            BattlefieldTransporterProtocol.AthensNpcId == 5195 &&
+            BattlefieldTransporterProtocol.SpartaNpcId == 5053 &&
+            BattlefieldTransporterProtocol.PublishedAthensNpcId == 5195 &&
             published.Length == 2 &&
             published[0].NpcKey == "Athens_056" &&
-            published[0].InteractionId == 5195 &&
+            published[0].InteractionId ==
+                BattlefieldTransporterProtocol.PublishedAthensNpcId &&
             published[1].NpcKey == "Sparta_056" &&
             published[1].InteractionId == 5053,
             "current published Battlefield Transporter IDs are pinned");
@@ -74,13 +76,15 @@ internal static class BattlefieldTransporterProtocolChecks
                 "Sparta_056",
                 5053,
                 out var spartaMenu) &&
-            spartaMenu.SequenceEqual([251, 274, 1001]) &&
+            spartaMenu.SequenceEqual(
+                [251, 274, 1001, BattlefieldTransporterProtocol.LelantineFarmSubId]) &&
             BattlefieldTransporterProtocol.TryGetInitialMenu(
                 "Athens_056",
                 5195,
                 out var athensMenu) &&
-            athensMenu.SequenceEqual([252, 274, 1001]),
-            "each capital publishes its exact stock root menu");
+            athensMenu.SequenceEqual(
+                [252, 274, 1001, BattlefieldTransporterProtocol.LelantineFarmSubId]),
+            "each capital publishes its exact stock root menu plus the farm entry");
         Check.True(
             !BattlefieldTransporterProtocol.TryGetInitialMenu(
                 "Sparta_056",

@@ -20,7 +20,14 @@ internal sealed record TransporterDestination(
 internal static class TransporterProtocol
 {
     public const uint SpartaNpcId = 5039;
-    public const uint AthensNpcId = 5180;
+    // The client is handed the capture's own id: CapturedNpcPlacementPolicy
+    // renumbers Athens' city npcs from the published catalog to the capture, and
+    // the client echoes back whatever it was handed. The published dialogue
+    // baseline still carries the catalog's value, and the npc content tables are
+    // append-only (a changed row needs a new revision), so both ids are accepted
+    // until the content is republished.
+    public const uint AthensNpcId = 5179;
+    public const uint PublishedAthensNpcId = 5180;
     public const uint MycenaeNpcId = 59721;
     public const int DialogIndex = 1;
     public const int ResultDialogIndex = 2;
@@ -97,6 +104,7 @@ internal static class TransporterProtocol
         (npcKey, interactionId) is
             ("Sparta_042", SpartaNpcId) or
             ("Athens_041", AthensNpcId) or
+            ("Athens_041", PublishedAthensNpcId) or
             ("Mycenae_All_013", MycenaeNpcId);
 
     public static bool TryGetInitialMenu(
@@ -107,7 +115,8 @@ internal static class TransporterProtocol
         subIds = (npcKey, interactionId) switch
         {
             ("Sparta_042", SpartaNpcId) => SpartaInitialMenuSubIds,
-            ("Athens_041", AthensNpcId) => AthensInitialMenuSubIds,
+            ("Athens_041", AthensNpcId) or
+            ("Athens_041", PublishedAthensNpcId) => AthensInitialMenuSubIds,
             ("Mycenae_All_013", MycenaeNpcId) => MycenaeInitialMenuSubIds,
             _ => []
         };
@@ -130,9 +139,15 @@ internal static class TransporterProtocol
             return false;
         }
 
+        // The client is handed the capture's id (5179) while the published
+        // dialogue baseline still carries the catalog's (5180), so a destination
+        // resolves under either - the sub-id is what actually names the entry.
+        var acceptedIds = npcKey == "Athens_041"
+            ? new[] { AthensNpcId, PublishedAthensNpcId }
+            : new[] { interactionId };
         destination = DestinationValues.FirstOrDefault(candidate =>
             string.Equals(candidate.NpcKey, npcKey, StringComparison.Ordinal) &&
-            candidate.InteractionId == interactionId &&
+            Array.IndexOf(acceptedIds, candidate.InteractionId) >= 0 &&
             candidate.SourceMapId == sourceMapId &&
             candidate.SubId == subId)!;
         return destination is not null;

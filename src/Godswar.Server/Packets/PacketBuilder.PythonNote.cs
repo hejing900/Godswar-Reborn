@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Protocol;
 
 namespace Godswar.Server.Packets;
@@ -92,6 +93,66 @@ internal static partial class PacketBuilder
                 "Native centered announcements require at most 126 ASCII bytes.");
         }
 
+        var packet = ComposeNote(
+            PythonNoteDirectTextType,
+            PythonNoteCenterChannel,
+            message[..Math.Min(message.Length, PythonNoteTextPartLength)],
+            message[Math.Min(message.Length, PythonNoteTextPartLength)..]);
+        return packet;
+    }
+
+    /// <summary>
+    /// The activity's donation proclamation: the note type its own client
+    /// script composes the message from, on the centre-screen channel, with the
+    /// donor in the native name field and the message halves in the note field.
+    /// </summary>
+    /// <remarks>
+    /// The shipped client never receives the Chinese text of this announcement.
+    /// <c>SrvMsg.lua</c> declares <c>SrvMsg_NOTE_181 = 33</c> and composes that
+    /// type as <c>name .. SrvMsg_Lelantine_msg[note[0]] .. note[2] ..
+    /// SrvMsg_Lelantine_msg[note[1]]</c>, so the frame carries the donor's name
+    /// and an ASCII note such as <c>51070#51090#110</c>; the client draws
+    /// "「名字」捐献犬宝宝宠物蛋，斯巴达阵营获得110积分！" from its own text
+    /// table. Capture evidence for the frame's shape is the note channel itself
+    /// (<c>S2C 10038 type=… channel=0 name=… note=…</c>, 916 captured frames).
+    /// </remarks>
+    public static byte[] LelantineDonationBroadcast(
+        string donorName,
+        bool athenian,
+        long points)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(donorName);
+        var note = LelantineFarmProtocol.BuildDonationBroadcastNote(
+            athenian,
+            points);
+        return ComposeNote(
+            LelantineFarmProtocol.DonationBroadcastNoteType,
+            checked((byte)LelantineFarmProtocol.DonationBroadcastChannel),
+            donorName,
+            note);
+    }
+
+    /// <summary>
+    /// One composed note: the type the client switches on, the channel it draws
+    /// on, and the two fixed 64-byte fields it reads as the name and the note.
+    /// </summary>
+    private static byte[] ComposeNote(
+        int noteType,
+        byte channel,
+        string name,
+        string note)
+    {
+        if (name.Length >= PythonNoteFieldLength ||
+            note.Length >= PythonNoteFieldLength ||
+            name.Any(static character => character is < ' ' or > '~') ||
+            note.Any(static character => character is < ' ' or > '~'))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(note),
+                "Native composed notes carry at most 63 printable ASCII bytes " +
+                "in each of their two fields.");
+        }
+
         var packet = new byte[PythonNotePacketLength];
         BinaryPrimitives.WriteUInt16LittleEndian(
             packet,
@@ -101,16 +162,14 @@ internal static partial class PacketBuilder
             Opcodes.PythonNote);
         BinaryPrimitives.WriteInt32LittleEndian(
             packet.AsSpan(4),
-            PythonNoteDirectTextType);
-        packet[8] = PythonNoteCenterChannel;
-
-        var split = Math.Min(message.Length, PythonNoteTextPartLength);
+            noteType);
+        packet[8] = channel;
         PacketText.WriteFixedAscii(
             packet.AsSpan(9, PythonNoteFieldLength),
-            message[..split]);
+            name);
         PacketText.WriteFixedAscii(
             packet.AsSpan(73, PythonNoteFieldLength),
-            message[split..]);
+            note);
         return packet;
     }
 }

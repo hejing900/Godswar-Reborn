@@ -180,8 +180,15 @@ C2S 10067 (48B) → S2C 10067 (48B) → C2S 10068 (8B) → C2S 10117 (4B)
   --login-host 127.1.1.110 --login-port 5999 `
   --local-login-port 5998 --local-game-port 7000 `
   --local-advertised-host 127.1.1.110 `
+  --default-game-host 127.1.1.110 --default-game-port 13333 `
+  --probe-port 7099 `
   --out 'D:\Godswar-Reborn-main\captures\godswar-proxy.log'
 ```
+
+> `--default-game-host/--default-game-port` **不能省**。登录回包里游戏的 host 与本机中转同址
+> （`127.1.1.110:13333`），代理只在“回包 host ≠ `--login-host`”时才跟随回包，
+> 否则一律用这一对作为上行目标；不填就永远等不到目标，表现为客户端卡在选服/进图
+> （日志里只有 `LOGIN redirect same-host=...`，之后连 `GAME connected` 都没有）。
 
 **前提：`godswar-postgres` 容器必须在运行**（工具默认写数据库，连不上会直接崩）。
 

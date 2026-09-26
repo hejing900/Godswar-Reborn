@@ -258,6 +258,16 @@ internal sealed partial class GameClientHandler
                 (BattlefieldTransporterProtocol.NiMiniResultDialogIndex,
                     BattlefieldTransporterProtocol
                         .NiMiniUnavailableResultSubId),
+            // The farm words its own refusals inside the activity window, so the
+            // refusal is answered under dialog index 47 rather than the
+            // transport menu's index 1.
+            BattlefieldDestinationKind.LelantineFarm =>
+                (BattlefieldTransporterProtocol.LelantineFarmResultDialogIndex,
+                    closed
+                        ? BattlefieldTransporterProtocol
+                            .LelantineFarmClosedResultSubId
+                        : BattlefieldTransporterProtocol
+                            .LelantineFarmLevelResultSubId),
             _ => throw new InvalidOperationException(
                 "The always-open Duel Arena has no admission result.")
         };

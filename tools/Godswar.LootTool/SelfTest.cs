@@ -247,11 +247,180 @@ internal static class SelfTest
 
         failures += problems.Count(static p => p.Severity == "致命");
 
+        failures += await CheckFarmAsync(settings, Line);
+
         Line();
         Line(failures == 0
             ? "结论：全部通过。"
             : $"结论：{failures} 项失败。");
         return Finish(report, failures == 0 ? 0 : 1);
+    }
+
+    /// <summary>
+    /// The farm tab's data layer: the view the faction totals come from, the two
+    /// ledgers, the published roster, the rule constants read back out of the
+    /// server's source, and a write probe that runs inside a transaction it then
+    /// rolls back - so the live score board is measured without being changed.
+    /// </summary>
+    private static async Task<int> CheckFarmAsync(
+        LootToolSettings settings,
+        Action<string> line)
+    {
+        var failures = 0;
+        line(string.Empty);
+        line("── 利兰丁农场（本次新增） ──────────────────────");
+
+        await using var farm = new FarmStore();
+        try
+        {
+            farm.Connect(settings.BuildConnectionString());
+        }
+        catch (Exception ex)
+        {
+            line($"[失败] 农场页无法连接数据库：{ex.Message}");
+            return 1;
+        }
+
+        if (!await farm.HasFarmSchemaAsync())
+        {
+            line("[失败] 该库没有 lelantine_farm_personal_points 视图/两张流水表；" +
+                 "服务端迁移 20260926_210 未应用。");
+            return 1;
+        }
+
+        line("[通过] 农场积分 schema 存在（视图 + 两张流水表）。");
+
+        var totals = await farm.LoadTotalsAsync();
+        line($"[信息] 阵营总分：斯巴达 {totals.SpartaPoints}｜雅典 {totals.AthensPoints}｜" +
+             $"有分角色 {totals.Members} 个｜捐卵流水 {totals.DonationRows} 行｜击杀行 {totals.KillRows} 行");
+
+        // The invariant the whole feature rests on: each camp's total is the sum
+        // of that camp's personal scores, and the activity's high score is the
+        // highest personal score.
+        var characters = await farm.LoadCharactersAsync(null, limit: 500);
+        var sparta = characters.Where(static row => row.Faction == LelantineFarmRules.SpartaCamp)
+            .Sum(static row => row.Personal);
+        var athens = characters.Where(static row => row.Faction == LelantineFarmRules.AthensCamp)
+            .Sum(static row => row.Personal);
+        var highest = characters.Count == 0 ? 0 : characters.Max(static row => row.Personal);
+        var invariant = sparta == totals.SpartaPoints && athens == totals.AthensPoints;
+        line(invariant
+            ? $"[通过] 阵营分 = 同阵营个人积分之和（斯巴达 {sparta}、雅典 {athens}）；" +
+              $"最高个人积分 {highest}。"
+            : $"[失败] 阵营分与个人分之和不一致：视图 斯巴达 {totals.SpartaPoints}/雅典 {totals.AthensPoints}，" +
+              $"逐人求和 斯巴达 {sparta}/雅典 {athens}。");
+        if (!invariant)
+        {
+            failures++;
+        }
+
+        var ranked = characters.Where(static row => row.Personal > 0).ToList();
+        var rankOk = ranked.All(row => row.Rank >= 1);
+        line(rankOk
+            ? $"[通过] 有分角色 {ranked.Count} 个都拿到了排名。"
+            : "[失败] 有分角色的排名出现 0。");
+        if (!rankOk)
+        {
+            failures++;
+        }
+
+        var npcs = await farm.LoadPublishedNpcsAsync();
+        var npcOk = npcs.Count > 0 &&
+            npcs.All(static npc => npc.MapId == LelantineFarmRules.MapId) &&
+            npcs.Select(static npc => npc.ObjectId).Distinct().Count() == npcs.Count;
+        line(npcOk
+            ? $"[通过] 当前发布的农场 NPC {npcs.Count} 个：" +
+              string.Join("、", npcs.Select(static npc => npc.NpcKey + "/" + npc.ObjectId))
+            : $"[失败] 已发布农场 NPC 异常：{npcs.Count} 个。");
+        if (!npcOk)
+        {
+            failures++;
+        }
+
+        var constants = FarmStore.LoadRuleConstants();
+        var missing = constants.Where(static constant =>
+            constant.Value.StartsWith("（未找到源码", StringComparison.Ordinal)).ToList();
+        line(missing.Count == 0
+            ? $"[通过] 从服务端源码读到 {constants.Count} 条农场规则常量。"
+            : $"[警告] {missing.Count} 条常量未读到源码（工具不在仓库内？）：" +
+              string.Join("、", missing.Select(static constant => constant.Name)));
+        if (missing.Count > 0)
+        {
+            failures++;
+        }
+
+        // A write probe that cannot leave a trace: everything happens in a
+        // transaction that is rolled back, and the totals are read again after
+        // the rollback to prove the score board is untouched.
+        var probe = characters.FirstOrDefault();
+        if (probe is null)
+        {
+            line("[信息] 库里没有任何角色，跳过写入探针。");
+            return failures;
+        }
+
+        var faction = probe.Faction is 0 or 1
+            ? probe.Faction
+            : (byte)LelantineFarmRules.SpartaCamp;
+        try
+        {
+            await farm.AddAdjustmentAsync(
+                probe.Id,
+                faction,
+                12345,
+                dryRun: true);
+            var after = await farm.LoadTotalsAsync();
+            var rolledBack = after.SpartaPoints == totals.SpartaPoints &&
+                after.AthensPoints == totals.AthensPoints &&
+                after.DonationRows == totals.DonationRows;
+            line(rolledBack
+                ? $"[通过] 演练写入（给 {probe.Name} +12345 分）没有落库，总分不变。"
+                : "[失败] 演练写入竟然改了数据。");
+            if (!rolledBack)
+            {
+                failures++;
+            }
+        }
+        catch (Exception ex)
+        {
+            line($"[失败] 演练写入抛错：{ex.Message}");
+            failures++;
+        }
+
+        var bag = await farm.LoadFarmBagAsync(probe.Id);
+        line($"[信息] {probe.Name} 背包里的活动物品：{(bag.Count == 0 ? "无" : string.Join(
+            "、",
+            bag.Select(static row =>
+                $"{row.DisplayName}({row.ItemId}) 品质{row.Quality}×{row.Stack} 槽{row.Slot}")))}");
+
+        try
+        {
+            var plan = await farm.GrantItemAsync(
+                probe.Id,
+                LelantineFarmRules.HoundEggItemId,
+                quantity: 99,
+                quality: LelantineFarmRules.EggRungs[2].Aptitude,
+                note: "selftest-dry-run",
+                dryRun: true);
+            var planned = plan.Placements.Sum(static placement => placement.Added);
+            line(planned == 99
+                ? $"[通过] 发放演练：{plan.CharacterName} 的 99 个忠犬卵（资质 {plan.Quality}）" +
+                  $"落在 {plan.Placements.Count} 个堆位，未写库。"
+                : $"[失败] 发放演练只规划了 {planned} 个。");
+            if (planned != 99)
+            {
+                failures++;
+            }
+        }
+        catch (FarmToolException ex) when (
+            ex.Message.Contains("背包已满", StringComparison.Ordinal))
+        {
+            // A full bag is the tool reporting a real blocker, not a defect; the
+            // operator has to free a slot before any handout can land.
+            line($"[信息] 发放演练跳过（{probe.Name} 的背包已满，工具已正确拒绝写入）：{ex.Message}");
+        }
+
+        return failures;
     }
 
     private static int Finish(StringBuilder report, int exitCode)

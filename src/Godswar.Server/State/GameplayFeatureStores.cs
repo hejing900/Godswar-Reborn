@@ -57,7 +57,10 @@ internal interface IMonsterRewardExtrasStore
 
 }
 
-internal sealed class UnsupportedGameplayFeatures : ICapitalShopPurchaseStore, IMonsterRewardExtrasStore
+internal sealed class UnsupportedGameplayFeatures :
+    ICapitalShopPurchaseStore,
+    IMonsterRewardExtrasStore,
+    ILelantineFarmPointsStore
 {
     public static readonly UnsupportedGameplayFeatures Instance = new();
     private UnsupportedGameplayFeatures() { }

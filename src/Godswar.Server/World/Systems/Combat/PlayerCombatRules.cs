@@ -63,7 +63,7 @@ internal static class PlayerCombatRules
         in CombatTargetStats target,
         ulong eventId,
         int targetOrder = 0) =>
-        AuthoredCombatPveCurrent.ResolveBasicAttack(
+        AuthoredPlayerPveCurrent.ResolveBasicAttack(
             attacker,
             target,
             eventId,
@@ -99,7 +99,7 @@ internal static class PlayerCombatRules
         in PlayerCombatSkillSnapshot skill,
         ulong eventId,
         int targetOrder = 0) =>
-        AuthoredCombatPveCurrent.ResolveSkillDamage(
+        AuthoredPlayerPveCurrent.ResolveSkillDamage(
             attacker,
             target,
             skill.Property,

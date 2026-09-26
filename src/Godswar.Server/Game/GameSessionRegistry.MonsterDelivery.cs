@@ -266,15 +266,9 @@ internal sealed partial class GameSessionRegistry
             return false;
         }
 
-        if (deliveryLease.ReconciliationObjectIds.Count > 0)
-        {
-            await SendMonsterHealthReconciliationAsync(
-                session,
-                deliveryLease,
-                cancellationToken,
-                labelPrefix);
-        }
-
+        // Damage first, then any reconciliation removal. A lethal hit retires
+        // the monster's viewer object, and a removal that arrives first makes
+        // the client drop the damage number for the very hit that killed it.
         if (deliveryLease.DirectHealthMutations.Count > 0)
         {
             var directHits = deliveryLease.DirectHealthMutations
@@ -290,6 +284,15 @@ internal sealed partial class GameSessionRegistry
                     directHits),
                 cancellationToken,
                 $"{labelPrefix}Damage");
+        }
+
+        if (deliveryLease.ReconciliationObjectIds.Count > 0)
+        {
+            await SendMonsterHealthReconciliationAsync(
+                session,
+                deliveryLease,
+                cancellationToken,
+                labelPrefix);
         }
 
         deliveryLease.Commit();
@@ -373,15 +376,9 @@ internal sealed partial class GameSessionRegistry
                     continue;
                 }
 
-                if (deliveryLease.ReconciliationObjectIds.Count > 0)
-                {
-                    await SendMonsterHealthReconciliationAsync(
-                        context.Session,
-                        deliveryLease,
-                        cancellationToken,
-                        labelPrefix);
-                }
-
+                // Match the self delivery: the lethal damage number has to be
+                // admitted while the viewer still has the monster, otherwise a
+                // removal that arrives first swallows the killing hit.
                 var impactPublished = false;
                 if (deliveryLease.DirectHealthMutations.Count > 0)
                 {
@@ -412,6 +409,15 @@ internal sealed partial class GameSessionRegistry
                         $"{labelPrefix}DamageWorld");
                 }
 
+                if (deliveryLease.ReconciliationObjectIds.Count > 0)
+                {
+                    await SendMonsterHealthReconciliationAsync(
+                        context.Session,
+                        deliveryLease,
+                        cancellationToken,
+                        labelPrefix);
+                }
+
                 if (!publishCastVisual && !impactPublished)
                 {
                     await context.Session.SendAsync(
@@ -438,9 +444,11 @@ internal sealed partial class GameSessionRegistry
         new(
             hit.HealthMutation.ObjectId,
             hit.ReportedDamage,
-            AttackType: terminalObjectIds.Contains(
-                hit.HealthMutation.ObjectId)
-                ? (byte)5
-                : (byte)1);
+            // The native 10047 receiver draws a positive floating number only
+            // for AttackType at most 2, and it has no type-5 death branch at
+            // all, so a lethal entry must keep the ordinary attack type or the
+            // number for the killing hit is suppressed. See
+            // docs/wonderland-followup-20260913.md.
+            AttackType: 1);
 
 }

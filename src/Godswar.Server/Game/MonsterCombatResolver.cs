@@ -18,7 +18,7 @@ internal static class MonsterCombatResolver
     public static uint CalculatePlayerBasicAttack(GameCharacter character)
     {
         var attacker = CombatCharacterStatsAdapter.FromCharacter(character);
-        return AuthoredCombatPveCurrent.ResolveBasicAttackForOutcome(
+        return AuthoredPlayerPveCurrent.ResolveBasicAttackForOutcome(
             attacker,
             target: default,
             CombatHitOutcome.Normal).Damage;
@@ -36,7 +36,10 @@ internal static class MonsterCombatResolver
             CombatCharacterStatsAdapter.ApplyRuntimeAttackerModifiers(
                 CombatCharacterStatsAdapter.FromCharacter(character),
                 runtimeModifiers);
-        return AuthoredCombatPveCurrent.ResolveBasicAttack(
+        // Player attacks on monsters use the player PvE policy: the existing
+        // accuracy curve with PvP's critical ratio. Incoming monster attacks
+        // and historical replay stay on AuthoredCombatPveCurrent.
+        return AuthoredPlayerPveCurrent.ResolveBasicAttack(
             attacker,
             target,
             combatEventId,

@@ -17,78 +17,189 @@ internal static partial class IntonedCombatSkillHandlerChecks
     {
         foreach (var mode in new[] { PlayerRuntimeMode.Legacy, PlayerRuntimeMode.Ecs })
         {
-            await CheckFlameBlastFivePulsesAsync(mode);
-            await CheckFlameBlastOverlapsAsync(mode);
+            await CheckFlameBlastLethalOpeningHitAsync(mode);
+            await CheckFlameBlastLethalPulseKeepsDamageNumberAsync(mode);
+            await CheckFlameBlastTenSecondFieldAsync(mode);
+            await CheckFlameBlastIndependentFieldsAsync(mode);
             await CheckSharedFlameFormulaAsync(mode);
         }
     }
 
-    private static async Task CheckFlameBlastFivePulsesAsync(PlayerRuntimeMode mode)
+    // A recurring pass that kills its target must still publish its number
+    // before the reconciliation removal, exactly like the opening hit.
+    private static async Task CheckFlameBlastLethalPulseKeepsDamageNumberAsync(
+        PlayerRuntimeMode mode)
+    {
+        var clock = NewFlameClock();
+        await using var fixture = await CreateFlameFixtureAsync(mode, clock,
+            monsterHealth: 500);
+        fixture.Character.CalculatedStats = new CharacterStats
+        {
+            MagicAttack = 500, Hit = 1_000_000, LifeAbsorptionFlat = FlameHealing
+        };
+        fixture.Registry.UpdateCharacter(fixture.Socket.Session, fixture.Character,
+            advanceWorldRevision: false);
+        await BeginFlameCastAsync(fixture, 3);
+        await WaitForFlameTimersAsync(fixture, clock, 1);
+        clock.Advance(TimeSpan.FromSeconds(1));
+        await WaitForFlameQuiescenceAsync(fixture, clock);
+        var damageIndex = -1;
+        var removalIndex = -1;
+        for (var index = 0; index < 8; index++)
+        {
+            var packet = await fixture.Socket.ReadPacketAsync();
+            var opcode = ReadOpcode(packet);
+            if (opcode == 10045 && damageIndex < 0) damageIndex = index;
+            if (packet.Length >= 12 && opcode == 0x2728 &&
+                BinaryPrimitives.ReadUInt32LittleEndian(packet.AsSpan(8)) == MonsterObjectId &&
+                removalIndex < 0) removalIndex = index;
+        }
+
+        Check.True(damageIndex >= 0,
+            $"{mode}: a lethal recurring pass still publishes its damage number");
+        Check.True(removalIndex < 0 || damageIndex < removalIndex,
+            $"{mode}: a lethal recurring pass publishes its number before the removal");
+    }
+
+    private static uint ReadMonsterGeneration(Fixture fixture) =>
+        fixture.Registry.TryGetMonsterSnapshot(0, MonsterObjectId, out var monster)
+            ? monster.SpawnGeneration
+            : throw new InvalidOperationException(
+                "lethal pulse priming reads the real monster generation");
+
+    // A lethal opening hit retires the monster's viewer object. The damage
+    // number has to be admitted while the client still has the monster, or the
+    // removal that follows swallows the hit that killed it.
+    private static async Task CheckFlameBlastLethalOpeningHitAsync(PlayerRuntimeMode mode)
+    {
+        var clock = NewFlameClock();
+        await using var fixture = await CreateFlameFixtureAsync(mode, clock,
+            monsterHealth: 500);
+        fixture.Character.CalculatedStats = new CharacterStats
+        {
+            MagicAttack = 5_000, Hit = 1_000_000, LifeAbsorptionFlat = FlameHealing
+        };
+        fixture.Registry.UpdateCharacter(fixture.Socket.Session, fixture.Character,
+            advanceWorldRevision: false);
+        var before = FlameMonsterHealth(fixture);
+        await BeginFlameCastAsync(fixture, 3);
+        var damageIndex = -1;
+        var removalIndex = -1;
+        for (var index = 0; index < 8 && (damageIndex < 0 || removalIndex < 0); index++)
+        {
+            var packet = await fixture.Socket.ReadPacketAsync();
+            var opcode = ReadOpcode(packet);
+            if (opcode == 10047 && damageIndex < 0) damageIndex = index;
+            if (packet.Length >= 8 && opcode == 0x2728 &&
+                BinaryPrimitives.ReadUInt32LittleEndian(packet.AsSpan(8)) == MonsterObjectId &&
+                removalIndex < 0) removalIndex = index;
+        }
+
+        Check.True(FlameMonsterHealth(fixture)[0] < before[0],
+            $"{mode}: the lethal opening hit really committed damage");
+        Check.True(damageIndex >= 0,
+            $"{mode}: the lethal opening hit still publishes its damage number");
+        Check.True(removalIndex < 0 || damageIndex < removalIndex,
+            $"{mode}: the removal of the killed monster never precedes its damage number");
+    }
+
+    private static async Task CheckFlameBlastTenSecondFieldAsync(PlayerRuntimeMode mode)
     {
         var clock = NewFlameClock();
         await using var fixture = await CreateFlameFixtureAsync(mode, clock);
         var totals = await CastAndReadInitialFlameAsync(fixture, centerX: 3);
         await WaitForFlameTimersAsync(fixture, clock, 1);
-        clock.Advance(TimeSpan.FromMilliseconds(3999));
-        Check.Equal(0, fixture.Socket.Available, "Flame Blast cannot damage before its first four-second deadline");
+        clock.Advance(TimeSpan.FromMilliseconds(999));
+        Check.Equal(0, fixture.Socket.Available, "Flame Blast cannot damage before its first one-second deadline");
 
         // Placement belongs to the ground point, not the caster's later location.
         fixture.Character.PositionX = 20;
         fixture.Registry.UpdateCharacter(fixture.Socket.Session, fixture.Character,
             advanceWorldRevision: true);
-        totals += await AdvanceAndReadFlameAsync(fixture, clock,
-            TimeSpan.FromMilliseconds(1), expectedFields: 1);
-        for (var ordinal = 2; ordinal <= 4; ordinal++)
-            totals += await AdvanceAndReadFlameAsync(fixture, clock,
-                TimeSpan.FromSeconds(4), expectedFields: ordinal == 4 ? 0 : 1);
+        var pulsesBefore = fixture.Handler.FlameBlastPulsesApplied;
+        totals += (await AdvanceAndReadFlameAsync(fixture, clock,
+            TimeSpan.FromMilliseconds(1))).Targets;
+        for (var step = 0; step < 8; step++)
+            totals += (await AdvanceAndReadFlameAsync(fixture, clock,
+                TimeSpan.FromSeconds(1))).Targets;
 
-        Check.True(totals >= 5, $"{mode}: several real target hits survive all five damage passes");
+        var log = fixture.Handler.FlameBlastPulseLog;
+        Check.Equal(9, fixture.Handler.FlameBlastPulsesApplied - pulsesBefore,
+            "the ten-second field delivers one recurring pass per second before it retires");
+        Check.True(log.Select(entry => entry.Ordinal).SequenceEqual(Enumerable.Range(1, 9)) &&
+            log.Zip(log.Skip(1)).All(pair =>
+                pair.Second.ElapsedTicks - pair.First.ElapsedTicks ==
+                FlameBlastPulsePolicy.Interval.Ticks),
+            "recurring passes land one interval apart from the accepted cast");
+        await WaitForFlameRetirementAsync(fixture, clock);
+
+        Check.True(totals >= 5, $"{mode}: several real target hits survive all ten damage passes");
         Check.Equal(50 + totals * FlameHealing, fixture.Character.CurrentHp,
             $"{mode}: each damaged monster contributes one actual heal across the field lifetime");
         Check.Equal(InitialMana - 180, fixture.Character.CurrentMp,
             "later pulses neither reserve nor charge the initial mana cost again");
         var finalHealth = FlameMonsterHealth(fixture);
-        clock.Advance(TimeSpan.FromSeconds(40));
+        clock.Advance(TimeSpan.FromSeconds(11));
         await Task.Yield();
         Check.True(finalHealth.SequenceEqual(FlameMonsterHealth(fixture)) &&
             fixture.Socket.Available == 0 && FlameFieldCount(fixture.Handler) == 0,
-            "five total pulses expire without a sixth damage pass or residual field");
+            "ten total pulses expire without an eleventh damage pass or residual field");
     }
 
-    private static async Task CheckFlameBlastOverlapsAsync(PlayerRuntimeMode mode)
+    private static async Task CheckFlameBlastIndependentFieldsAsync(PlayerRuntimeMode mode)
     {
         var clock = NewFlameClock();
         await using var fixture = await CreateFlameFixtureAsync(mode, clock);
         var totals = await CastAndReadInitialFlameAsync(fixture, 3);
         await WaitForFlameTimersAsync(fixture, clock, 1);
+        var firstFieldMana = fixture.Character.CurrentMp;
 
-        // Verify the real admission rejection before advancing the fixture's
-        // cooldown authority; this is not a direct invocation of completion.
-        await BeginFlameCastAsync(fixture, 3);
-        var error = await fixture.Socket.ReadPacketAsync(12);
-        var interruption = await fixture.Socket.ReadPacketAsync(8);
-        Check.True(error.SequenceEqual(PacketBuilder.LocalizedError(NativeErrorCodes.SkillNotReady)) &&
-            interruption.SequenceEqual(PacketBuilder.SkillCastInterrupt(LocalObjectId)),
-            "a premature Flame Blast recast retains the ordinary cooldown rejection");
-        Check.Equal(1, FlameFieldCount(fixture.Handler), "a rejected recast creates no field");
-        Check.Equal(InitialMana - 180, fixture.Character.CurrentMp, "rejected recast consumes no mana");
+        // Drive the first field one pass at a time so the second cast lands
+        // while it is demonstrably still ticking on its own schedule.
+        var firstLog = fixture.Handler.FlameBlastPulseLog;
+        await PumpFlameClockAsync(fixture, clock, TimeSpan.FromSeconds(2));
+        var firstFieldPasses = fixture.Handler.FlameBlastPulseLog.Count - firstLog.Count;
+        Check.Equal(2, firstFieldPasses,
+            $"{mode}: the first field keeps its own one-pass-per-second schedule");
 
-        // The scheduler clock is injected separately from existing cooldowns.
-        // Prune the expired fixture lease explicitly instead of waiting seconds.
+        // The second accepted cast must own a second field with its own clock
+        // rather than refreshing, restarting or merging into the first one.
         fixture.Registry.PruneHostileSkillCooldowns(DateTimeOffset.UtcNow.AddSeconds(3));
-        clock.Advance(TimeSpan.FromSeconds(2));
-        totals += await CastAndReadInitialFlameAsync(fixture, 3);
-        await WaitForFlameTimersAsync(fixture, clock, 2);
-        for (var step = 0; step < 8; step++)
-            totals += await AdvanceAndReadFlameAsync(fixture, clock,
-                TimeSpan.FromSeconds(2), expectedFields: step < 6 ? 2 : step == 6 ? 1 : 0);
-
-        Check.Equal(50 + totals * FlameHealing, fixture.Character.CurrentHp,
-            $"{mode}: overlapping independent fields each heal for their own committed target hits");
+        await BeginSecondFlameCastAsync(fixture, 3);
+        await PumpFlameClockAsync(fixture, clock, TimeSpan.FromSeconds(9));
         Check.Equal(InitialMana - 360, fixture.Character.CurrentMp,
-            "two accepted fields consume exactly two initial mana costs");
-        Check.True(totals >= 10 && FlameFieldCount(fixture.Handler) == 0,
-            "both fields run their remaining four pulses and retire independently");
+            "each accepted cast pays its own mana once and no field pass charges again");
+
+        var log = fixture.Handler.FlameBlastPulseLog;
+        var fieldIds = log.Select(entry => entry.FieldId).Distinct().Order().ToArray();
+        Check.Equal(2, fieldIds.Length,
+            "two accepted casts own two independent fields");
+        foreach (var fieldId in fieldIds)
+        {
+            var entries = log.Where(entry => entry.FieldId == fieldId)
+                .OrderBy(entry => entry.Ordinal).ToArray();
+            Check.True(entries.Select(entry => entry.Ordinal).SequenceEqual(
+                    Enumerable.Range(1, entries.Length)),
+                $"{mode}: field{fieldId} never restarts or skips its own ordinals");
+            Check.True(entries.Length == 9,
+                $"{mode}: field{fieldId} delivers its own nine recurring passes");
+            Check.True(entries.Zip(entries.Skip(1)).All(pair =>
+                    pair.Second.ElapsedTicks - pair.First.ElapsedTicks ==
+                    FlameBlastPulsePolicy.Interval.Ticks),
+                $"{mode}: field{fieldId} keeps its own one-second cadence");
+        }
+
+        // The log is chronological, so the second field's first pass must come
+        // after the first field's first pass: the later cast appended a new
+        // schedule instead of taking over the ticking one.
+        var firstAppearance = fieldIds.ToDictionary(fieldId => fieldId,
+            fieldId => log.ToList().FindIndex(entry => entry.FieldId == fieldId));
+        Check.True(firstAppearance[fieldIds[1]] > firstAppearance[fieldIds[0]],
+            "the second field starts its own schedule instead of refreshing the first");
+        Check.True(FlameFieldCount(fixture.Handler) == 0 && clock.ScheduledTimerCount == 0,
+            "both fields retire independently without residual timers");
+        Check.True(totals >= 2 && firstFieldMana == InitialMana - 180,
+            $"{mode}: both initial casts commit damage before their recurring passes");
     }
 
     private static async Task<int> CastAndReadInitialFlameAsync(Fixture fixture, float centerX,
@@ -138,17 +249,22 @@ internal static partial class IntonedCombatSkillHandlerChecks
         return changed.Length;
     }
 
-    private static async Task<int> AdvanceAndReadFlameAsync(Fixture fixture,
-        ManualTimeProvider clock, TimeSpan advance, int expectedFields,
+    // Advances the field clock by one scheduled step. Returns the number of
+    // targets whose health was actually mutated (each contributes one heal
+    // packet) and the total damage committed. A single advance can deliver
+    // more than one pass under the manually driven clock.
+    private static async Task<(int Targets, int Damage)> AdvanceAndReadFlameAsync(
+        Fixture fixture, ManualTimeProvider clock, TimeSpan advance,
         Func<uint, byte>? expectedStyle = null)
     {
         var before = FlameMonsterHealth(fixture);
         var beforeHp = fixture.Character.CurrentHp;
         var beforeMana = fixture.Character.CurrentMp;
         clock.Advance(advance);
-        await WaitForFlameTimersAsync(fixture, clock, expectedFields);
+        await WaitForFlameQuiescenceAsync(fixture, clock);
         var after = FlameMonsterHealth(fixture);
         var changed = ChangedFlameTargets(before, after);
+        var damage = changed.Sum(index => checked((int)(before[index] - after[index])));
         if (changed.Length > 0)
         {
             var packet = await ReadAfterFlameClaimsAsync(fixture);
@@ -173,7 +289,7 @@ internal static partial class IntonedCombatSkillHandlerChecks
         Check.True(after[2] == before[2] && fixture.Character.CurrentMp == beforeMana &&
             fixture.Socket.Available == 0,
             "a pulse excludes the out-of-area mob and sends no recast, impact, mana or extra heal");
-        return changed.Length;
+        return (changed.Length, damage);
     }
 
     private static int[] ChangedFlameTargets(uint[] before, uint[] after) =>

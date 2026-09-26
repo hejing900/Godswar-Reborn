@@ -18,7 +18,9 @@ internal static class FactionCrierProtocolChecks
                 [1, 2, 3, 4, 1000]),
             "Faction Crier publishes four root choices and its explanation");
         Check.True(
-            FactionCrierProtocol.IsEndpoint("Athens_055", 5194) &&
+            FactionCrierProtocol.IsEndpoint("Athens_055", FactionCrierProtocol.AthensNpcId) &&
+            FactionCrierProtocol.IsEndpoint(
+                "Athens_055", FactionCrierProtocol.PublishedAthensNpcId) &&
             FactionCrierProtocol.IsEndpoint("Sparta_055", 5052) &&
             FactionCrierProtocol.IsEndpoint("Sparta_055", 5054),
             "published and source Faction Crier endpoints are compatible");

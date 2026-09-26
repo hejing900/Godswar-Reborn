@@ -27,6 +27,7 @@ internal static partial class PetContentArchitectureChecks
     private static readonly HashSet<string> AllowedCompiledConsumers =
         new(StringComparer.Ordinal)
         {
+            "src/Godswar.Server/Application/Pets/PinnedPetContentCatalog.Validation.cs",
             "src/Godswar.Server/Infrastructure/Items/PetMagicJadeItemContentBaseline.cs",
             "src/Godswar.Server/Infrastructure/Pets/PetContentBaseline.cs",
             "src/Godswar.Server/Infrastructure/Pets/PetMergeRankContentBaseline.cs",

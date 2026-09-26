@@ -39,6 +39,63 @@ internal static partial class PacketBuilder
                 expectedCapturedNpcId: 5_457),
             [14_085]));
 
+    /// <summary>
+    /// The Lelantine Farm quartermaster's net stock.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Captured from the reference server at
+    /// <c>2026-09-26T21:01:32.1800763+08:00</c> as a single 892-byte opcode-10071
+    /// frame: category 0, ten listings. The listings are the five tuck nets -
+    /// 10080 wooden, 10081 iron, 10082 silver, 10083 gold and 10084 mysterious -
+    /// each offered once and once at 99, priced by the client's own
+    /// <c>Money</c> field as 500, 1500, 5000, 130 and 400 silver.
+    /// </para>
+    /// <para>
+    /// One byte is corrected. The captured frame's currency byte is
+    /// <c>1</c>, and the stock client's own shop-currency table
+    /// (<c>TryGetShopCurrency(byte)</c>) has no entry for it, so the catalogue
+    /// would be rejected before it could be sent. The nets are priced in the
+    /// character's own silver, which that table spells <c>3</c>, so byte 9 is
+    /// rewritten to <c>3</c> and every other captured byte is preserved.
+    /// </para>
+    /// </remarks>
+    private const string LelantineFarmQuartermasterCatalogGzip =
+        "H4sIAAAAAAACCqthDlf/IMrAwMDIxQgkGRLUGRj+YwGMjAxgeUKAken//y9IKmHMRCqYe4cV09wkKpjbIYxpbjJOcxmJM5fx//8mBkxzU6hg7gQs4Ysn3pJpFG/JNIq3ZBrFWzKN4i2Z3HgDAPjmLrF8AwAA";
+
+    /// <summary>The captured frame's currency byte, which the client rejects.</summary>
+    private const byte LelantineFarmCapturedCurrencyByte = 1;
+
+    /// <summary>
+    /// The client's own silver currency byte, which replaces the captured one.
+    /// </summary>
+    private const byte LelantineFarmSilverCurrencyByte = 3;
+
+    private static readonly Lazy<byte[]> LelantineFarmQuartermasterCatalog =
+        new(() => ApplyLelantineFarmCurrency(
+            InflateCatalog(
+                LelantineFarmQuartermasterCatalogGzip,
+                expectedLength: 892,
+                expectedPacketCount: 1,
+                expectedCapturedNpcId: 5_616)));
+
+    /// <summary>
+    /// Rewrites the captured frame's currency byte to the one the client's own
+    /// table accepts, leaving every other captured byte untouched.
+    /// </summary>
+    private static byte[] ApplyLelantineFarmCurrency(byte[] catalog)
+    {
+        if (catalog.Length != 892 ||
+            catalog[9] != LelantineFarmCapturedCurrencyByte)
+        {
+            throw new InvalidDataException(
+                "The captured farm shop frame is not the expected frame.");
+        }
+
+        catalog[9] = LelantineFarmSilverCurrencyByte;
+        return catalog;
+    }
+
     private static byte[] GetCapturedCapitalShopCatalogSource(
         CapitalNpcServiceKind service) =>
         service switch
@@ -46,6 +103,8 @@ internal static partial class PacketBuilder
             CapitalNpcServiceKind.PetMerchant => PetMerchantCatalog.Value,
             CapitalNpcServiceKind.SkillVendor => SkillVendorCatalog.Value,
             CapitalNpcServiceKind.PropsVendor => PropsVendorCatalog.Value,
+            CapitalNpcServiceKind.LelantineFarmQuartermaster =>
+                LelantineFarmQuartermasterCatalog.Value,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(service),
                 service,

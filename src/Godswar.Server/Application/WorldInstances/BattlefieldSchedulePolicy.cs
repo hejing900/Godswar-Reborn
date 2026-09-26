@@ -18,8 +18,13 @@ internal static class BattlefieldSchedulePolicy
         DateTimeOffset instant)
     {
         ArgumentNullException.ThrowIfNull(calendar);
-        if (destination == BattlefieldDestinationKind.DuelArena)
+        if (destination is BattlefieldDestinationKind.DuelArena or
+            BattlefieldDestinationKind.LelantineFarm)
         {
+            // The Duel Arena is always available, and the Lelantine Farm is
+            // deliberately held open too: its published window is a single
+            // Friday hour, which makes the activity untestable on any other
+            // day. Every other destination keeps its published window.
             return true;
         }
 

@@ -57,11 +57,12 @@ internal static partial class PostgresPetContentBaselinePublisher
                 not "reviewed-pet-baseline-v6" and
                 not "reviewed-pet-baseline-v7" and
                 not "reviewed-pet-baseline-v8" and
-                not "reviewed-pet-baseline-v9")
+                not "reviewed-pet-baseline-v9" and
+                not "reviewed-pet-baseline-v10")
         {
             throw new InvalidDataException(
-                "The official pet-content revision is not a reviewed V1, " +
-                "V2 through V9 predecessor of the V10 release.");
+                "The official pet-content revision is not a reviewed V1 " +
+                "through V10 predecessor of the current release.");
         }
 
         baseline.ValidateItemReferences(itemCatalog);

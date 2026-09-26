@@ -36,6 +36,8 @@ internal static partial class NpcContentAuthorityChecks
         CheckArenaV5Release();
         CheckArenaV6Release();
         CheckArenaV7Release();
+        CheckLelantineFarmV8Release();
+        CheckLelantineFarmV24Release();
         CheckArenaV15DialogueRelease();
         CheckArenaV16DialogueRelease();
         CheckArenaV17DialogueRelease();

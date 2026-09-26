@@ -250,7 +250,8 @@ internal static partial class IntonedCombatSkillHandlerChecks
 
     private static async Task WaitUntilAsync(
         Func<bool> condition,
-        TimeSpan timeout)
+        TimeSpan timeout,
+        string? detail = null)
     {
         var deadline = DateTimeOffset.UtcNow + timeout;
         while (!condition())
@@ -258,7 +259,8 @@ internal static partial class IntonedCombatSkillHandlerChecks
             if (DateTimeOffset.UtcNow >= deadline)
             {
                 throw new TimeoutException(
-                    "The cooldown admission was not observed.");
+                    "The cooldown admission was not observed." +
+                    (detail is null ? string.Empty : " " + detail));
             }
 
             await Task.Delay(10);

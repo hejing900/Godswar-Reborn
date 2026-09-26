@@ -33,10 +33,10 @@ internal static partial class InstanceCallerProtocolChecks
             InstanceCallerProtocol.QueueUnavailableResultSubId == 1000,
             "root and destination pages are finite and preserve Medusa order");
         Check.True(
-            InstanceCallerProtocol.IsEndpoint("Athens_060", 5199) &&
+            InstanceCallerProtocol.IsEndpoint("Athens_060", 5198) &&
             InstanceCallerProtocol.IsEndpoint("Sparta_060", 5057) &&
             !InstanceCallerProtocol.IsEndpoint("Sparta_060", 5059) &&
-            !InstanceCallerProtocol.IsEndpoint("Athens_061", 5199),
+            !InstanceCallerProtocol.IsEndpoint("Athens_061", 5198),
             "only published capital Instance Caller endpoints are accepted");
 
         CheckNavigationAndDifficultyPaths();

@@ -48,6 +48,7 @@ internal static partial class Program
             ("Pet Healing combat-text and vitals protocol", PetHealingTalentProtocolChecks.RunAsync),
             .. DataArchitectureIntegrationChecks(),
             .. PetProtocolCheckCatalog.All,
+            .. IntonedCombatSkillCheckCatalog.All,
             // BagConsumableUseChecks is parked with the paused bag-consumable
             // feature: its frame builder does not reproduce the captured
             // opcode-10040 cast yet, and the runtime wiring is removed, so the
@@ -86,7 +87,6 @@ internal static partial class Program
             (
                 PriestHealingSkillCatalogChecks.CheckName,
                 PriestHealingSkillCatalogChecks.RunAsync),
-            ("Ordinary intoned combat skill lifecycle", IntonedCombatSkillHandlerChecks.RunAsync),
             ("Native mount Ride status and spawn protocol", CheckMountRideProtocolAsync),
             ("Mount and mount-gear Q20/G25 stat progression", MountEquipmentProgressionChecks.RunAsync),
             ("Immediate mount Ride dismount toggle", CheckImmediateMountRideDismountAsync),

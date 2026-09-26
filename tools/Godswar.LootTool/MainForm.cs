@@ -14,6 +14,7 @@ internal sealed class MainForm : Form
     private readonly LootToolSettings _settings = LootToolSettings.Load();
     private readonly LootStore _store = new();
     private readonly PetPanel _petPanel = new();
+    private readonly FarmPanel _farmPanel = new();
     private readonly ConnectionPanel _connection = new();
     private readonly TextBox _filterBox = new();
     private readonly ComboBox _filterMode = new();
@@ -44,7 +45,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Godswar GM 工具（掉落表 + 宠物档位）";
+        Text = "Godswar GM 工具（利兰丁农场 + 掉落表 + 宠物档位）";
         Width = 1420;
         Height = 880;
         StartPosition = FormStartPosition.CenterScreen;
@@ -81,6 +82,7 @@ internal sealed class MainForm : Form
 
         await _store.DisposeAsync();
         await _petPanel.DisposeAsync();
+        await _farmPanel.DisposeAsync();
         base.OnFormClosing(e);
     }
 
@@ -107,6 +109,9 @@ internal sealed class MainForm : Form
         lootPage.Controls.Add(BuildBody());
         var petPage = new TabPage("宠物档位");
         petPage.Controls.Add(_petPanel);
+        var farmPage = new TabPage("利兰丁农场");
+        farmPage.Controls.Add(_farmPanel);
+        tabs.TabPages.Add(farmPage);
         tabs.TabPages.Add(lootPage);
         tabs.TabPages.Add(petPage);
         root.Controls.Add(tabs, 0, 1);
@@ -445,6 +450,7 @@ internal sealed class MainForm : Form
             _connection.SetStatus("连接正常", healthy: true);
             await ReadAllAsync();
             await ConnectPetPanelAsync();
+            await ConnectFarmPanelAsync();
         }
         catch (Exception ex)
         {
@@ -482,8 +488,25 @@ internal sealed class MainForm : Form
         }
     }
 
-    private async Task ReadAllAsync()
+    /// <summary>
+    /// The farm tab reads its own connection too, so a database that has not run
+    /// the farm score migration cannot break the loot or pet workflows.
+    /// </summary>
+    private async Task ConnectFarmPanelAsync()
     {
+        try
+        {
+            await _farmPanel.ConnectAndReadAsync(
+                _settings.BuildConnectionString(),
+                _settings.ClientRoot);
+        }
+        catch (Exception ex)
+        {
+            _farmPanel.SetStatus($"农场页读取失败：{ex.Message}");
+        }
+    }
+
+    private async Task ReadAllAsync()    {
         if (!_store.IsConnected)
         {
             MessageBox.Show(this, "请先点「连接数据库」。", "提示");
@@ -508,6 +531,15 @@ internal sealed class MainForm : Form
             catch (Exception ex)
             {
                 _petPanel.SetStatus($"宠物页读取失败：{ex.Message}");
+            }
+
+            try
+            {
+                await _farmPanel.ReadAsync();
+            }
+            catch (Exception ex)
+            {
+                _farmPanel.SetStatus($"农场页读取失败：{ex.Message}");
             }
 
             var configured = _monsters.Count(static m => m.HasLootTable);

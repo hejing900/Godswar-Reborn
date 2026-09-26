@@ -51,7 +51,18 @@ internal enum CapitalNpcServiceKind
     AthensIngredientsVendor,
     AthensForgingRecipeVendor,
     AthensMythcraftingRecipeVendor,
-    AthensScholarshipRecipeVendor
+    AthensScholarshipRecipeVendor,
+
+    /// <summary>
+    /// The Lelantine Farm's Quartermaster, a shop rather than a dialogue.
+    /// </summary>
+    /// <remarks>
+    /// Captured <c>S2C 10067 {5616, 4, 0, "Lelantine_Farm_004"}</c> at
+    /// <c>2026-09-26 21:01:31</c>: flags 4 is the shop page, and the client
+    /// followed it with an <c>10068</c> page request that the reference server
+    /// answered with a ten-listing silver catalogue of the five tuck nets.
+    /// </remarks>
+    LelantineFarmQuartermaster
 }
 
 internal enum CapitalNpcShopCurrency
@@ -196,6 +207,12 @@ internal static class CapitalNpcServiceProtocol
                 CapitalNpcServiceKind.AthensMythcraftingRecipeVendor,
             ("Athens_137", 5275u) =>
                 CapitalNpcServiceKind.AthensScholarshipRecipeVendor,
+            // The Lelantine Farm's Quartermaster. The farm roster places these
+            // two under the capture's own object ids, so the ids in this arm are
+            // the ones the client echoes back.
+            ("Lelantine_Farm_004", 5616u) or
+            ("Lelantine_Farm_007", 5621u) =>
+                CapitalNpcServiceKind.LelantineFarmQuartermaster,
             _ => null
         };
 
@@ -262,7 +279,8 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.AthensIngredientsVendor or
             CapitalNpcServiceKind.AthensForgingRecipeVendor or
             CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
-            CapitalNpcServiceKind.AthensScholarshipRecipeVendor;
+            CapitalNpcServiceKind.AthensScholarshipRecipeVendor or
+            CapitalNpcServiceKind.LelantineFarmQuartermaster;
 
     public static bool IsSuppressedSpawn(NpcSpawnDefinition npc) =>
         (npc.NpcKey, npc.InteractionId) is
@@ -456,7 +474,10 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.SkillVendor or
             CapitalNpcServiceKind.PointExchanger =>
                 CapitalNpcShopCurrency.BindingGold,
-            CapitalNpcServiceKind.PetMerchant =>
+            CapitalNpcServiceKind.PetMerchant or
+            // The farm quartermaster's captured frames carry currency byte 1,
+            // which is silver, so it prices in the character's own silver.
+            CapitalNpcServiceKind.LelantineFarmQuartermaster =>
                 CapitalNpcShopCurrency.Silver,
             // Athens merchant quarter. The charge each one advertises is the
             // currency byte its captured frames carry, so this table restates the
@@ -499,7 +520,8 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.AthensIngredientsVendor or
             CapitalNpcServiceKind.AthensForgingRecipeVendor or
             CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
-            CapitalNpcServiceKind.AthensScholarshipRecipeVendor;
+            CapitalNpcServiceKind.AthensScholarshipRecipeVendor or
+            CapitalNpcServiceKind.LelantineFarmQuartermaster;
     }
 
     public static bool TryGetShopCurrency(

@@ -55,13 +55,12 @@ internal static partial class IntonedCombatSkillHandlerChecks
         Check.True(hits > 0,
             $"{mode}: real native574 admission commits shared-formula damage before recurring pulses");
         await WaitForFlameTimersAsync(fixture, clock, 1);
-        for (var ordinal = 1; ordinal <= 4; ordinal++)
+        for (var ordinal = 1; ordinal <= 9; ordinal++)
         {
             await PrimeFlamePulseStylesAsync(fixture, projected.Skill, ordinal);
             var before = FlameMonsterHealth(fixture);
-            hits += await AdvanceAndReadFlameAsync(fixture, clock,
-                TimeSpan.FromSeconds(4), expectedFields: ordinal == 4 ? 0 : 1,
-                expectedStyle: StyleForDamage);
+            hits += (await AdvanceAndReadFlameAsync(fixture, clock,
+                TimeSpan.FromSeconds(1), expectedStyle: StyleForDamage)).Targets;
             var after = FlameMonsterHealth(fixture);
             Check.True(ChangedFlameTargets(before, after)
                     .Select(index => before[index] - after[index]).Order().SequenceEqual(legalDamage.Order()),
@@ -74,15 +73,16 @@ internal static partial class IntonedCombatSkillHandlerChecks
                 if (applied == normalDamage) normalHits++;
             }
         }
+        await WaitForFlameRetirementAsync(fixture, clock);
 
         Check.True(hits >= 5 && normalHits > 0 && FlameMonsterHealth(fixture).All(hp => hp > 500_000),
-            "large living targets exercise all five damage passes without early kill or corpse side effects");
+            "large living targets exercise all ten damage passes without early kill or corpse side effects");
         Check.Equal(50 + hits * FlameHealing, fixture.Character.CurrentHp,
             "each shared-formula target mutation still gives one actual lifesteal contribution");
         Check.Equal(InitialMana - 246, fixture.Character.CurrentMp,
             "all recurring shared-formula pulses retain one projected initial MP charge");
         Check.True(FlameFieldCount(fixture.Handler) == 0 && fixture.Socket.Available == 0,
-            "shared-formula field retires after four continuations with no duplicate native frames");
+            "shared-formula field retires after nine continuations with no duplicate native frames");
 
         static byte StyleForDamage(uint damage) => damage switch
         {

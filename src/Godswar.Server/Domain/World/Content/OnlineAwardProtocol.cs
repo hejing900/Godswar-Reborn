@@ -8,7 +8,13 @@ namespace Godswar.Server.Domain.World.Content;
 internal static class OnlineAwardProtocol
 {
     public const int DialogIndex = 49;
-    public const uint AthensNpcId = 5271;
+    // The client is handed the capture's own id: CapturedNpcPlacementPolicy
+    // renumbers Athens' city npcs from the published catalog to the capture, and
+    // the client echoes back whatever it was handed. The published dialogue
+    // baseline still carries the catalog's value, so both are accepted until the
+    // content is republished.
+    public const uint AthensNpcId = 5270;
+    public const uint PublishedAthensNpcId = 5271;
     public const uint SpartaNpcId = 5129;
     public const int InitialRequestSubId = -1;
     public const int SuccessSubId = 102;
@@ -25,9 +31,10 @@ internal static class OnlineAwardProtocol
     public static bool IsEndpoint(string npcKey, uint npcId) =>
         (npcKey, npcId) is
             ("Athens_132", AthensNpcId) or
+            ("Athens_132", PublishedAthensNpcId) or
             ("Sparta_132", SpartaNpcId);
 
     public static bool IsEndpoint(uint npcId, int dialogIndex) =>
         dialogIndex == DialogIndex &&
-        npcId is AthensNpcId or SpartaNpcId;
+        npcId is AthensNpcId or PublishedAthensNpcId or SpartaNpcId;
 }

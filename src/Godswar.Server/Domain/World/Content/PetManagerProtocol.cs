@@ -44,7 +44,13 @@ internal static partial class PetManagerProtocol
     public const int BagPageCount = 4;
     public const int BagSlotsPerPage = 24;
     public const int MaximumSkillSlots = 12;
-    public const uint AthensNpcId = 5227;
+    // The client is handed the capture's own id: CapturedNpcPlacementPolicy
+    // renumbers Athens' city npcs from the published catalog to the capture, and
+    // the client echoes back whatever it was handed. The published dialogue
+    // baseline still carries the catalog's value, so both are accepted until the
+    // content is republished.
+    public const uint AthensNpcId = 5226;
+    public const uint PublishedAthensNpcId = 5227;
     public const uint PublishedSpartaNpcId = 5085;
     public const uint SourceSpartaNpcId = 5087;
 
@@ -78,6 +84,7 @@ internal static partial class PetManagerProtocol
     public static bool IsEndpoint(string npcKey, uint npcId) =>
         (npcKey, npcId) is
             ("Athens_088", AthensNpcId) or
+            ("Athens_088", PublishedAthensNpcId) or
             ("Sparta_088", PublishedSpartaNpcId) or
             ("Sparta_088", SourceSpartaNpcId);
 

@@ -36,5 +36,17 @@ internal enum NpcDialogueBehavior
     Transporter = 14,
     BattlefieldTransporter = 15,
     DuelArenaTransporter = 16,
-    DuelArenaServices = 17
+    DuelArenaServices = 17,
+
+    /// <summary>
+    /// The Lelantine Farm's Returning Helper: the capital teleport under the
+    /// stock <c>NpcFunTranmit.lua</c> dialog index 1.
+    /// </summary>
+    FarmReturnTeleporter = 18,
+
+    /// <summary>
+    /// The Lelantine Farm activity window, the client's <c>NpcFunFarm.lua</c>
+    /// under dialog index 47.
+    /// </summary>
+    Farm = 19
 }

@@ -154,6 +154,8 @@ internal sealed partial class GameClientHandler
         _monsterRewardExtras = gameStore as IMonsterRewardExtrasStore ??
             UnsupportedGameplayFeatures.Instance;
         _fighterLevelSeals = gameStore as IFighterLevelSealStore;
+        _farmPoints = gameStore as ILelantineFarmPointsStore ??
+            UnsupportedGameplayFeatures.Instance;
         _weekendExperienceClaims = gameStore as IWeekendExperienceClaimStore;
         _realmCatalog = realmCatalog;
         _processRealmId = processRealmId ?? RealmId.Tempest;
