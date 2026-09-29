@@ -191,14 +191,23 @@ internal sealed partial class GameClientHandler
     {
         ClearForgeSelection();
         ClearGearEnhancerSelection();
+        QuestFrameTrace.Append(
+            "[create] entered account=" + (_account is not null) +
+            " phase=" + IsCharacterSelectionLifecyclePhase +
+            " secure=" + _session.IsSecure +
+            " durable=" + (_characterLifecycleCommands is not null) +
+            " operationId=" + (packet.ClientOperationId is not null),
+            []);
         if (_account is null)
         {
+            QuestFrameTrace.Append("[create] no account, disconnecting", []);
             _session.Disconnect();
             return;
         }
 
         if (!IsCharacterSelectionLifecyclePhase)
         {
+            QuestFrameTrace.Append("[create] outside selection phase", []);
             await RejectOutsideSelectionLifecycleAsync(
                 CommandFamily.CharacterCreate,
                 packet,
@@ -405,14 +414,8 @@ internal sealed partial class GameClientHandler
         var compatibleNpcs = new List<NpcSpawnDefinition>(loadedNpcDefinitions.Count);
         foreach (var npc in loadedNpcDefinitions)
         {
-            var compatibleNpc =
-                CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility(npc);
-            if (CapitalNpcServiceProtocol.IsSuppressedSpawn(compatibleNpc))
-            {
-                continue;
-            }
-
-            compatibleNpcs.Add(compatibleNpc);
+            compatibleNpcs.Add(
+                CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility(npc));
         }
 
         // The placements are applied to the whole map at once so the identities the
@@ -434,6 +437,24 @@ internal sealed partial class GameClientHandler
             }
 
             npcDefinitions.Add(effectiveNpc);
+        }
+
+        // A Wonderland run owns its own NPCs - the eight island teleporters, the
+        // entrance blackmarket actor and the eight treasure chests - and publishes
+        // no map-207 rows, so they are injected here, before the roster is
+        // published to the instance catalog and to the client.
+        var beforeInstanceNpcs = npcDefinitions.Count;
+        npcDefinitions =
+        [
+            .. _registry.AddWonderlandInstanceNpcs(_session, npcDefinitions)
+        ];
+        if (npcDefinitions.Count != beforeInstanceNpcs)
+        {
+            Console.WriteLine(
+                "[npc] instance actors injected " +
+                $"map={_character.CurrentMap} " +
+                $"static={beforeInstanceNpcs} " +
+                $"total={npcDefinitions.Count}");
         }
 
         var npcCatalog = await _registry.PublishMapNpcDefinitionsAsync(

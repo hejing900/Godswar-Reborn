@@ -354,6 +354,13 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateQuestExperienceAppraisal(),
         CreatePetPresenceDeleteOperation(),
         CreateLelantineFarmPoints(),
-        CreateLelantineFarmPersonalScores()
+        CreateLelantineFarmPersonalScores(),
+        CreateQuestRewardItemClaims(),
+        CreateQuestRewardOverrides(),
+        CreateMonsterLootBindOnPickup(),
+        CreateRewardItemAttributes(),
+        CreateWonderlandUnlimitedEntries(),
+        CreateHarborAttackDailyEntry(),
+        CreateAtlantisPartialRewards()
     ];
 }

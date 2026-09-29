@@ -231,8 +231,17 @@ internal static partial class CharacterLifecycleDurableHandlerChecks
         }
     }
 
-    private static async Task
-        CheckMixedRawPostgresProfileFailsClosedAsync()
+    /// <summary>
+    /// A raw session cannot use the durable lifecycle executor at all: its command
+    /// contract trusts only a secure transport
+    /// (<c>CharacterLifecycleCommandContract.IsTrustedTransport</c>), and the stock
+    /// client has no such transport - it was captured answering such a request with
+    /// <c>InvalidIntent</c> and never touching the database. The raw profile
+    /// therefore has to fall through to the compatibility store, which is the same
+    /// store it used before lifecycle moved behind the executor; refusing instead
+    /// is what made character creation impossible on a raw deployment.
+    /// </summary>
+    private static async Task CheckRawProfileUsesCompatibilityPathAsync()
     {
         foreach (var family in new[]
                  {
@@ -245,9 +254,12 @@ internal static partial class CharacterLifecycleDurableHandlerChecks
             var initial = create
                 ? EmptySnapshot()
                 : ActiveSnapshot();
+            var projected = create
+                ? ActiveSnapshot()
+                : EmptySnapshot();
             await using var fixture = CreateMixedRawFixture(
                 initial,
-                initial);
+                projected);
 
             await InvokeAsync(
                 fixture.Handler,
@@ -259,22 +271,23 @@ internal static partial class CharacterLifecycleDurableHandlerChecks
 
             Check.Equal(
                 0,
-                fixture.Store.CreateCount +
-                    fixture.Store.DeleteCount,
-                $"{family} raw/PostgreSQL profile cannot mutate broad store");
-            Check.Equal(
-                0,
                 fixture.Executor.CreateCount +
                     fixture.Executor.DeleteCount,
-                $"{family} raw/PostgreSQL profile cannot invent identity");
-            var forbiddenSuccess = create
+                $"{family} raw profile never reaches the secure-only executor");
+            Check.Equal(
+                1,
+                create
+                    ? fixture.Store.CreateCount
+                    : fixture.Store.DeleteCount,
+                $"{family} raw profile falls through to the compatibility store");
+
+            var success = create
                 ? PacketBuilder.CreateRoleSuccess()
                 : PacketBuilder.DeleteRoleSuccess();
             Check.True(
-                fixture.Transport.ReadClearPackets().All(packet =>
-                    !packet.AsSpan().SequenceEqual(
-                        forbiddenSuccess)),
-                $"{family} raw/PostgreSQL profile sends no false success");
+                fixture.Transport.ReadClearPackets().Any(packet =>
+                    packet.AsSpan().SequenceEqual(success)),
+                $"{family} raw profile answers with the native success");
         }
     }
 }

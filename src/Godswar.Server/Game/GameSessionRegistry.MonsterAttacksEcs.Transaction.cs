@@ -94,6 +94,18 @@ internal sealed partial class GameSessionRegistry
 
             var targetAuthority = authority.TargetAuthority;
 
+            // Encounter admission: a cast the client saw interrupted, an island
+            // that is not published yet, a stale monster identity or a native
+            // area hit that no longer covers this target must never land.
+            if (!IsWonderlandIncomingAttackAllowedLocked(runtime, attack, targetContext, damageResolvedAt))
+            {
+                Console.WriteLine(
+                    $"[wonderland] incoming attack rejected instance={runtime.InstanceId} " +
+                    $"monster={attack.Monster.ObjectId} target={targetContext.DisplayName} event={combatEventId}");
+                authorityRejected = true;
+                return Result();
+            }
+
             lock (targetContext.Character.VitalsSync)
             {
                 var effectiveMonsterProfile =
@@ -102,11 +114,14 @@ internal sealed partial class GameSessionRegistry
                         attack.Monster,
                         damageResolvedAt,
                         medusaCapture.MonsterProfile);
-                resolution = MonsterIncomingCombatPolicy.ResolveAttack(
+                resolution = ResolveWonderlandMonsterAttack(
+                    runtime,
+                    attack,
+                    targetContext,
                     effectiveMonsterProfile,
-                    targetContext.Character,
                     runtimeMitigation,
-                    combatEventId);
+                    combatEventId,
+                    damageResolvedAt);
                 var lastCommittedAttackEventId =
                     GetPlayerVitalsDamageEcsDiagnostics(
                         targetContext.Session)?.LastAttackEventId ?? 0;
@@ -305,6 +320,32 @@ internal sealed partial class GameSessionRegistry
                     elementalReservation?.Commit();
                     CompleteMonsterIncomingAttack(elementalClaimKey);
                     elementalClaimCompleted = elementalClaimKey.IsValid;
+                }
+
+                // A landed Wonderland boss hit is the only producer of the
+                // encounter's stun, silence, armor-rend and blessing effects.
+                // Skill casting already reads that layer and every status
+                // snapshot merges it, so an uncommitted hit would leave the
+                // boss's whole mechanic invisible.
+                try
+                {
+                    lock (targetContext.Character.VitalsSync)
+                    {
+                        CommitWonderlandIncomingEffectsLocked(
+                            runtime,
+                            targetContext,
+                            attack,
+                            resolution,
+                            decision.AppliedDamage,
+                            damageResolvedAt);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Player HP and the owner replay are already durable.
+                    Console.Error.WriteLine(
+                        $"[wonderland] incoming effect commit failed instance={runtime.InstanceId} " +
+                        $"monster={attack.Monster.ObjectId}: {ex.Message}");
                 }
             }
             else

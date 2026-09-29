@@ -280,6 +280,9 @@ internal sealed class PostgresApplicationDataRuntime :
             new PostgresMedusaCompletionRewardStore(_dataSource);
         AtlantisCompletionRewards = new PostgresAtlantisCompletionRewardStore(_dataSource);
         TitleSelections = new PostgresCharacterTitleSelectionStore(_dataSource);
+        WonderlandTitles = new PostgresWonderlandTitleStore(_dataSource);
+        WonderlandChests = new PostgresWonderlandChestClaimStore(_dataSource);
+        WonderlandBlackmarket = new PostgresWonderlandBlackmarketStore(_dataSource);
         var outboxConsumers =
             PostgresOutboxConsumerCatalog.Create();
         _outboxDispatcher = new PostgresOutboxDispatcher(
@@ -460,6 +463,17 @@ internal sealed class PostgresApplicationDataRuntime :
     public IAtlantisCompletionRewardStore AtlantisCompletionRewards { get; }
 
     public ICharacterTitleSelectionStore TitleSelections { get; }
+
+    /// <summary>
+    /// Per-island Wonderland clear evidence. The run's teleporters, treasure
+    /// chests and final exit all read the settlement this store owns, so an
+    /// unconfigured store silently disables every Wonderland NPC service.
+    /// </summary>
+    public IWonderlandTitleStore WonderlandTitles { get; }
+
+    public IWonderlandChestClaimStore WonderlandChests { get; }
+
+    public IWonderlandBlackmarketStore WonderlandBlackmarket { get; }
 
     public bool OutboxEnabled { get; }
 

@@ -20,14 +20,14 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
 {
     private const int PublicationLockNamespace = 1_193_657_936;
     private const int PublicationLockKey = 1_448_298_802;
-    private const string Publisher = "server-baseline-v24-manifest-v1";
+    private const string Publisher = "server-baseline-v25-manifest-v1";
 
     public static string CurrentReleaseRevision =>
         WorldContentRevisionHasher.HashNpcDialogueRelease(
             new WorldContentFamilyRevision("npc-dialogues",
-                NpcDialogueBaselineV24.ExpectedRevision,
-                NpcDialogueBaselineV24.ExpectedHashedEntryCount),
-            NpcDialogueBaselineV24.ExpectedSpawnRevision).Sha256;
+                NpcDialogueBaselineV25.ExpectedRevision,
+                NpcDialogueBaselineV25.ExpectedHashedEntryCount),
+            NpcDialogueBaselineV25.ExpectedSpawnRevision).Sha256;
 
     public static async Task<NpcDialoguePublicationResult>
         EnsurePublishedAsync(
@@ -77,10 +77,10 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             cancellationToken);
         if (!string.Equals(
                 spawnRevision.Revision,
-                NpcDialogueBaselineV24.ExpectedSpawnRevision,
+                NpcDialogueBaselineV25.ExpectedSpawnRevision,
                 StringComparison.Ordinal) ||
             spawnRevision.EntryCount !=
-                NpcDialogueBaselineV24.ExpectedTextCount)
+                NpcDialogueBaselineV25.ExpectedTextCount)
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline does not target the " +
@@ -92,20 +92,20 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
             // A sealed publication must remain independent of mutable seed
             // tables after its initial construction.
             var published = new WorldContentFamilyRevision("npc-dialogues",
-                current.Revision, NpcDialogueBaselineV24.ExpectedHashedEntryCount);
+                current.Revision, NpcDialogueBaselineV25.ExpectedHashedEntryCount);
             await VerifyStoredReleaseAsync(connection, transaction, published,
                 spawnRevision.Revision, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return current with { Created = false };
         }
 
-        var texts = NpcDialogueBaselineV24.ApplyTextOverrides(
+        var texts = NpcDialogueBaselineV25.ApplyTextOverrides(
             await ReadOfficialNpcTextsAsync(
                 connection,
                 transaction,
                 spawnRevision.Revision,
                 cancellationToken));
-        var routes = NpcDialogueBaselineV24.CreateRoutes();
+        var routes = NpcDialogueBaselineV25.CreateRoutes();
         var payload = ValidateBaseline(texts, routes);
         var revision = WorldContentRevisionHasher.HashNpcDialogueRelease(
             payload, spawnRevision.Revision);
@@ -159,13 +159,13 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         IReadOnlyList<NpcTextDefinition> texts,
         IReadOnlyList<NpcDialogueRouteDefinition> routes)
     {
-        if (texts.Count != NpcDialogueBaselineV24.ExpectedTextCount ||
-            routes.Count != NpcDialogueBaselineV24.ExpectedRouteCount ||
-            NpcDialogueBaselineV24.Profiles.Length !=
-                NpcDialogueBaselineV24.ExpectedProfileCount ||
-            NpcDialogueBaselineV24.Profiles.Sum(
+        if (texts.Count != NpcDialogueBaselineV25.ExpectedTextCount ||
+            routes.Count != NpcDialogueBaselineV25.ExpectedRouteCount ||
+            NpcDialogueBaselineV25.Profiles.Length !=
+                NpcDialogueBaselineV25.ExpectedProfileCount ||
+            NpcDialogueBaselineV25.Profiles.Sum(
                 static profile => profile.InitialMenuSubIds.Length) !=
-                NpcDialogueBaselineV24.ExpectedMenuEntryCount)
+                NpcDialogueBaselineV25.ExpectedMenuEntryCount)
         {
             throw new InvalidDataException(
                 "The reviewed NPC dialogue baseline has unexpected counts.");
@@ -228,10 +228,10 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         var revision =
             WorldContentRevisionHasher.HashNpcDialogues(texts, routes);
         if (revision.EntryCount !=
-                NpcDialogueBaselineV24.ExpectedHashedEntryCount ||
+                NpcDialogueBaselineV25.ExpectedHashedEntryCount ||
             !string.Equals(
                 revision.Sha256,
-                NpcDialogueBaselineV24.ExpectedRevision,
+                NpcDialogueBaselineV25.ExpectedRevision,
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
@@ -378,11 +378,11 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
         new(
             revision,
             spawnRevision,
-            NpcDialogueBaselineV24.ExpectedTextCount,
-            NpcDialogueBaselineV24.ExpectedProfileCount,
-            NpcDialogueBaselineV24.ExpectedRouteCount,
-            NpcDialogueBaselineV24.ExpectedMenuEntryCount,
-            NpcDialogueBaselineV24.Source,
+            NpcDialogueBaselineV25.ExpectedTextCount,
+            NpcDialogueBaselineV25.ExpectedProfileCount,
+            NpcDialogueBaselineV25.ExpectedRouteCount,
+            NpcDialogueBaselineV25.ExpectedMenuEntryCount,
+            NpcDialogueBaselineV25.Source,
             Created);
 
     private static bool IsSupportedPreviousRevision(string revision) =>
@@ -506,6 +506,9 @@ internal static partial class PostgresNpcDialogueBaselinePublisher
                     NpcDialogueBaselineV23.ExpectedHashedEntryCount),
                 NpcDialogueBaselineV23.ExpectedSpawnRevision).Sha256,
             StringComparison.Ordinal) ||
+        // The reviewed V24 release, in its raw form and its dependency-bound
+        // form. A database published from the build before this one holds the
+        // latter, so it has to stay readable as a predecessor.
         string.Equals(
             revision,
             NpcDialogueBaselineV24.ExpectedRevision,

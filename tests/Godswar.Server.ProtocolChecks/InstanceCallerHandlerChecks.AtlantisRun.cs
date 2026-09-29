@@ -241,21 +241,30 @@ internal static partial class InstanceCallerHandlerChecks
         AtlantisOpalFixture fixture, int[] before, bool complete)
     {
         var allPackets = fixture.ReadAllPackets();
+        // Native 10231 is the leave countdown when its seconds field is non-zero
+        // and the plain teardown when it is zero.
+        var seconds = BinaryPrimitives.ReadInt32LittleEndian(
+            allPackets[0].Skip(before[0])
+                .Single(packet => ReadOpcode(packet) == Opcodes.RepetitionReset)
+                .AsSpan(4));
         for (var index = 0; index < allPackets.Count; index++)
         {
             var emitted = allPackets[index].Skip(before[index]).ToArray();
             var result = emitted.Single(packet => ReadOpcode(packet) == Opcodes.RepetitionCompletionState);
+            // A completed run and a run that ran out of time show the same native
+            // leave countdown: the panel is terminal either way, and the members
+            // are carried home when the countdown expires.
             Check.True(result.Length == 12 &&
                 BinaryPrimitives.ReadInt32LittleEndian(result.AsSpan(4)) == 224 &&
-                BinaryPrimitives.ReadInt32LittleEndian(result.AsSpan(8)) == (complete ? 1 : 0) &&
+                BinaryPrimitives.ReadInt32LittleEndian(result.AsSpan(8)) == 1 &&
+                seconds is 29 or 30 &&
                 emitted.All(packet => ReadOpcode(packet) != Opcodes.SceneChange) &&
-                emitted.Any(packet => packet.SequenceEqual(PacketBuilder.RepetitionPanelCompletion())) == complete,
-                $"Atlantis member {index} receives its native completion/timeout result without relocation");
-            Check.True(emitted.Any(packet => packet.SequenceEqual(PacketBuilder.RepetitionCountdown(29))) == complete,
-                "completion replaces the active Terminate panel with the remaining thirty-second countdown");
+                emitted.Any(packet => packet.SequenceEqual(PacketBuilder.RepetitionPanelCompletion())) &&
+                emitted.Any(packet => packet.SequenceEqual(PacketBuilder.RepetitionCountdown(seconds))),
+                $"Atlantis member {index} receives its native leave countdown without relocation");
         }
         AssertAtlantisFightPanel(fixture, before,
-            remainingSeconds: complete ? 29 : 0, points: complete ? 850 : 0);
+            remainingSeconds: seconds, points: complete ? 850 : 0);
     }
 
     private static string AtlantisRewardState(GameCharacter character) =>

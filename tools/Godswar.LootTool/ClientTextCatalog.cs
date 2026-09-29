@@ -49,6 +49,41 @@ internal sealed class ClientTextCatalog
         return catalog;
     }
 
+    /// <summary>
+    /// 客户端里的语言目录：zh_cn → en_us → 第一个存在的目录（都没有就退回 zh_cn，
+    /// 好让报错信息里的期望路径是人能看懂的）。
+    /// </summary>
+    public static string DetectLanguage(string? clientRoot)
+    {
+        const string fallback = "zh_cn";
+        if (string.IsNullOrWhiteSpace(clientRoot))
+        {
+            return fallback;
+        }
+
+        var localization = Path.Combine(clientRoot, "Localization");
+        if (!Directory.Exists(localization))
+        {
+            return fallback;
+        }
+
+        var languages = Directory
+            .EnumerateDirectories(localization)
+            .Select(static path => Path.GetFileName(path))
+            .Where(static name => name.Length > 0)
+            .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        foreach (var preferred in (string[])["zh_cn", "en_us"])
+        {
+            if (languages.Contains(preferred, StringComparer.OrdinalIgnoreCase))
+            {
+                return preferred;
+            }
+        }
+
+        return languages.Count > 0 ? languages[0] : fallback;
+    }
+
     /// <summary>Chinese name when known, otherwise the server's English name.</summary>
     public string ItemName(string? nameKey, string fallback)
     {

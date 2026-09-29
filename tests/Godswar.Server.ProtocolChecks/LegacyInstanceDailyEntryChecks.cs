@@ -66,6 +66,10 @@ internal static class LegacyInstanceDailyEntryChecks
         var day = new DateOnly(2026, 9, 1);
         foreach (var kind in Enum.GetValues<InstanceCallerEntryKind>())
         {
+            // 港湾遇袭 grants one free daily entry; the reviewed instances keep
+            // the shared three.
+            var expectedFreeEntryLimit =
+                LegacyInstanceDailyEntryPolicy.GetDefaultFreeEntryLimit(kind);
             foreach (var partySize in Enumerable.Range(1, 5))
             {
                 var characters = Enumerable.Range(200 + partySize * 10,
@@ -74,9 +78,9 @@ internal static class LegacyInstanceDailyEntryChecks
                     Guid.NewGuid(), RealmId.Tempest, day, kind, characters);
                 Check.True(
                     reservation.Status == LegacyInstanceDailyEntryClaimStatus.Claimed &&
-                    reservation.FreeEntryLimit == 3 &&
+                    reservation.FreeEntryLimit == expectedFreeEntryLimit &&
                     reservation.PaymentRequiredCharacterIds.Count == 0,
-                    $"{kind} claims {partySize} members with unchanged free allowance");
+                    $"{kind} claims {partySize} members with its own free allowance");
             }
 
             foreach (var partySize in new[] { 0, 6 })

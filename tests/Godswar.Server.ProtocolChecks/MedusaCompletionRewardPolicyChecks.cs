@@ -13,6 +13,7 @@ internal static class MedusaCompletionRewardPolicyChecks
         Check.True(
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Enhanced,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(10),
                 out var tenMinute) &&
@@ -27,6 +28,7 @@ internal static class MedusaCompletionRewardPolicyChecks
         Check.True(
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Enhanced,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(10).Add(TimeSpan.FromTicks(1)),
                 out var afterTen) &&
@@ -37,6 +39,7 @@ internal static class MedusaCompletionRewardPolicyChecks
         Check.True(
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Normal,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(9),
                 out var normal) &&
@@ -48,6 +51,7 @@ internal static class MedusaCompletionRewardPolicyChecks
             WorldInstanceId.New(),
             RealmId.Tempest,
             MedusaEncounterDifficulty.Enhanced,
+            completed: true,
             DateTimeOffset.UtcNow,
             TimeSpan.FromMinutes(9),
             finalScore: 2_997,
@@ -62,6 +66,7 @@ internal static class MedusaCompletionRewardPolicyChecks
             WorldInstanceId.New(),
             RealmId.Tempest,
             MedusaEncounterDifficulty.Enhanced,
+            completed: true,
             DateTimeOffset.UtcNow,
             TimeSpan.FromMinutes(9),
             finalScore: 3_802,
@@ -76,6 +81,7 @@ internal static class MedusaCompletionRewardPolicyChecks
         Check.True(
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Enhanced,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(20),
                 out var twentyMinute) &&
@@ -83,6 +89,7 @@ internal static class MedusaCompletionRewardPolicyChecks
                 MedusaEncounterTitle.MedusaExecutioners &&
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Enhanced,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(25),
                 out var twentyFiveMinute) &&
@@ -95,6 +102,7 @@ internal static class MedusaCompletionRewardPolicyChecks
                 MedusaEncounterDifficulty.Mythic) &&
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Mythic,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(9),
                 out var mythic) &&
@@ -103,6 +111,7 @@ internal static class MedusaCompletionRewardPolicyChecks
             mythic.AwardedTitleId == 5152 &&
             !MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Enhanced,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 MedusaIslandPolicy.TimeLimit,
                 out _),
@@ -134,6 +143,7 @@ internal static class MedusaCompletionRewardPolicyChecks
             Check.True(
                 MedusaCompletionRewardPolicy.TryResolve(
                     MedusaEncounterDifficulty.Mythic,
+                    completed: true,
                     MedusaIslandPolicy.VictoryScore,
                     TimeSpan.FromMinutes(9),
                     out var configured) &&

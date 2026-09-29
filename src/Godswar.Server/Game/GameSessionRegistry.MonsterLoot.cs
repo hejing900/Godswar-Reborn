@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Godswar.Server.Application.World.Content;
+using Godswar.Server.State;
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game.WorldInstances;
@@ -187,7 +188,9 @@ internal sealed partial class GameSessionRegistry
                     index,
                     drop.LootIndex,
                     drop.ItemId,
-                    drop.Quantity))
+                    drop.Quantity,
+                    drop.BoundOnPickup,
+                    drop.Attributes))
             .ToArray();
         // The client only opens a corpse's loot window while that corpse is on
         // screen, so a looted field corpse keeps the captured window instead of
@@ -480,7 +483,9 @@ internal sealed partial class GameSessionRegistry
                 entry.RuleLootIndex,
                 entry.ItemId,
                 entry.Quantity,
-                attemptId);
+                attemptId,
+                entry.BoundOnPickup,
+                entry.Attributes);
             return true;
         }
     }
@@ -603,7 +608,9 @@ internal readonly record struct MonsterLootEntry(
     int PickupIndex,
     int RuleLootIndex,
     uint ItemId,
-    int Quantity);
+    int Quantity,
+    bool? BoundOnPickup = null,
+    ItemGrantAttributes Attributes = default);
 
 internal sealed record MonsterLootPresentation(
     uint MonsterObjectId,
@@ -620,4 +627,6 @@ internal sealed record MonsterLootPickupReservation(
     int RuleLootIndex,
     uint ItemId,
     int Quantity,
-    Guid AttemptId);
+    Guid AttemptId,
+    bool? BoundOnPickup = null,
+    ItemGrantAttributes Attributes = default);

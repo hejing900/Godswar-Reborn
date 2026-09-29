@@ -84,6 +84,10 @@ internal sealed class PostgresMonsterLootContentSnapshotReader
         return result.AsReadOnly();
     }
 
+    /// <summary>An attribute column, where <c>NULL</c> means "not configured".</summary>
+    private static short? Optional(NpgsqlDataReader reader, int ordinal) =>
+        reader.IsDBNull(ordinal) ? null : reader.GetInt16(ordinal);
+
     private static async Task<IReadOnlyList<MonsterLootRule>>
         ReadLootAsync(
             NpgsqlConnection connection,
@@ -94,7 +98,13 @@ internal sealed class PostgresMonsterLootContentSnapshotReader
             """
             SELECT rule.template_key, rule.loot_index, rule.item_id,
                    rule.chance_basis_points, rule.minimum_quantity,
-                   rule.maximum_quantity
+                   rule.maximum_quantity, rule.bound_on_pickup,
+                   rule.item_quality, rule.item_grade,
+                   rule.attribute1, rule.attribute_level1,
+                   rule.attribute2, rule.attribute_level2,
+                   rule.attribute3, rule.attribute_level3,
+                   rule.attribute4, rule.attribute_level4,
+                   rule.attribute5, rule.attribute_level5
             FROM public.monster_loot_rules rule
             JOIN public.monster_loot_tables header
               ON header.template_key = rule.template_key
@@ -116,7 +126,16 @@ internal sealed class PostgresMonsterLootContentSnapshotReader
                 checked((uint)reader.GetInt32(2)),
                 reader.GetInt32(3),
                 reader.GetInt16(4),
-                reader.GetInt16(5)));
+                reader.GetInt16(5),
+                reader.IsDBNull(6) ? null : reader.GetBoolean(6),
+                new Godswar.Server.State.ItemGrantAttributes(
+                    reader.IsDBNull(7) ? (short)1 : reader.GetInt16(7),
+                    reader.IsDBNull(8) ? (short)1 : reader.GetInt16(8),
+                    Optional(reader, 9), Optional(reader, 10),
+                    Optional(reader, 11), Optional(reader, 12),
+                    Optional(reader, 13), Optional(reader, 14),
+                    Optional(reader, 15), Optional(reader, 16),
+                    Optional(reader, 17), Optional(reader, 18))));
         }
         return result.AsReadOnly();
     }

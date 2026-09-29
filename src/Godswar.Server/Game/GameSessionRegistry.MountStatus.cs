@@ -263,7 +263,13 @@ internal sealed partial class GameSessionRegistry
     {
         if (!_playerStatusStates.TryGetValue(session, out var state))
         {
-            return ClientStatusAggregate.Empty;
+            // Wonderland's blessed-bird effects are encounter state, not runtime
+            // statuses, so they must apply even before this player has a status
+            // state of their own.
+            return AdjustWonderlandPlayerModifiers(
+                session,
+                now,
+                ClientStatusAggregate.Empty);
         }
 
         state.Gate.Wait();
@@ -277,13 +283,19 @@ internal sealed partial class GameSessionRegistry
                             session,
                             out var context))
                     {
-                        return EvaluatePlayerStatusEcsLocked(
-                                session,
-                                state,
-                                context,
-                                now)
-                            .Snapshot
-                            .Aggregate;
+                        // Wonderland's blessed-bird effects are encounter state,
+                        // not runtime statuses, so they are layered onto the one
+                        // aggregate every attack, skill and status frame reads.
+                        return AdjustWonderlandPlayerModifiers(
+                            session,
+                            now,
+                            EvaluatePlayerStatusEcsLocked(
+                                    session,
+                                    state,
+                                    context,
+                                    now)
+                                .Snapshot
+                                .Aggregate);
                     }
                 }
             }
@@ -291,11 +303,14 @@ internal sealed partial class GameSessionRegistry
             var active = state.RuntimeStatuses.Values
                 .Where(status => status.ExpiresAt > now)
                 .ToArray();
-            return PlayerStatusComposer.Compose(
-                    ExperienceBoostState.Empty,
-                    active,
-                    now)
-                .Aggregate;
+            return AdjustWonderlandPlayerModifiers(
+                session,
+                now,
+                PlayerStatusComposer.Compose(
+                        ExperienceBoostState.Empty,
+                        active,
+                        now)
+                    .Aggregate);
         }
         finally
         {

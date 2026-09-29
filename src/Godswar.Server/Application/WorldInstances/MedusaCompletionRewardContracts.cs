@@ -16,6 +16,7 @@ internal sealed class MedusaCompletionRewardRequest
         WorldInstanceId worldInstanceId,
         RealmId realmId,
         MedusaEncounterDifficulty difficulty,
+        bool completed,
         DateTimeOffset completedAtUtc,
         TimeSpan elapsed,
         int finalScore,
@@ -40,6 +41,7 @@ internal sealed class MedusaCompletionRewardRequest
             frozenCharacterIds.Any(static characterId => characterId <= 0) ||
             !MedusaCompletionRewardPolicy.TryResolve(
                 difficulty,
+                completed,
                 finalScore,
                 elapsed,
                 out var award))
@@ -51,6 +53,7 @@ internal sealed class MedusaCompletionRewardRequest
         WorldInstanceId = worldInstanceId;
         RealmId = realmId;
         Difficulty = difficulty;
+        Completed = completed;
         CompletedAtUtc = completedAtUtc;
         Elapsed = elapsed;
         FinalScore = finalScore;
@@ -63,6 +66,14 @@ internal sealed class MedusaCompletionRewardRequest
     public RealmId RealmId { get; }
 
     public MedusaEncounterDifficulty Difficulty { get; }
+
+    /// <summary>
+    /// Whether both final bosses fell. It selects the documented tier family:
+    /// a completed run keeps its time tier (and earns a title only when its score
+    /// reached the victory threshold), while a run that ended early keeps the
+    /// score tier it reached and never a title.
+    /// </summary>
+    public bool Completed { get; }
 
     public DateTimeOffset CompletedAtUtc { get; }
 

@@ -1,6 +1,8 @@
 using System.Collections.Frozen;
 using System.Security.Cryptography;
 
+using Godswar.Server.State;
+
 namespace Godswar.Server.Application.World.Content;
 
 /// <summary>
@@ -12,19 +14,27 @@ internal readonly record struct MonsterLootTableRule(
     int MaximumDrops);
 
 /// <summary>One editable drop rule of a monster loot table.</summary>
+/// <param name="BoundOnPickup">
+/// Whether this rule's drop binds to the character that picks it up;
+/// <c>null</c> follows the item template's own <c>BindType</c>.
+/// </param>
 internal readonly record struct MonsterLootRule(
     string TemplateKey,
     int LootIndex,
     uint ItemId,
     int ChanceBasisPoints,
     int MinimumQuantity,
-    int MaximumQuantity);
+    int MaximumQuantity,
+    bool? BoundOnPickup = null,
+    ItemGrantAttributes Attributes = default);
 
 /// <summary>A drop that survived its chance roll for one kill.</summary>
 internal readonly record struct RolledMonsterLoot(
     int LootIndex,
     uint ItemId,
-    int Quantity);
+    int Quantity,
+    bool? BoundOnPickup = null,
+    ItemGrantAttributes Attributes = default);
 
 /// <summary>
 /// One repeatable-read snapshot of the database-owned monster loot tables,
@@ -114,7 +124,12 @@ internal sealed class MonsterLootContentSnapshot
             var quantity = checked(
                 rule.MinimumQuantity +
                 (int)(BitConverter.ToUInt32(hash[4..]) % range));
-            rolled.Add(new(rule.LootIndex, rule.ItemId, quantity));
+            rolled.Add(new(
+                rule.LootIndex,
+                rule.ItemId,
+                quantity,
+                rule.BoundOnPickup,
+                rule.Attributes));
         }
 
         return rolled.AsReadOnly();

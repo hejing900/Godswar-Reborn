@@ -5,6 +5,58 @@ namespace Godswar.Server.Game;
 
 internal sealed partial class MapInstance
 {
+    /// <summary>
+    /// Adds a member who confirmed the party's window after the run was sealed.
+    /// </summary>
+    /// <remarks>
+    /// Only the rosters grow: the run's participant list (island travel, allied
+    /// combat presentation, area targeting) and the monster runtime's attacker
+    /// whitelist. The published monsters and their plan - counts and health - are
+    /// left exactly as they were generated.
+    /// </remarks>
+    internal bool TryAppendWonderlandParticipant(
+        int characterId,
+        int level,
+        byte camp,
+        out WonderlandSnapshot snapshot)
+    {
+        snapshot = null!;
+        lock (_wonderlandGate)
+        lock (_monsterRuntimeGate)
+        {
+            if (_wonderlandRun is null || _wonderlandFinalizedIds is null ||
+                _wonderlandMonsters is null)
+            {
+                Console.WriteLine(
+                    "[instance-invite] append refused: run=" +
+                    $"{_wonderlandRun is not null} finalized=" +
+                    $"{_wonderlandFinalizedIds is not null} monsters=" +
+                    $"{_wonderlandMonsters is not null} map={MapId}");
+                return false;
+            }
+            if (!_wonderlandRun.TryAddLateParticipant(
+                    new(characterId, level, camp),
+                    out snapshot))
+            {
+                _wonderlandRun.Advance(DateTimeOffset.UtcNow);
+                var observed = _wonderlandRun.Snapshot();
+                Console.WriteLine(
+                    "[instance-invite] append refused by the run " +
+                    $"state={observed.State} island={observed.CurrentIsland} " +
+                    $"party={observed.Participants.Length} camp={observed.PartyCamp} " +
+                    $"joining-camp={camp} character={characterId}");
+                return false;
+            }
+            if (!_wonderlandMonsters.TryAddParticipant(characterId))
+            {
+                return false;
+            }
+            _wonderlandFinalizedIds =
+                [.. _wonderlandFinalizedIds.Append(characterId).Order()];
+            return true;
+        }
+    }
+
     /// <summary>Fix actual successful entrants before publication, retaining the leader's faction and clock.</summary>
     internal bool TryFinalizeWonderlandAdmissions(IReadOnlyCollection<int> actualEntrants)
     {

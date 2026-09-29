@@ -78,6 +78,99 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
+    /// <summary>
+    /// Admits a member who confirmed the party's window after the run was sealed,
+    /// so 飘渺 accepts a slower teammate exactly as the other instances do.
+    /// </summary>
+    /// <remarks>
+    /// Registry-first lock order: the registry gate is held before the owning map
+    /// is invoked, and the map never calls back into the registry.
+    /// </remarks>
+    internal bool TryAdmitWonderlandLateEntrant(
+        WorldInstanceId instanceId,
+        ClientSession session,
+        int characterId,
+        int level,
+        byte camp,
+        Guid reservationId = default)
+    {
+        lock (_gate)
+        {
+            if (!_wonderlandAdmissions.TryGetValue(instanceId, out var admission))
+            {
+                Console.WriteLine(
+                    $"[instance-invite] late admission refused: no admission instance={instanceId}");
+                return false;
+            }
+            if (!admission.Sealed)
+            {
+                Console.WriteLine(
+                    $"[instance-invite] late admission refused: not sealed instance={instanceId}");
+                return false;
+            }
+            if (admission.Entrants.Contains(characterId))
+            {
+                // Idempotent: a repeated confirmation (the client may answer the
+                // same window twice) must continue to the transfer instead of
+                // releasing the attempt the first confirmation already spent.
+                Console.WriteLine(
+                    $"[instance-invite] late admission already recorded character={characterId}");
+                return true;
+            }
+            if (!_sessions.TryGetValue(session, out var context) ||
+                context.CharacterId != characterId ||
+                context.WorldInstanceId == instanceId)
+            {
+                Console.WriteLine(
+                    $"[instance-invite] late admission refused: session mismatch character={characterId}");
+                return false;
+            }
+            if (!WorldInstances.TryFind(instanceId, out var runtime) ||
+                runtime.MapId != WonderlandMapId)
+            {
+                Console.WriteLine(
+                    $"[instance-invite] late admission refused: runtime missing instance={instanceId}");
+                return false;
+            }
+            if (!InvokeWorldOwnerAuthoritativeMutation(
+                    runtime,
+                    map => map.TryAppendWonderlandParticipant(
+                        characterId,
+                        level,
+                        camp,
+                        out _)))
+            {
+                Console.WriteLine(
+                    "[instance-invite] late admission refused by the run " +
+                    $"instance={instanceId} character={characterId} camp={camp} " +
+                    $"level={level}");
+                return false;
+            }
+            admission.Entrants.Add(characterId);
+            // Keep the invited member's own identity on the run's roster: the
+            // title settlement fences its recipients against the admitted roster,
+            // and this member holds no seat in the registered party.
+            admission.JoinedMembers.Add(new LegacyInstancePartyMember(
+                context.Session,
+                context.AccountId,
+                context.CharacterId,
+                context.CharacterName,
+                context.Character.Level,
+                context.RealmId,
+                context.WorldInstanceId,
+                context.MapId,
+                context.Ownership));
+            if (reservationId != Guid.Empty)
+            {
+                _wonderlandReservations[reservationId] = instanceId;
+            }
+            Console.WriteLine(
+                "[instance-invite] late admission accepted " +
+                $"instance={instanceId} character={characterId}");
+            return true;
+        }
+    }
+
     private bool MayEnterWonderlandMap(MapInstance map, int characterId)
     {
         if (map.MapId != WonderlandMapId || !map.TryGetWonderlandSnapshot(out var run)) return true;
@@ -125,17 +218,50 @@ internal sealed partial class GameSessionRegistry
                     damage.Monster.SpawnGeneration, now);
             });
             if (result?.ClearedIsland is not { } clear || clear.Island is < 1 or > 8) return;
-            var admitted = admission.OriginalMembers.Where(member => admission.Entrants.Contains(member.CharacterId))
+            // The one line an operator needs to see that scoring is live: the
+            // cleared-island count is both the panel's score and the score the
+            // island teleporters gate on.
+            Console.WriteLine($"[wonderland] score instance={runtime.InstanceId} island={clear.Island} " +
+                $"cleared={result.Snapshot.CompletedIslands} remaining={result.Snapshot.RequiredMonstersRemaining} " +
+                $"outcome={result.Outcome} state={result.Snapshot.State}");
+            // The run's admitted roster is the registered party plus every member
+            // admitted after it was sealed. It fences the recipients (see below)
+            // and it is what the durable title store reconciles against the daily
+            // entry ledger, across each of those admissions' own reservations.
+            var roster = admission.OriginalMembers
+                .Concat(admission.JoinedMembers)
+                .Where(member => admission.Entrants.Contains(member.CharacterId))
+                .GroupBy(member => member.CharacterId)
+                .Select(group => group.First())
+                .OrderBy(member => member.CharacterId)
+                .ToArray();
+            var admitted = roster
                 .Select(member => new WonderlandTitleMember(member.AccountId, member.CharacterId, member.Ownership))
                 .ToArray();
+            // Title recipients are every admitted member still inside when the
+            // island clears, whether they registered with the party or joined it
+            // later. A character who left or dropped is not present and is not
+            // paid.
             var finishers = SnapshotWonderlandMembersLocked(runtime).Where(context =>
-                    admission.Entrants.Contains(context.CharacterId)).ToArray();
+                    admission.Entrants.Contains(context.CharacterId) &&
+                    roster.Any(member =>
+                        member.CharacterId == context.CharacterId &&
+                        member.AccountId == context.AccountId)).ToArray();
             var frozen = finishers
                 .Select(context => new WonderlandTitleMember(context.AccountId, context.CharacterId, context.Ownership))
                 .ToArray();
             if (admitted.Length == 0 || frozen.Length == 0) return;
+            // Every admission reservation that put a character into this run,
+            // including the ones a later member claimed for themselves.
+            var reservations = _wonderlandReservations
+                .Where(pair => pair.Value == runtime.InstanceId)
+                .Select(pair => pair.Key)
+                .Append(admission.ReservationId)
+                .Distinct()
+                .Order()
+                .ToArray();
             var request = new WonderlandTitleRequest(runtime.InstanceId, runtime.RealmId, admission.ReservationId,
-                admission.StartedAt, clear.ClearedAt, clear.Island, admitted, frozen);
+                admission.StartedAt, clear.ClearedAt, clear.Island, admitted, frozen, reservations);
             if (QueueWonderlandTitleMilestone(request))
                 CaptureWonderlandCompletionNoticeLocked(request, admission.LeaderId, finishers);
         }
@@ -147,6 +273,33 @@ internal sealed partial class GameSessionRegistry
             context.MapId == WonderlandMapId && context.Character.CurrentMap == WonderlandMapId &&
             context.Ownership.IsValid && IsCurrentAccountSession(context.AccountId, context.Session, context.Ownership))
             .OrderBy(context => context.CharacterId).ToArray();
+
+    /// <summary>
+    /// Moves 飘渺's leader to the earliest still-present participant when the
+    /// registered leader has left the run. Called from the tick under the
+    /// registry gate; the run's own end control follows the new leader.
+    /// </summary>
+    private void MaintainWonderlandLeaderLocked(
+        WorldInstanceId instanceId,
+        WonderlandAdmission admission,
+        WonderlandSnapshot run,
+        GameSessionContext[] members)
+    {
+        var present = OrderInstanceMembers(
+            [.. run.Participants.Select(static participant => participant.CharacterId)],
+            [.. members.Select(static member => member.CharacterId)]);
+        if (TryResolveInstanceLeaderSuccessor(
+                instanceId,
+                "Wonderland",
+                admission.LeaderId,
+                present,
+                out var successor))
+        {
+            admission.LeaderId = successor;
+            // The panel publishes every tick from this same snapshot, so the
+            // refreshed roster reaches the members on this pass.
+        }
+    }
 
     private bool IsCurrentWonderlandMember(GameSessionContext member, WorldInstanceId instanceId) =>
         _sessions.TryGetValue(member.Session, out var current) && current.WorldReady &&
@@ -161,8 +314,18 @@ internal sealed partial class GameSessionRegistry
     {
         public Guid ReservationId { get; } = reservationId;
         public ushort DailyLimit { get; } = dailyLimit;
-        public int LeaderId { get; } = leaderId;
+        // Transferable: the run's leader moves to the earliest still-present
+        // participant when the registered leader leaves or drops.
+        public int LeaderId { get; set; } = leaderId;
         public LegacyInstancePartyMember[] OriginalMembers { get; } = originalMembers;
+
+        /// <summary>
+        /// Members admitted after the registered party was sealed - invited by
+        /// name, or confirming the party window after the leader entered. They
+        /// hold their own admission reservation and belong to the run's roster for
+        /// entitlement, without a seat in the registered party.
+        /// </summary>
+        public List<LegacyInstancePartyMember> JoinedMembers { get; } = [];
         public DateTimeOffset StartedAt { get; } = startedAt;
         public HashSet<int> Entrants { get; } = [];
         public bool Sealed { get; set; }

@@ -59,6 +59,25 @@ internal sealed partial class GameClientHandler
             "Athens_081" or "Sparta_081" => ByFunction(FitnessTrainerDialogue),
             "Athens_082" or "Sparta_082" => ByFunction(FitnessTrainerDialogue),
             "Athens_125" or "Sparta_125" => ByFunction(TrojanWarCoordinatorDialogue),
+            // Captured on 2026-09-28. Sparta_115 owns function 66 and Sparta_124
+            // function 67; the latter shares that number with Sparta_125 above,
+            // which is exactly why each NPC keeps its own entry - the routing
+            // table is keyed by the npc, so the two windows cannot borrow each
+            // other's buttons.
+            "Sparta_115" => ByFunction(SummerGiftEnvoyDialogue),
+            "Sparta_124" => ByFunction(TroyEventAwarderDialogue),
+            // The battlefield awarder. Function 3 is NPC_FLAG_SYS_WAR in the
+            // client's own table; the reference advertised exactly that number on
+            // 2026-09-28, and the quest page cannot take the click first because
+            // the gate only fires for a carried starter-chain quest this npc
+            // responds to.
+            //
+            // Athens_073 is a different actor with its own appearance and id, but
+            // it is the same endpoint: both capitals' awarders are driven by
+            // NpcFunWar.lua, so they share this one dialogue and each keeps its
+            // own identity through the routing table's npc key.
+            "Athens_073" or "Sparta_073" =>
+                ByFunction(BattlefieldAwarderDialogue),
             "Labyrinth_006" or "Labyrint2_006" => ByFunction(ZeusEnvoyDialogue),
             "WarField_003" or "WarField_008" => ByFunction(BattlefieldCrierDialogue),
             _ => null

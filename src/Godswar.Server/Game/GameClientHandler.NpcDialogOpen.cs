@@ -50,6 +50,28 @@ internal sealed partial class GameClientHandler
             $"carried={_character?.Quests.Count ?? 0}",
             []);
 
+        // A Wonderland run's own actors answer first. The eight island
+        // teleporters, the entrance blackmarket and the eight treasure chests are
+        // injected into the instance roster rather than published as map content,
+        // so the dialogue route lookup below finds nothing for them and would
+        // leave every click unanswered. Both handlers refuse anything that is not
+        // one of those actors, and only on map 207.
+        if (await TryHandleWonderlandNpcOpenAsync(
+                packet,
+                npc,
+                cancellationToken) ||
+            await TryHandleWonderlandChestOpenAsync(
+                packet,
+                npc,
+                cancellationToken))
+        {
+            QuestFrameTrace.Append(
+                $"[npc] dialog open branch=wonderland npc={npc.InteractionId} " +
+                $"key={npc.NpcKey}",
+                []);
+            return;
+        }
+
         // The stock client can leave normal storage open while the related
         // manager dialogue is used. Preserve only an access lease that was
         // already issued by the normal Warehouse NPC; the manager never

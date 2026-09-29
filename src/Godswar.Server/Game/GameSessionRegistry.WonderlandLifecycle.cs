@@ -52,6 +52,17 @@ internal sealed partial class GameSessionRegistry
                             return published ?? current;
                         });
                         members = SnapshotWonderlandMembersLocked(runtime);
+                        if (run is not null)
+                        {
+                            // A run whose registered leader has left keeps an
+                            // ending authority: the earliest present participant
+                            // takes the leadership over.
+                            MaintainWonderlandLeaderLocked(
+                                instanceId,
+                                entry.Value,
+                                run,
+                                members);
+                        }
                         _wonderlandDepartures.TryRemove(instanceId, out _);
                     }
                     if (run is null) continue;
@@ -59,7 +70,11 @@ internal sealed partial class GameSessionRegistry
                     if (run.State == WonderlandRunState.Active) continue;
                     CaptureWonderlandTerminationNotice(runtime, run, entry.Value, members);
                     if (HasPendingWonderlandTitles(instanceId)) continue;
-                    if (WonderlandCompletionPolicy.IsTreasureWindowOpen(run, now)) continue;
+                    // The leave countdown a completed run shows, and the same one
+                    // an ended or timed-out run shows, hold the members inside
+                    // until it expires; they are carried out afterwards.
+                    if (WonderlandCompletionPolicy.IsTreasureWindowOpen(run, now) ||
+                        WonderlandCompletionPolicy.IsEndWindowOpen(run, now)) continue;
                     await ExitWonderlandMembersAsync(runtime, run, members, cancellationToken);
                     _wonderlandRetirements.TryAdd(instanceId, 0);
                     await TryRetireWonderlandRuntimeAsync(instanceId, cancellationToken);
@@ -84,7 +99,11 @@ internal sealed partial class GameSessionRegistry
             if (!_sessions.TryGetValue(session, out var actor) ||
                 !IsCurrentWonderlandMember(actor, actor.WorldInstanceId) ||
                 !_wonderlandAdmissions.TryGetValue(actor.WorldInstanceId, out var admission) ||
-                actor.CharacterId != admission.LeaderId || GetPartyMembership(session) is { IsLeader: false } ||
+                // Only the instance's registered leader may end the run. Party
+                // leadership belongs to a separate system and must not gate this:
+                // ANDing them locked the control out for every member whenever the
+                // instance leader was not the party leader.
+                actor.CharacterId != admission.LeaderId ||
                 !WorldInstances.TryFind(actor.WorldInstanceId, out var runtime)) return false;
             var terminated = InvokeWorldOwnerAuthoritativeMutation(runtime, map =>
             {

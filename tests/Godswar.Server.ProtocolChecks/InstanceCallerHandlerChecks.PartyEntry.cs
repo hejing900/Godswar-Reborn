@@ -301,13 +301,19 @@ internal static partial class InstanceCallerHandlerChecks
                         Opcodes.RepetitionInstanceMembers &&
                     BinaryPrimitives.ReadInt32LittleEndian(
                         packet.AsSpan(4)) == 2) &&
-                !memberPackets.Any(packet =>
-                    ReadOpcode(packet) is Opcodes.RepetitionSync or
-                        Opcodes.RepetitionFightInfo) &&
+                // Every admitted member reads the instance's own progress panel,
+                // not just the leader: the run timer and score are instance
+                // scoped, so a member joining a running instance sees its
+                // current progress.
+                memberPackets.Any(packet =>
+                    ReadOpcode(packet) == Opcodes.RepetitionSync) &&
+                memberPackets.Any(packet =>
+                    ReadOpcode(packet) == Opcodes.RepetitionFightInfo) &&
                 leader.Registry.GetWorldInstanceSessions(
                     targetInstanceId).Count == 2,
                 "Medusa party entry publishes both players and sends the " +
-                "run timer only to the leader and the instance roster to both");
+                "run timer and the instance roster to the leader and to every " +
+                "admitted member");
 
             var leaderBeforeMonsterAoi = leader.ReadPackets().Count;
             await InvokeAsync(
@@ -340,14 +346,38 @@ internal static partial class InstanceCallerHandlerChecks
                     action: 0,
                     trailingByte: 0xED));
             Check.True(
-                leader.ReadPackets()
-                    .Skip(leaderBeforeEnd)
-                    .Single()
-                    .SequenceEqual(PacketBuilder.RepetitionReset()),
-                "the native leader control authoritatively ends and closes the Medusa panel");
+                leader.Registry.TryGetSessionWorldInstanceId(
+                    leader.Session,
+                    out var afterLeaderEnd) &&
+                afterLeaderEnd == targetInstanceId,
+                "the native leader control authoritatively ends the Medusa run " +
+                "and keeps the members inside for the leave countdown");
 
             await leader.Registry.AdvanceMonsterWorldOnceAsync(
                 DateTimeOffset.UtcNow,
+                CancellationToken.None);
+            var endingPackets = leader.ReadPackets()
+                .Skip(leaderBeforeEnd)
+                .ToArray();
+            Check.True(
+                endingPackets.Any(packet =>
+                    packet.SequenceEqual(PacketBuilder.RepetitionPanelCompletion())) &&
+                endingPackets.Any(packet =>
+                    ReadOpcode(packet) == Opcodes.RepetitionCompletionState &&
+                    BinaryPrimitives.ReadInt32LittleEndian(
+                        packet.AsSpan(8)) == 1) &&
+                // Native 10231 carries the leave countdown when its seconds field
+                // is non-zero; zero is the plain teardown.
+                endingPackets.Any(packet =>
+                    ReadOpcode(packet) == Opcodes.RepetitionReset &&
+                    BinaryPrimitives.ReadInt32LittleEndian(
+                        packet.AsSpan(4)) == 30),
+                "an ended Medusa run publishes the native leave countdown to " +
+                "every member instead of hiding the panel");
+
+            // The countdown expiry carries the members home.
+            await leader.Registry.AdvanceMonsterWorldOnceAsync(
+                DateTimeOffset.UtcNow.AddSeconds(31),
                 CancellationToken.None);
             Check.True(
                 leader.Character.CurrentMap != 200 &&

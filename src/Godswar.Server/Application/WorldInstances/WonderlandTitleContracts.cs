@@ -27,22 +27,33 @@ internal static class WonderlandTitlePolicy
 
 /// <summary>
 /// Immutable evidence produced by the exact instance owner when an island
-/// clears. Captured session fences prove eligibility at that point; later
-/// disconnect or transport does not revoke an earned entitlement.
+/// clears. The award is the instance's own result and keeps the registered
+/// party's classification; entitlement is granted to every character still
+/// inside the run at that moment, including one who confirmed the party window
+/// after the run was sealed. Later disconnect or transport does not revoke an
+/// earned entitlement.
 /// </summary>
 internal sealed class WonderlandTitleRequest
 {
     public WonderlandTitleRequest(WorldInstanceId worldInstanceId, RealmId realmId,
         Guid admissionReservationId, DateTimeOffset startedAtUtc, DateTimeOffset clearedAtUtc,
         int islandNumber, IReadOnlyCollection<WonderlandTitleMember> admittedMembers,
-        IReadOnlyCollection<WonderlandTitleMember> frozenMembers)
+        IReadOnlyCollection<WonderlandTitleMember> frozenMembers,
+        IReadOnlyCollection<Guid>? admissionReservationIds = null)
     {
         ArgumentNullException.ThrowIfNull(admittedMembers);
         ArgumentNullException.ThrowIfNull(frozenMembers);
+        var reservations = (admissionReservationIds ?? [admissionReservationId])
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .Order()
+            .ToArray();
         var admitted = admittedMembers.OrderBy(member => member.CharacterId).ToArray();
         var frozen = frozenMembers.OrderBy(member => member.CharacterId).ToArray();
         if (!worldInstanceId.IsValid || !realmId.IsValid || realmId.Value > short.MaxValue ||
-            admissionReservationId == Guid.Empty || startedAtUtc == default ||
+            admissionReservationId == Guid.Empty || reservations.Length == 0 ||
+            !reservations.Contains(admissionReservationId) ||
+            startedAtUtc == default ||
             startedAtUtc.Offset != TimeSpan.Zero || clearedAtUtc.Offset != TimeSpan.Zero ||
             clearedAtUtc < startedAtUtc || clearedAtUtc - startedAtUtc >= TimeSpan.FromMinutes(40) ||
             !ValidRoster(admitted) || !ValidRoster(frozen) || frozen.Any(member => !admitted.Any(original =>
@@ -51,6 +62,7 @@ internal sealed class WonderlandTitleRequest
         WorldInstanceId = worldInstanceId;
         RealmId = realmId;
         AdmissionReservationId = admissionReservationId;
+        AdmissionReservationIds = Array.AsReadOnly(reservations);
         StartedAtUtc = startedAtUtc;
         ClearedAtUtc = clearedAtUtc;
         Award = WonderlandTitlePolicy.Resolve(islandNumber);
@@ -79,6 +91,14 @@ internal sealed class WonderlandTitleRequest
     public WorldInstanceId WorldInstanceId { get; }
     public RealmId RealmId { get; }
     public Guid AdmissionReservationId { get; }
+
+    /// <summary>
+    /// Every admission reservation that put a character into this run: the
+    /// registered party's own and, for a member who confirmed the party window
+    /// after the run was sealed, that member's own. The ledger fence reads them
+    /// as one set.
+    /// </summary>
+    public IReadOnlyList<Guid> AdmissionReservationIds { get; }
     public DateTimeOffset StartedAtUtc { get; }
     public DateTimeOffset ClearedAtUtc { get; }
     public WonderlandTitleAward Award { get; }

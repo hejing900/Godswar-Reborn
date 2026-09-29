@@ -55,10 +55,26 @@ internal sealed partial class MapInstance
             _atlantisWaves?.Advance(now);
             if (snapshot is not null && snapshot.State != AtlantisRunState.Active)
             {
+                // A run that ran out of time still owes its members the tier its
+                // score reached, so the evidence freezes here as well.
+                FreezeAtlantisRewardOnTerminal(snapshot);
                 StopAtlantisMonsterCombat();
             }
             return snapshot is not null;
         }
+    }
+
+    /// <summary>
+    /// Freezes the reward evidence the first time the run terminalizes, whatever
+    /// terminal state it reached.
+    /// </summary>
+    private void FreezeAtlantisRewardOnTerminal(AtlantisRunSnapshot snapshot)
+    {
+        if (snapshot.State == AtlantisRunState.Active)
+        {
+            return;
+        }
+        FreezeAtlantisRewardMembers(snapshot);
     }
 
     internal AtlantisKillResult RecordCommittedAtlantisMonsterKill(
@@ -94,10 +110,7 @@ internal sealed partial class MapInstance
             }
             if (result.Snapshot?.State != AtlantisRunState.Active)
             {
-                if (result.Snapshot?.State == AtlantisRunState.Completed)
-                {
-                    FreezeAtlantisCompletionMembers(result.Snapshot);
-                }
+                FreezeAtlantisRewardOnTerminal(result.Snapshot!);
                 _atlantisWaves?.Advance(committedAt);
                 StopAtlantisMonsterCombat();
             }
@@ -114,6 +127,8 @@ internal sealed partial class MapInstance
             {
                 return false;
             }
+            // The leader ended the run early: freeze what the party had earned.
+            FreezeAtlantisRewardOnTerminal(snapshot);
             _atlantisWaves?.Cancel(now);
             StopAtlantisMonsterCombat();
             return true;

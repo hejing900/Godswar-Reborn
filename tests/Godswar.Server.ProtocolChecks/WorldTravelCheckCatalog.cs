@@ -43,6 +43,8 @@ internal static class WorldTravelCheckCatalog
         (AtlantisMonsterKillScoringChecks.CheckName, AtlantisMonsterKillScoringChecks.RunAsync),
         (InstanceCallerHandlerChecks.AtlantisRunCheckName,
             InstanceCallerHandlerChecks.RunAtlantisRunAsync),
+        (InstanceCallerHandlerChecks.HarborAttackCheckName,
+            InstanceCallerHandlerChecks.RunHarborAttackAsync),
         ("Authoritative hidden live-map transfer", MapLiveTransferChecks.RunAsync),
         (MapLiveTransferChecks.MutationLifetimeCheckName,
             MapLiveTransferChecks.RunMutationLifetimeAsync),

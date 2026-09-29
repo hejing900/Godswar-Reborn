@@ -107,7 +107,7 @@ internal sealed partial class GameSessionRegistry
 
     private sealed record WonderlandBossLootDelivery(GameSessionContext Actor, WonderlandBossCorpse Corpse);
 
-    private static async Task ClearExpiredWonderlandCorpseLootAsync(ClientSession session, MapInstance map,
+    internal static async Task ClearExpiredWonderlandCorpseLootAsync(ClientSession session, MapInstance map,
         uint objectId, CancellationToken token)
     {
         if (map.MapId != 207 || !map.TryGetWonderlandBossCorpse(objectId, out _)) return;

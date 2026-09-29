@@ -81,6 +81,154 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+        // 赫拉克里斯的试炼: the entry page admits the character instead of
+        // answering with the reference's level-gate line. Checked before that
+        // line's rule because both read the same argument word.
+        if (InstanceCallerProtocol.TryResolveHeraclesTrialEntry(
+                dialogIndex,
+                arguments,
+                out var heraclesMapId,
+                out var heraclesX,
+                out var heraclesZ))
+        {
+            if (!IsCanonicalInstanceCallerAction(
+                    packet,
+                    route,
+                    npcId,
+                    dialogIndex))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected non-canonical Heracles " +
+                    $"entry request npc={npcId}");
+                return;
+            }
+
+            var heraclesContext = _instanceCallerPageContext;
+            ClearInstanceCallerPageContext();
+            if (!IsCurrentInstanceCallerPageContext(
+                    heraclesContext,
+                    route,
+                    npcId,
+                    dialogIndex,
+                    InstanceCallerProtocol.HeraclesTrialRootSubId))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected Heracles entry without " +
+                    $"current page context npc={npcId}");
+                return;
+            }
+
+            var sourceMap = _character.CurrentMap;
+            var outcome = await TryBeginMapTransitionAsync(
+                heraclesMapId,
+                heraclesX,
+                heraclesZ,
+                $"instance-caller:heracles-trial:{npcId}",
+                cancellationToken);
+            Console.WriteLine(
+                "[instance-caller] Heracles trial entry " +
+                $"character={_character.Name} level={_character.Level} " +
+                $"map={sourceMap}->{heraclesMapId} " +
+                $"arrival=({heraclesX},{heraclesZ}) outcome={outcome}");
+            if (outcome == SceneTransitionOutcome.RejectedWithoutRelocation)
+            {
+                // The map authority refused the move. Answer with the reference's
+                // own line for this page so the window is not left silent.
+                await _session.SendAsync(
+                    PacketBuilder.NpcFunctionActionResponse(
+                        npcId,
+                        dialogIndex,
+                        InstanceCallerProtocol.AtlantisLevelResultSubId),
+                    cancellationToken,
+                    "InstanceCallerHeraclesUnavailable");
+            }
+
+            return;
+        }
+
+        // 港湾遇袭: an eligible character is admitted by this page, while a
+        // character below the level floor falls through to the shared level-gate
+        // answer below - the exact line the reference answered this page with in
+        // the September 28 capture.
+        if (InstanceCallerProtocol.TryResolveHarborAttackEntry(
+                dialogIndex,
+                arguments) &&
+            _character.Level >= InstanceCallerProtocol.HarborAttackMinimumLevel)
+        {
+            if (!IsCanonicalInstanceCallerAction(
+                    packet,
+                    route,
+                    npcId,
+                    dialogIndex))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected non-canonical 港湾遇袭 " +
+                    $"entry request npc={npcId}");
+                return;
+            }
+
+            var harborContext = _instanceCallerPageContext;
+            ClearInstanceCallerPageContext();
+            if (!IsCurrentInstanceCallerPageContext(
+                    harborContext,
+                    route,
+                    npcId,
+                    dialogIndex,
+                    InstanceCallerProtocol.HarborAttackRootSubId))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected 港湾遇袭 entry without " +
+                    $"current page context npc={npcId}");
+                return;
+            }
+
+            // Both harbor maps are the same dungeon at two level bands and the
+            // client only sends the page number, so the admitted leader's own
+            // level selects the content map.
+            var harborDestination =
+                InstanceCallerProtocol.ResolveHarborAttackDestination(
+                    _character.Level);
+            Console.WriteLine(
+                "[instance-caller] 港湾遇袭 entry " +
+                $"character={_character.Name} level={_character.Level} " +
+                $"map={harborDestination.TargetMapId} " +
+                $"scene={harborDestination.ClientSceneId}");
+            await BeginLegacyInstanceEntryCountdownAsync(
+                npcId,
+                dialogIndex,
+                harborDestination,
+                cancellationToken);
+            return;
+        }
+
+        if (InstanceCallerProtocol.TryGetLevelGateResult(
+                dialogIndex,
+                arguments,
+                out var levelGateSubIds))
+        {
+            if (!IsCanonicalInstanceCallerAction(
+                    packet,
+                    route,
+                    npcId,
+                    dialogIndex))
+            {
+                Console.Error.WriteLine(
+                    "[instance-caller] rejected non-canonical level gate " +
+                    $"request npc={npcId}");
+                return;
+            }
+
+            ClearInstanceCallerPageContext();
+            await _session.SendAsync(
+                PacketBuilder.NpcFunctionActionResponse(
+                    npcId,
+                    dialogIndex,
+                    levelGateSubIds),
+                cancellationToken,
+                "InstanceCallerLevelGate");
+            return;
+        }
+
         if (InstanceCallerProtocol.TryResolveEntry(
                 dialogIndex,
                 subId,

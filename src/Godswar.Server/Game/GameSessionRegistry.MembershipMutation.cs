@@ -51,9 +51,14 @@ internal sealed partial class GameSessionRegistry
         public void Dispose()
         {
             Task? departureWrite = null;
+            Task? wonderlandDepartureWrite = null;
             try
             {
                 departureWrite = registry.RecordCommittedAtlantisDepartureLocked(previous);
+                // A Wonderland run is cancelled once its last member leaves, so
+                // the departure has to be recorded inside this same membership
+                // fence rather than inferred from the next world tick.
+                wonderlandDepartureWrite = registry.RecordCommittedWonderlandDepartureLocked(previous);
             }
             finally
             {
@@ -63,6 +68,10 @@ internal sealed partial class GameSessionRegistry
             if (departureWrite is not null)
             {
                 _ = ObserveAtlantisDepartureWriteAsync(previous!.Session, departureWrite);
+            }
+            if (wonderlandDepartureWrite is not null)
+            {
+                _ = ObserveAtlantisDepartureWriteAsync(previous!.Session, wonderlandDepartureWrite);
             }
         }
     }

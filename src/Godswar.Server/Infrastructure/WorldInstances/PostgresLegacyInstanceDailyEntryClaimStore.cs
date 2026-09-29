@@ -96,11 +96,14 @@ internal sealed partial class PostgresLegacyInstanceDailyEntryClaimStore(
                 policy.PaidRetryLimit);
         }
 
-        IReadOnlySet<int> paymentRequiredCharacterIds = characterIds
-            .Where(characterId =>
-                usageByCharacter.GetValueOrDefault(characterId) >=
-                policy.FreeEntryLimit)
-            .ToHashSet();
+        IReadOnlySet<int> paymentRequiredCharacterIds =
+            policy.PaidRetryLimit is null
+                ? new HashSet<int>()
+                : characterIds
+                    .Where(characterId =>
+                        usageByCharacter.GetValueOrDefault(characterId) >=
+                        policy.FreeEntryLimit)
+                    .ToHashSet();
 
         await using var command = new NpgsqlCommand(
             ClaimSql,

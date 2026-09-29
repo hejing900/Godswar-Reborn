@@ -11,6 +11,8 @@ internal sealed partial class MapInstance
     {
         private readonly Dictionary<uint, (WonderlandSpawnPolicy Policy, IMonsterMapRuntime Runtime)> _owners = [];
         private readonly HashSet<int> _participants = participants.ToHashSet();
+        /// <summary>Adds a member admitted after the run was sealed.</summary>
+        internal bool TryAddParticipant(int characterId) => _participants.Add(characterId);
         private readonly List<MonsterRuntimeUpdate> _terminalUpdates = [];
         private bool _terminal;
         private bool _publicationPending;

@@ -21,9 +21,21 @@ internal sealed partial class GameSessionRegistry
             }
             return;
         }
-        if (delivery.Run.State == AtlantisRunState.Cancelled)
+        if (delivery.Run.State is AtlantisRunState.Cancelled or AtlantisRunState.TimedOut)
         {
-            await PublishAtlantisTerminationEgressAsync(delivery, cancellationToken);
+            // An ended or timed-out run behaves like a completed one for its
+            // members: the panel becomes the native leave countdown, a member may
+            // leave immediately, and the remaining members are carried out when
+            // the thirty seconds expire. It also pays the tier its score reached:
+            // the settlement is attempted first and retried by later ticks, but it
+            // never holds the egress hostage - the runtime is kept alive until it
+            // settles, so no result is lost and nobody is stranded.
+            _ = await SettleAtlantisCompletionRewardsAsync(delivery, cancellationToken);
+            await PublishAtlantisTerminationUiAsync(delivery, cancellationToken);
+            if (!IsAtlantisTerminationExitWindowOpen(delivery.Run, delivery.ObservedAt))
+            {
+                await PublishAtlantisTerminationEgressAsync(delivery, cancellationToken);
+            }
             await RetireFinishedEmptyAtlantisRunAsync(delivery, cancellationToken);
             return;
         }

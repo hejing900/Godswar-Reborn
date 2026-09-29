@@ -311,6 +311,11 @@ internal sealed partial class GameSessionRegistry
                 return (Applied: applied, Value: value);
             });
         result = attempt.Value;
+        // A periodic (elemental) killing blow is still a committed kill: a
+        // Wonderland boss finished by a damage-over-time tick must clear its
+        // island exactly like a melee kill does.
+        if (attempt.Applied && runtime.MapId == WonderlandMapId)
+            ObserveWonderlandMonsterDamageCommitted(runtime, attempt.Value, committedAt, source);
         return attempt.Applied;
     }
 

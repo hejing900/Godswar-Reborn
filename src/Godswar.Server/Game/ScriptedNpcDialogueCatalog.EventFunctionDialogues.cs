@@ -142,10 +142,19 @@ internal sealed partial class GameClientHandler
     /// downgrade, re-skin or exchange, which this server does not perform. The six
     /// page-two forms take an item and a submission whose <c>+20</c> value has not
     /// been observed, so they stay unanswered like 2.14 and 2.16.
+    ///
+    /// The September 28 2026 capture (session c202c633, npc 5113 = Sparta_116 at
+    /// local 01:58:55) settles the opening page instead of leaving it inferred:
+    /// the reference advertised <c>[100, 101, 102, 103, 104, 105, 106, 107]</c>,
+    /// which is that list verbatim. <c>106</c> is therefore sent after all - the
+    /// client's own script does define the 绑定坐骑装备 button for it - and
+    /// <c>107</c> rides along with no branch anywhere in the script and with
+    /// <c>NF_HF_B107</c> undefined, so it draws nothing. Neither one was clicked
+    /// in the capture, so neither owns an answer and both are left unanswered.
     /// </remarks>
     private static readonly ScriptedNpcDialogue MountFeederDialogue = new(
         FunctionNumber: 21,
-        OpeningMenu: [100, 101, 102, 103, 104, 105],
+        OpeningMenu: [100, 101, 102, 103, 104, 105, 106, 107],
         Steps: new Dictionary<int, int[]>
         {
             // Script-encoded through the message callback's own PreSubID test.
@@ -182,12 +191,23 @@ internal sealed partial class GameClientHandler
     /// results (<c>220</c> level, <c>230</c> already holding a bag, <c>240</c> full
     /// bag, <c>250</c> bag granted) all restate the same offer, so settling which one
     /// a click earns needs a capture. <c>210</c> is the script's own mis-click line.
+    ///
+    /// The September 28 2026 capture (session c202c633, npc 5115 = Sparta_118 at
+    /// local 01:58:44) settles both: the reference advertised <c>[101, 102]</c>,
+    /// so <c>101</c> 领取任务袋 is a real button after all (the earlier reading
+    /// that it draws an empty label came from <c>NF_L0_QT101</c> versus the
+    /// zero-padded <c>NF_L0_QT0101</c>, and the client defines the latter), and
+    /// clicking it answered <c>250</c> - the script's own "you have the quest bag"
+    /// line. Both numbers are on the opening page, so the reply is one page.
+    /// The bag itself is not granted here: this server owns no quest-bag economy,
+    /// and the capture only shows the line the reference drew.
     /// </remarks>
     private static readonly ScriptedNpcDialogue RandomQuestManagerDialogue = new(
         FunctionNumber: 52,
-        OpeningMenu: [102],
+        OpeningMenu: [101, 102],
         Steps: new Dictionary<int, int[]>
         {
+            [101] = [250],
             [102] = [202]
         });
 

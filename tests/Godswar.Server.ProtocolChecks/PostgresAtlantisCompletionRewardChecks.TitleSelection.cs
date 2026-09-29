@@ -102,7 +102,7 @@ internal static partial class PostgresAtlantisCompletionRewardChecks
         NpgsqlDataSource source, CompletionFixture fixture)
     {
         var request = new MedusaCompletionRewardRequest(WorldInstanceId.New(), RealmId.Tempest,
-            MedusaEncounterDifficulty.Enhanced, DateTimeOffset.UtcNow, TimeSpan.FromMinutes(9),
+            MedusaEncounterDifficulty.Enhanced, completed: true, DateTimeOffset.UtcNow, TimeSpan.FromMinutes(9),
             MedusaIslandPolicy.VictoryScore, fixture.Request.AdmittedCharacterIds);
         var receipt = await new PostgresMedusaCompletionRewardStore(source).SettleAsync(request);
         Check.True(receipt.Status == MedusaCompletionRewardStatus.Applied,

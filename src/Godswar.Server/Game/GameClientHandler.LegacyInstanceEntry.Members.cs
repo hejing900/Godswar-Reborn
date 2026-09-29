@@ -7,12 +7,24 @@ internal sealed partial class GameClientHandler
 {
     private async Task TransferLegacyInstanceFollowersAsync(
         LegacyInstancePartySnapshot party, InstanceCallerEntryDestination destination,
-        NpcSpawnDefinition npc, WorldInstanceDescriptor target, Guid reservationId, bool opalsCharged)
+        NpcSpawnDefinition npc, WorldInstanceDescriptor target, Guid reservationId, bool opalsCharged,
+        IReadOnlySet<int>? confirmedFollowerCharacterIds = null)
     {
         var leader = party.Members[0];
         var failedMembers = new List<LegacyInstancePartyMember>();
+        var unconfirmedMembers = new List<LegacyInstancePartyMember>();
         foreach (var member in party.Members.Skip(1))
         {
+            // 港湾遇袭 gives every member the leader's own sixty-second window. A
+            // member who never confirmed it is not transferred, and the release
+            // below returns the daily attempt they never spent.
+            if (confirmedFollowerCharacterIds is { } confirmed &&
+                !confirmed.Contains(member.CharacterId))
+            {
+                unconfirmedMembers.Add(member);
+                continue;
+            }
+
             if (!_registry.IsLegacyInstancePartyMemberSnapshotCurrent(
                     party,
                     member,
@@ -85,9 +97,25 @@ internal sealed partial class GameClientHandler
                 CancellationToken.None);
         }
 
+        // The same release path serves a member who simply never confirmed their
+        // own window, without reporting a transfer failure that did not happen.
+        if (unconfirmedMembers.Count != 0 && !opalsCharged)
+        {
+            await ReleaseLegacyInstanceDailyEntryMembersAsync(
+                reservationId,
+                unconfirmedMembers
+                    .Select(static member => member.CharacterId)
+                    .ToArray());
+            Console.WriteLine(
+                "[instance-caller] member windows closed without entry " +
+                $"count={unconfirmedMembers.Count} " +
+                $"characters={string.Join(',', unconfirmedMembers.Select(static member => member.CharacterName))}");
+        }
+
         if (opalsCharged)
         {
-            var failedCharacterIds = failedMembers
+            var releasedCharacterIds = failedMembers
+                .Concat(unconfirmedMembers)
                 .Select(static member => member.CharacterId)
                 .ToHashSet();
             _ = await SettleLegacyInstanceOpalsAsync(
@@ -95,7 +123,7 @@ internal sealed partial class GameClientHandler
                 party,
                 party.Members
                     .Where(member =>
-                        !failedCharacterIds.Contains(member.CharacterId))
+                        !releasedCharacterIds.Contains(member.CharacterId))
                     .Select(static member => member.CharacterId)
                     .ToArray());
         }
@@ -105,6 +133,7 @@ internal sealed partial class GameClientHandler
             $"leader={leader.CharacterName} " +
             $"destination={destination.DisplayName} " +
             $"instance={target.InstanceId} party={party.Members.Count} " +
-            $"member-transfer-failures={failedMembers.Count}");
+            $"member-transfer-failures={failedMembers.Count} " +
+            $"member-windows-closed={unconfirmedMembers.Count}");
     }
 }

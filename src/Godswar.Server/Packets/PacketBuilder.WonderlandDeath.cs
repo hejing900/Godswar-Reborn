@@ -4,7 +4,7 @@ namespace Godswar.Server.Packets;
 
 internal static partial class PacketBuilder
 {
-    private static byte[] WonderlandPlayerDeath(uint playerObjectId)
+    internal static byte[] WonderlandPlayerDeath(uint playerObjectId)
     {
         // Installed Origin's MSG_DEAD (10027) opens the local revival dialog.
         // Its five optional reward recipients must be -1 so a player death

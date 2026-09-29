@@ -75,8 +75,21 @@ internal sealed partial class GameClientHandler
             return false;
         }
 
-        if (MatchesCurrentKitBagItem(_character, slot, itemId) ||
-            !_registry.TryReserveGroundLootPickup(
+        // The bag itself is deliberately not consulted before the reservation. A
+        // second drop of the same item - the ordinary case for anything
+        // stackable - names the slot that now already holds it, and reading that
+        // as a bag-to-equipment move is exactly what dropped every pickup after
+        // the first: the client showed the item, the server never wrote it, and
+        // the next relog took it away. The request's handle word is traced but no
+        // longer decides anything: a real pickup and the client's echo of a bag
+        // record differ in it, yet the same client was captured sending both
+        // shapes, so only the pending ground item settles whether this is a
+        // pickup. An offer that names no pending ground item still falls through
+        // to the move path below.
+        var handle = BinaryPrimitives.ReadUInt32LittleEndian(packet.Payload);
+        MonsterLootTrace.Log(
+            $"pickup-request character={_character.Name} slot={slot} item={itemId} handle={handle:X8} key={groundKeyHigh:X8}:{groundKeyLow:X8}");
+        if (!_registry.TryReserveGroundLootPickup(
                 _session,
                 itemId,
                 groundKeyHigh,
@@ -85,23 +98,88 @@ internal sealed partial class GameClientHandler
                 out var reservation))
         {
             MonsterLootTrace.Log(
-                $"pickup-unmatched character={_character.Name} slot={slot} item={itemId} key={groundKeyHigh:X8}:{groundKeyLow:X8}");
+                $"pickup-unmatched character={_character.Name} slot={slot} item={itemId} handle={handle:X8} bag-has-item={MatchesCurrentKitBagItem(_character, slot, itemId)}");
             return false;
         }
 
         MonsterLootTrace.Log(
             $"pickup-reserved character={_character.Name} slot={slot} item={itemId} corpse={reservation.MonsterObjectId} quantity={reservation.Quantity}");
 
+        return await CommitGroundLootPickupAsync(
+            reservation,
+            slot,
+            packet.Buffer,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Pays a ground item the client announced on opcode 10114.
+    /// </summary>
+    /// <remarks>
+    /// The installed client announces a corpse pickup as a 52-byte 10114 whose
+    /// payload names the destination bag slot at +4 and the item at +8 - and on
+    /// this server it sends nothing else: the 40-byte 10056 descriptor it was
+    /// captured sending in September only appears afterwards, as its echo of the
+    /// bag records this server pushes back. Ignoring the announcement is why a
+    /// picked-up item showed in the client's bag and was gone after the next
+    /// relog. The ground item itself still decides: an announcement that names no
+    /// pending drop is an inspection and changes nothing.
+    /// </remarks>
+    private async Task<bool> TryHandleAnnouncedGroundPickupAsync(
+        int slot,
+        uint itemId,
+        CancellationToken cancellationToken)
+    {
+        if (_account is null || _character is null)
+        {
+            return false;
+        }
+
+        MonsterLootTrace.Log(
+            $"announce-request character={_character.Name} slot={slot} item={itemId}");
+        if (!_registry.TryReserveGroundLootPickup(
+                _session,
+                itemId,
+                0u,
+                0u,
+                DateTimeOffset.UtcNow,
+                out var reservation))
+        {
+            MonsterLootTrace.Log(
+                $"announce-unmatched character={_character.Name} slot={slot} item={itemId} bag-has-item={MatchesCurrentKitBagItem(_character, slot, itemId)}");
+            return false;
+        }
+
+        MonsterLootTrace.Log(
+            $"announce-reserved character={_character.Name} slot={slot} item={itemId} corpse={reservation.MonsterObjectId} quantity={reservation.Quantity}");
+
+        // 10114 has no descriptor of its own to echo, so the acknowledgement is
+        // the authoritative bag the pickup just changed.
+        return await CommitGroundLootPickupAsync(
+            reservation,
+            slot,
+            ackFrame: null,
+            cancellationToken);
+    }
+
+    private async Task<bool> CommitGroundLootPickupAsync(
+        MonsterLootPickupReservation reservation,
+        int slot,
+        byte[]? ackFrame,
+        CancellationToken cancellationToken)
+    {
         var completed = false;
         try
         {
             var result = await _monsterRewardExtras.PickupMonsterLootAsync(
-                _account.Id,
-                _character.Id,
+                _account!.Id,
+                _character!.Id,
                 reservation.DeathEventId,
                 reservation.RuleLootIndex,
                 reservation.ItemId,
                 reservation.Quantity,
+                reservation.BoundOnPickup,
+                reservation.Attributes,
                 cancellationToken);
             if (!result.Succeeded || result.Character is null ||
                 !RevalidateCurrentWorldEffectOwnership("ground_loot_pickup"))
@@ -119,10 +197,14 @@ internal sealed partial class GameClientHandler
                 _session,
                 _character,
                 advanceWorldRevision: false);
-            await _session.SendAsync(
-                BuildGroundLootPickupAck(packet.Buffer, reservation),
-                cancellationToken,
-                "GroundLootPickupAck");
+            if (ackFrame is { } frame)
+            {
+                await _session.SendAsync(
+                    BuildGroundLootPickupAck(frame, reservation),
+                    cancellationToken,
+                    "GroundLootPickupAck");
+            }
+
             await SendKitBagRefreshAsync(cancellationToken);
             _registry.CompleteMonsterLootPickup(reservation);
             completed = true;
@@ -195,6 +277,8 @@ internal sealed partial class GameClientHandler
                 reservation.RuleLootIndex,
                 reservation.ItemId,
                 reservation.Quantity,
+                reservation.BoundOnPickup,
+                reservation.Attributes,
                 cancellationToken);
             if (!result.Succeeded || result.Character is null ||
                 !RevalidateCurrentWorldEffectOwnership(

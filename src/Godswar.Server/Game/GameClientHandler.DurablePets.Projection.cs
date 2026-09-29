@@ -195,6 +195,19 @@ internal sealed partial class GameClientHandler
 
         if (receipt.Family == CommandFamily.BagItemActivation)
         {
+            // A Wonderland sack owns its whole projection: the native
+            // acquisition notice for the drawn reward plus the exact bag
+            // cleanup. The generic slot clear and owned-pet rebuild below must
+            // not also answer it.
+            if (IsWonderlandSackProjection(receipt))
+            {
+                return previousKitBag is not null &&
+                    await SendWonderlandSackProjectionAsync(
+                        receipt,
+                        disposition,
+                        previousKitBag,
+                        cancellationToken);
+            }
             if (IsPlayerSkillBookReceipt(receipt.Status))
             {
                 return await SendPlayerSkillBookProjectionAsync(

@@ -70,6 +70,9 @@ internal sealed partial class PostgresAtlantisCompletionRewardStore
         // admitted_at records persistence time, not transfer time. A repaired
         // marker can be written after completion; claimed_at still predates
         // the run and every successful admitted identity must match exactly.
+        // This fences the registered party. A member who joined later holds their
+        // own reservation and is fenced by the recipient list instead, which only
+        // ever names sessions that were inside the instance at completion.
         while (await reader.ReadAsync(token))
         {
             if (index >= request.AdmittedCharacterIds.Count || reader.GetInt16(0) != request.RealmId.Value ||

@@ -36,11 +36,23 @@ internal sealed partial class GameClientHandler
                 $"instance={leave.ExpectedSourceWorldInstanceId} transferred={transferred} hp={_character.CurrentHp}");
             return true;
         }
+        // An ended or timed-out run counts down like a completed one; this same
+        // control is the member's immediate leave during that countdown.
+        if (_registry.TryResolveEndedWonderlandLeave(_session, repetitionId, repetitionIndex,
+                DateTimeOffset.UtcNow, out var endedLeave))
+        {
+            var transferred = await TryBeginAuthoritativeInstanceTransitionAsync(endedLeave, cancellationToken);
+            Console.WriteLine($"[wonderland] end-window leave character={_character.Name} " +
+                $"instance={endedLeave.ExpectedSourceWorldInstanceId} transferred={transferred} hp={_character.CurrentHp}");
+            return true;
+        }
         if (_registry.TryTerminateWonderlandRun(_session, repetitionId, repetitionIndex, DateTimeOffset.UtcNow))
         {
+            // The run is now terminal. The world tick publishes the native leave
+            // countdown to every member inside, exactly as completion does, so no
+            // reset is sent here: that would wipe the panel the countdown needs.
             Console.WriteLine($"[wonderland] termination accepted character={_character.Name} " +
                 $"hp={_character.CurrentHp} repetition={repetitionId?.ToString() ?? "panel"} index={repetitionIndex}");
-            await _session.SendAsync(PacketBuilder.RepetitionReset(), cancellationToken, "WonderlandLeaderTerminate");
         }
         return true;
     }

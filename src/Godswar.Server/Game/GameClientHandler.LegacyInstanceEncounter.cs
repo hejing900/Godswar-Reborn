@@ -39,6 +39,8 @@ internal sealed partial class GameClientHandler
             DateTimeOffset.UtcNow, reservationId, party.Members),
         InstanceCallerEntryKind.Wonderland => _registry.TryStartWonderlandEncounter(instanceId,
             dailyLimit, party.Members, DateTimeOffset.UtcNow, reservationId),
+        InstanceCallerEntryKind.HarborAttack => _registry.TryStartHarborAttackEncounter(instanceId,
+            dailyLimit, party.Members, DateTimeOffset.UtcNow, reservationId),
         _ => false
     };
 }

@@ -32,13 +32,40 @@ internal sealed partial class GameClientHandler
     {
         if (_pendingInstanceEntry is not null || _instanceEntryCountdownStopped)
             return;
+        // The client keys its queue state and Enter window by the destination's
+        // own repetition scene, which the destination carries: 224 Atlantis,
+        // 227 Wonderland, and 229/230 for the two 港湾遇袭 maps.
+        if (destination.ClientSceneId <= 0)
+        {
+            Console.Error.WriteLine(
+                "[instance-caller] destination has no client scene " +
+                $"destination={destination.Kind}");
+            return;
+        }
+        var sceneId = destination.ClientSceneId;
         var prepared = await TryPrepareLegacyInstanceEntryAsync(
             npcId, dialogIndex, destination, cancellationToken);
         if (prepared is null)
             return;
-        var sceneId = destination.Kind == InstanceCallerEntryKind.Wonderland ? 227 : 224;
-        await PublishInstanceEntryCountdownAsync(new(npcId, dialogIndex, sceneId,
-            prepared, destination, null, default, destination.TargetMapId), cancellationToken);
+        if (!await PublishInstanceEntryCountdownAsync(new(npcId, dialogIndex, sceneId,
+                prepared, destination, null, default, destination.TargetMapId), cancellationToken))
+        {
+            return;
+        }
+
+        // A per-member instance gives every admitted member the same native Enter
+        // window the leader just received. A member who does not confirm inside
+        // their own sixty seconds is left behind, and never spends a daily
+        // attempt.
+        if (InstanceCallerProtocol.UsesPerMemberEntryWindow(destination.Kind))
+        {
+            await _registry.PublishMemberEntryWindowsAsync(
+                _session,
+                prepared.Party,
+                sceneId,
+                destination.Kind,
+                cancellationToken);
+        }
     }
 
     private async Task BeginMedusaEntryCountdownAsync(uint npcId, int dialogIndex,
@@ -54,7 +81,7 @@ internal sealed partial class GameClientHandler
             null, null, party, difficulty, targetMapId), cancellationToken);
     }
 
-    private async Task PublishInstanceEntryCountdownAsync(PendingInstanceEntry pending,
+    private async Task<bool> PublishInstanceEntryCountdownAsync(PendingInstanceEntry pending,
         CancellationToken cancellationToken)
     {
         // At most one outstanding zero-token notice. A repeated NPC choice
@@ -62,7 +89,7 @@ internal sealed partial class GameClientHandler
         if (_pendingInstanceEntry is not null || _instanceEntryCountdownStopped || _session.IsDisconnected)
         {
             pending.TimerCancellation.Dispose();
-            return;
+            return false;
         }
         _pendingInstanceEntry = pending;
         try
@@ -72,6 +99,7 @@ internal sealed partial class GameClientHandler
             await _session.SendAsync(PacketBuilder.InstanceEntryNotice(pending.ClientSceneId),
                 cancellationToken, "InstanceEntryCountdown");
             _instanceEntryCountdownTask = RunInstanceEntryCountdownAsync(pending, cancellationToken);
+            return true;
         }
         catch
         {
@@ -151,6 +179,7 @@ internal sealed partial class GameClientHandler
         if (!accepted)
         {
             ClearPendingInstanceEntryConsent(pending);
+            _registry.CloseMemberEntryWindow(_session);
             await _session.SendAsync(PacketBuilder.InstanceEntryQueueState(pending.ClientSceneId, 1),
                 cancellationToken, "InstanceEntryCanceled");
             return;
@@ -162,6 +191,7 @@ internal sealed partial class GameClientHandler
         catch (Exception error)
         {
             ClearPendingInstanceEntryConsent(pending);
+            _registry.CloseMemberEntryWindow(_session);
             Console.Error.WriteLine("[instance-caller] entry activation fault " +
                 $"character={_character?.Name ?? "<none>"} scene={pending.ClientSceneId} " +
                 $"reason=ActivationFault exception={error.GetType().Name}");
@@ -194,6 +224,8 @@ internal sealed partial class GameClientHandler
         }
         finally { _characterStateGate.Release(); }
         await _instanceEntryCountdownTask;
+        // The initiator is gone, so the party's open windows have no run to join.
+        _registry.CloseMemberEntryWindow(_session);
     }
 
     private void ClearPendingInstanceEntryConsent(PendingInstanceEntry pending)

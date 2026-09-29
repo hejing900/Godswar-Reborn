@@ -1,10 +1,28 @@
 using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Game.WorldInstances;
+using Godswar.Server.Packets;
 
 namespace Godswar.Server.Game;
 
 internal sealed partial class GameSessionRegistry
 {
+    /// <summary>
+    /// The death frame the killed player and every nearby viewer must receive.
+    /// </summary>
+    /// <remarks>
+    /// docs/wonderland-native-death-revival-20260911.md records the native
+    /// chain: on map 207 the installed client's revival window is opened by the
+    /// full 116-byte 10027 <c>MSG_DEAD</c> frame, whose local-object branch
+    /// calls <c>Revive_Init()</c>. The ordinary 10018 frame is a scene load,
+    /// <c>MSG_SCENE_CHANGE</c>, and is reserved for the actual relocation after
+    /// a successful revival or portal travel.
+    /// </remarks>
+    private static byte[] PlayerDeathFrame(WorldInstanceRuntime runtime, uint objectId,
+        float x, float z, byte mapId) =>
+        runtime.MapId == WonderlandMapId
+            ? PacketBuilder.WonderlandPlayerDeath(objectId)
+            : PacketBuilder.PlayerDeath(objectId, x, 0f, z, mapId);
+
     // Handler timestamps precede admission to this gate. A world tick may
     // already have advanced the same run while that handler waited.
     private bool TryResolveWonderlandDamageTimeLocked(WorldInstanceRuntime runtime, uint objectId,

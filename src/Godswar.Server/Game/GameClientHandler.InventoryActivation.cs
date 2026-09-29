@@ -1,4 +1,5 @@
 using Godswar.Server.Application.Pets;
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Protocol;
 using Godswar.Server.State;
 
@@ -75,6 +76,11 @@ internal sealed partial class GameClientHandler
         var isReviewedPlayerSkillBook =
             _gameplayCatalogs.Content.SkillBooks.Any(
                 book => book.ItemId == itemId);
+        // Boss sacks are ordinary consumed bag items; the durable activation
+        // path owns their reward draw, so they are classified here rather than
+        // falling through to the equipment-only rejection.
+        var isWonderlandSack =
+            WonderlandSackRewardPolicy.IsSack(itemId);
         var isEquipment =
             EquipmentSlots.TryGetAuthoritativeSlot(
                 RequireItemContent().Templates,
@@ -116,6 +122,7 @@ internal sealed partial class GameClientHandler
             isExperienceBoostPotion || isPetCareItem ||
             isReviewedPetSkillBook ||
             isReviewedPlayerSkillBook ||
+            isWonderlandSack ||
             isPackedSealJade)
         {
                 if (!AllowLegacyPlayerMutationFallback(
@@ -135,6 +142,8 @@ internal sealed partial class GameClientHandler
                                             ? "pet_care_item"
                                             : isExperienceBoostPotion
                                             ? "experience_boost_potion"
+                                            : isWonderlandSack
+                                            ? "wonderland_sack_open"
                                             : isReviewedPlayerSkillBook
                                         ? "player_skill_book_learn"
                                     : "pet_skill_book_learn"))

@@ -44,6 +44,14 @@ internal sealed class GameClientHandlerFactory(
         registry.ConfigureAtlantisCompletionRewards(postgresRuntime?.AtlantisCompletionRewards,
             postgresRuntime?.LegacyInstanceDailyEntries);
         registry.ConfigureCharacterTitleSelections(postgresRuntime?.TitleSelections);
+        // Wonderland's island titles gate the treasure chests, the final exit
+        // and (through settlement) the run's retirement, so the title store is
+        // configured together with the two claim stores it authorizes.
+        registry.ConfigureWonderlandTitles(
+            postgresRuntime?.WonderlandTitles,
+            postgresRuntime?.LegacyInstanceDailyEntries);
+        registry.ConfigureWonderlandChests(postgresRuntime?.WonderlandChests);
+        registry.ConfigureWonderlandBlackmarket(postgresRuntime?.WonderlandBlackmarket);
         return new(
             session,
             store,

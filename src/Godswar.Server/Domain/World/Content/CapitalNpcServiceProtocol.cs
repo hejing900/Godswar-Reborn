@@ -62,7 +62,22 @@ internal enum CapitalNpcServiceKind
     /// followed it with an <c>10068</c> page request that the reference server
     /// answered with a ten-listing silver catalogue of the five tuck nets.
     /// </remarks>
-    LelantineFarmQuartermaster
+    LelantineFarmQuartermaster,
+
+    // The Sparta merchant quarter, captured 2026-09-28 (session c202c633,
+    // local 01:52-02:09): ten merchants that answer a click with function
+    // number zero and then stream their stock after the client's 10068 page
+    // request, exactly like the Athens quarter. Two keys share one shelf, so
+    // the seven kinds below cover ten actors. Every one of them prices in
+    // silver - the user's requirement for this port, and the price the capture
+    // itself carries (each listing costs the item's own silver price).
+    SpartaWarriorEquipmentMerchant,
+    SpartaScholarEquipmentMerchant,
+    SpartaSkillMerchant,
+    SpartaArmorMerchant,
+    SpartaJewelryMerchant,
+    SpartaPropsMerchant,
+    SpartaPetMerchant
 }
 
 internal enum CapitalNpcShopCurrency
@@ -156,16 +171,23 @@ internal static class CapitalNpcServiceProtocol
                 CapitalNpcServiceKind.HolyStoneRedeemer,
             ("Sparta_053", 5050u) or ("Athens_053", 5191u) =>
                 CapitalNpcServiceKind.HalloweenEnvoy,
-            ("Sparta_089", 5086u) or ("Athens_089", 5227u) =>
+            // The Athens pet merchant keeps the older, larger shelf. Sparta's own
+            // pet merchant was captured on 2026-09-28 streaming a different,
+            // silver shelf, so it has its own kind below.
+            ("Athens_089", 5227u) =>
                 CapitalNpcServiceKind.PetMerchant,
-            ("Sparta_034", 44345u) or ("Athens_036", 5175u) or
+            // The newbie maps' skill and props vendors. Sparta's city actors used
+            // to share these kinds; the 2026-09-28 capture shows they stream their
+            // own, smaller shelves, so they now have their own kinds below and
+            // these two arms keep only the Athens and newbie endpoints.
+            ("Athens_036", 5175u) or
             ("Sparta_Newbie_004", 46565u) or
             // The capture places the Athens skill vendor on npc 5285 on map 2.
             // It used to be keyed by the published ini id 54453, which
             // CapturedNpcPlacementPolicy overwrites, so the shop never answered.
             ("Athens_Newbie_004", 5285u) =>
                 CapitalNpcServiceKind.SkillVendor,
-            ("Sparta_036", 5033u) or ("Athens_021", 5161u) =>
+            ("Athens_021", 5161u) =>
                 CapitalNpcServiceKind.PropsVendor,
             ("Sparta_077", 5074u) or ("Athens_077", 5215u) =>
                 CapitalNpcServiceKind.PointExchanger,
@@ -213,6 +235,32 @@ internal static class CapitalNpcServiceProtocol
             ("Lelantine_Farm_004", 5616u) or
             ("Lelantine_Farm_007", 5621u) =>
                 CapitalNpcServiceKind.LelantineFarmQuartermaster,
+            // The Sparta merchant quarter, captured 2026-09-28 (session
+            // c202c633). Map 0 is published from the capture already, so
+            // CapturedNpcPlacementPolicy leaves its rows alone and the id the
+            // client echoes back is the one npc_spawn_definitions carries -
+            // which is why these arms use the published ids (Sparta_028 is
+            // 42888, not the reference's own 5026) and not the capture's.
+            ("Sparta_028", 42_888u) or ("Sparta_096", 5_093u) =>
+                CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant,
+            ("Sparta_029", 5_026u) or ("Sparta_107", 5_104u) =>
+                CapitalNpcServiceKind.SpartaScholarEquipmentMerchant,
+            // Sparta_034 and Sparta_036 used to read as the newbie maps' skill
+            // and props vendors; the capture shows the city actors stream their
+            // own, smaller shelves, so they keep their own kinds now. The
+            // Athens and newbie endpoints keep SkillVendor/PropsVendor.
+            ("Sparta_034", 44_345u) or ("Sparta_099", 5_096u) =>
+                CapitalNpcServiceKind.SpartaSkillMerchant,
+            ("Sparta_037", 5_034u) =>
+                CapitalNpcServiceKind.SpartaArmorMerchant,
+            ("Sparta_038", 5_035u) =>
+                CapitalNpcServiceKind.SpartaJewelryMerchant,
+            ("Sparta_036", 5_033u) =>
+                CapitalNpcServiceKind.SpartaPropsMerchant,
+            // The Athens pet merchant keeps the older, larger shelf; the Sparta
+            // one is the silver shelf the capture streamed from npc 5086.
+            ("Sparta_089", 5_086u) =>
+                CapitalNpcServiceKind.SpartaPetMerchant,
             _ => null
         };
 
@@ -280,14 +328,14 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.AthensForgingRecipeVendor or
             CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
             CapitalNpcServiceKind.AthensScholarshipRecipeVendor or
-            CapitalNpcServiceKind.LelantineFarmQuartermaster;
-
-    public static bool IsSuppressedSpawn(NpcSpawnDefinition npc) =>
-        (npc.NpcKey, npc.InteractionId) is
-            ("Sparta_028", 42888u) or
-            ("Sparta_029", 5026u) or
-            ("Sparta_037", 5034u) or
-            ("Sparta_038", 5035u);
+            CapitalNpcServiceKind.LelantineFarmQuartermaster or
+            CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaScholarEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaSkillMerchant or
+            CapitalNpcServiceKind.SpartaArmorMerchant or
+            CapitalNpcServiceKind.SpartaJewelryMerchant or
+            CapitalNpcServiceKind.SpartaPropsMerchant or
+            CapitalNpcServiceKind.SpartaPetMerchant;
 
     public static NpcSpawnDefinition ApplyCapturedSpawnCompatibility(
         NpcSpawnDefinition npc) =>
@@ -499,6 +547,22 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
             CapitalNpcServiceKind.AthensScholarshipRecipeVendor =>
                 CapitalNpcShopCurrency.Silver,
+            // The Sparta merchant quarter captured on 2026-09-28. The user's
+            // requirement for this port is that every item on these shelves is
+            // bought with silver, which is also the price the capture carries:
+            // each equipment listing costs the item's own silver price in the
+            // client's ItemBaseAttribute.xml. The captured frames' currency byte
+            // (0x04 on seven of them) is rewritten to the client's silver code
+            // when the catalogue is loaded, so the client draws the silver
+            // balance and the purchase charges the same wallet.
+            CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaScholarEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaSkillMerchant or
+            CapitalNpcServiceKind.SpartaArmorMerchant or
+            CapitalNpcServiceKind.SpartaJewelryMerchant or
+            CapitalNpcServiceKind.SpartaPropsMerchant or
+            CapitalNpcServiceKind.SpartaPetMerchant =>
+                CapitalNpcShopCurrency.Silver,
             _ => default
         };
         return service is
@@ -521,7 +585,14 @@ internal static class CapitalNpcServiceProtocol
             CapitalNpcServiceKind.AthensForgingRecipeVendor or
             CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
             CapitalNpcServiceKind.AthensScholarshipRecipeVendor or
-            CapitalNpcServiceKind.LelantineFarmQuartermaster;
+            CapitalNpcServiceKind.LelantineFarmQuartermaster or
+            CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaScholarEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaSkillMerchant or
+            CapitalNpcServiceKind.SpartaArmorMerchant or
+            CapitalNpcServiceKind.SpartaJewelryMerchant or
+            CapitalNpcServiceKind.SpartaPropsMerchant or
+            CapitalNpcServiceKind.SpartaPetMerchant;
     }
 
     public static bool TryGetShopCurrency(

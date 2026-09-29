@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Godswar.Server.Application.World.Content;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Networking;
 using Godswar.Server.Packets;
@@ -490,18 +491,29 @@ internal sealed partial class GameClientHandler
         Console.WriteLine(
             $"[quest] hand-in character={_character.Name} quest={rewarded.QuestId}");
 
+        // The GM tool owns a quest's payout when it has a row for it; otherwise
+        // the quest's own captured values stand. The override is read once here,
+        // so a hand-in cannot pay half from each source.
+        var payout = QuestRewardContentCatalog.Current.Resolve(
+            rewarded.QuestId,
+            new QuestRewardPayout(
+                rewarded.Experience,
+                rewarded.TalentPoints,
+                rewarded.Silver,
+                rewarded.Gold));
+
         // The durable quest experience appraisal scales this hand-in's
         // experience. Monster rewards keep their own multiplier path: the
         // appraisal is quest-only, which is what the client's own SM_L0_06 text
         // promises ("完成任务时可额外获得10%的经验").
         var rewardExperience = await ScaleQuestRewardExperienceAsync(
-            rewarded.Experience,
+            payout.Experience,
             cancellationToken);
         var progression = await _store.ApplyMonsterKillRewardAsync(
             _account?.Id ?? 0,
             _character.Id,
             rewardExperience,
-            rewarded.TalentPoints,
+            payout.TalentPoints,
             cancellationToken);
         var levelUps = progression?.LevelUps ?? [];
         if (progression is not null)
@@ -520,8 +532,8 @@ internal sealed partial class GameClientHandler
             var wallet = await _store.GrantQuestCurrencyAsync(
                 _account?.Id ?? 0,
                 _character.Id,
-                rewarded.Silver,
-                rewarded.Gold,
+                payout.Silver,
+                payout.Gold,
                 cancellationToken);
             if (wallet is not null)
             {
@@ -615,6 +627,13 @@ internal sealed partial class GameClientHandler
                 _session,
                 "QuestHandInLevelUpWorld");
         }
+
+        // The client pays the reward slot it picked itself and announces the item
+        // on opcode 10056 right after this acknowledgement, so the promise the
+        // answer carries has to be remembered before it is sent: that is what the
+        // announcement is checked against, and what turns the client's own copy
+        // into a durable item the next relog still shows.
+        OfferQuestRewardItems(rewarded.QuestId);
 
         await _session.SendAsync(
             PacketBuilder.QuestHandInAck(
@@ -848,9 +867,7 @@ internal sealed partial class GameClientHandler
             // published id would point the client at an object that is not there.
             var effectiveNpcs = CapturedNpcPlacementPolicy.ApplyToMap(
                 [.. mapContent.Npcs
-                    .Select(CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility)
-                    .Where(static npc =>
-                        !CapitalNpcServiceProtocol.IsSuppressedSpawn(npc))]);
+                    .Select(CapitalNpcServiceProtocol.ApplyCapturedSpawnCompatibility)]);
             foreach (var npc in effectiveNpcs)
             {
                 if (string.Equals(npc.NpcKey, npcKey, StringComparison.Ordinal))

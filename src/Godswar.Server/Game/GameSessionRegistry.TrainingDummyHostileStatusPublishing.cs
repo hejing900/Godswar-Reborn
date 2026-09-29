@@ -55,7 +55,13 @@ internal sealed partial class GameSessionRegistry
             hostileOverlay);
         snapshotWithoutMedusa = hostile;
         medusaOverlay = CaptureMedusaClientStatusOverlay(context, now);
-        return MedusaClientStatusProjection.Merge(hostile, medusaOverlay);
+        // Wonderland boss debuffs are authoritative encounter effects rather
+        // than runtime statuses, so they are layered onto every snapshot that
+        // this producer emits and cleared again when the run ends.
+        return MergeWonderlandStatusOverlay(
+            context,
+            MedusaClientStatusProjection.Merge(hostile, medusaOverlay),
+            now);
     }
 
     internal async Task<bool>

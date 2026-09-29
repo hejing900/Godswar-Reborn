@@ -83,9 +83,14 @@ internal sealed class ServerRuntimeBootstrapContext
             PostgresMonsterLootContentSnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString,
                 cancellationToken);
+        var questRewards = await
+            PostgresQuestRewardContentSnapshotReader.LoadAsync(
+                options.Storage.PostgresConnectionString,
+                cancellationToken);
         MedusaRewardPolicyCatalog.Install(medusaRewards);
         MedusaMonsterContentCatalog.Install(medusaMonsters);
         MonsterLootContentCatalog.Install(monsterLoot);
+        QuestRewardContentCatalog.Install(questRewards);
         return new(
             options,
             world,

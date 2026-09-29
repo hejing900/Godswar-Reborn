@@ -57,8 +57,8 @@ internal sealed partial class GameSessionRegistry
                 PacketBuilder.PhysicalDamage(source.ObjectId, source.X, source.Y, source.Z,
                     objectId, applied, 0, (byte)CombatHitOutcome.Normal)
             };
-            if (killed) packets.Add(PacketBuilder.PlayerDeath(objectId,
-                target.Character.PositionX, 0, target.Character.PositionZ, target.MapId));
+            if (killed) packets.Add(PlayerDeathFrame(runtime, objectId,
+                target.Character.PositionX, target.Character.PositionZ, target.MapId));
             if (!viewer.Session.TryAdmitExactBatch(packets, out var sent)) viewer.Session.Disconnect();
             state.Notifications.Enqueue(sent);
         }

@@ -175,6 +175,151 @@ internal static class SelfTest
                     failures++;
                 }
 
+                // 「拾取后绑定」三态回环：true / false / NULL 都要原样写回，
+                // NULL 绝不能被落成 false（那会把「跟随物品模板」改成「可交易」）
+                if (!await store.HasBoundOnPickupColumnAsync())
+                {
+                    Line("[跳过] 数据库的 monster_loot_rules 还没有 bound_on_pickup 列" +
+                         "（服务端迁移 20260927_213 未应用），跳过「拾取后绑定」回环。");
+                    // 列不在时也不许静默按默认值写：选了「可交易 / 拾取绑定」必须被拦住
+                    try
+                    {
+                        await store.SaveLootAsync(
+                            probeKey,
+                            1,
+                            true,
+                            [
+                                new LootRuleInput(
+                                    0,
+                                    probeItemId,
+                                    2500,
+                                    1,
+                                    1,
+                                    true,
+                                    true)
+                            ]);
+                        Line("[失败] 库里还没有 bound_on_pickup 列，却把「拾取绑定」写进去了。");
+                        failures++;
+                    }
+                    catch (LootValidationException ex)
+                    {
+                        Line($"[通过] 缺列时写「拾取绑定」被拦住：{ex.Message}");
+                    }
+                }
+                else
+                {
+                    foreach (var (bound, label) in new (bool?, string)[]
+                             {
+                                 (true, "拾取绑定"),
+                                 (false, "可交易"),
+                                 (null, "跟随物品(默认)")
+                             })
+                    {
+                        await store.SaveLootAsync(
+                            probeKey,
+                            1,
+                            true,
+                            [
+                                new LootRuleInput(
+                                    0,
+                                    probeItemId,
+                                    2500,
+                                    1,
+                                    1,
+                                    true,
+                                    bound)
+                            ]);
+                        var readBack = (await store.LoadRulesAsync(probeKey))[0]
+                            .BoundOnPickup;
+                        var boundOk = readBack == bound;
+                        Line(boundOk
+                            ? $"[通过] 拾取后 = {label}：" +
+                              $"写入 {DescribeBound(bound)} 读回 {DescribeBound(readBack)}。"
+                            : $"[失败] 拾取后 = {label} 写回不一致：" +
+                              $"期望 {DescribeBound(bound)}，实际 {DescribeBound(readBack)}。");
+                        if (!boundOk)
+                        {
+                            failures++;
+                        }
+                    }
+                }
+
+                // 12 列「物品属性」回环：品质10 / 等级12 / 属性 24 等级5、133、90 → 读回一致 → 还原 NULL
+                if (!await store.HasItemAttributeColumnsAsync())
+                {
+                    Line("[跳过] 数据库的 monster_loot_rules 还没有那 12 列物品属性" +
+                         "（服务端迁移 20260927_214 未应用），跳过掉落物品属性回环。");
+                    // 列不在时也不许静默写：配过属性必须被拦住
+                    try
+                    {
+                        await store.SaveLootAsync(
+                            probeKey,
+                            1,
+                            true,
+                            [
+                                new LootRuleInput(
+                                    0,
+                                    probeItemId,
+                                    2500,
+                                    1,
+                                    1,
+                                    true,
+                                    null,
+                                    ProbeAttributes)
+                            ]);
+                        Line("[失败] 库里还没有那 12 列物品属性，却把属性写进去了。");
+                        failures++;
+                    }
+                    catch (LootValidationException ex)
+                    {
+                        Line($"[通过] 缺列时写物品属性被拦住：{ex.Message}");
+                    }
+                }
+                else
+                {
+                    await store.SaveLootAsync(
+                        probeKey,
+                        1,
+                        true,
+                        [
+                            new LootRuleInput(
+                                0,
+                                probeItemId,
+                                2500,
+                                1,
+                                1,
+                                true,
+                                null,
+                                ProbeAttributes)
+                        ]);
+                    var withAttributes = (await store.LoadRulesAsync(probeKey))[0].Attributes;
+                    var attributesOk = withAttributes == ProbeAttributes;
+                    Line(attributesOk
+                        ? $"[通过] 掉落物品属性写入后读回一致：{withAttributes!.Summary}"
+                        : $"[失败] 掉落物品属性写回不一致：期望 {ProbeAttributes.Summary}，" +
+                          $"实际 {withAttributes?.Summary ?? "NULL"}。");
+                    if (!attributesOk)
+                    {
+                        failures++;
+                    }
+
+                    // 还原成 NULL：不配置就是要回到 NULL，不能留下 0
+                    await store.SaveLootAsync(
+                        probeKey,
+                        1,
+                        true,
+                        [new LootRuleInput(0, probeItemId, 2500, 1, 1, true)]);
+                    var restored = (await store.LoadRulesAsync(probeKey))[0].Attributes;
+                    var restoredOk = restored is { IsEmpty: true };
+                    Line(restoredOk
+                        ? "[通过] 掉落物品属性已还原成不配置（12 列 NULL）。"
+                        : $"[失败] 掉落物品属性没有还原干净：{restored?.Summary ?? "NULL"}。");
+                    if (!restoredOk)
+                    {
+                        failures++;
+                    }
+                }
+
                 try
                 {
                     await store.SaveLootAsync(
@@ -248,6 +393,10 @@ internal static class SelfTest
         failures += problems.Count(static p => p.Severity == "致命");
 
         failures += await CheckFarmAsync(settings, Line);
+
+        failures += await CheckQuestRewardAsync(settings, items, Line);
+
+        failures += CheckQuestCatalogue(settings, Line);
 
         Line();
         Line(failures == 0
@@ -422,6 +571,438 @@ internal static class SelfTest
 
         return failures;
     }
+
+    /// <summary>
+    /// 任务奖励页签的数据层：两张覆盖表在（服务端迁移跑过）时做一次
+    /// 「写入 → 读回 → 删除」回环，目标任务取自本库真实存在的任务 ID；
+    /// 结束时把写进去的行删干净，不留垃圾数据。旧库没有这两张表时只报跳过。
+    /// </summary>
+    /// <summary>
+    /// 「任务奖励」页签的搜索源：客户端自己带的 Quest.xml + Text\Quest\*.dat。
+    /// 客户端目录不存在时跳过（工具在没装客户端的机器上照样能跑其它段落）。
+    /// </summary>
+    private static int CheckQuestCatalogue(LootToolSettings settings, Action<string> line)
+    {
+        var failures = 0;
+        line(string.Empty);
+        line("── 任务目录解析（本次新增） ────────────────────");
+
+        if (string.IsNullOrWhiteSpace(settings.ClientRoot) ||
+            !Directory.Exists(settings.ClientRoot))
+        {
+            line($"[跳过] 客户端目录不可用（{settings.ClientRoot}），跳过任务目录解析。");
+            return failures;
+        }
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var catalog = QuestCatalog.Load(settings.ClientRoot);
+        stopwatch.Stop();
+
+        if (catalog.Error is { Length: > 0 })
+        {
+            line($"[失败] 任务目录解析失败：{catalog.Error}");
+            return 1;
+        }
+
+        line($"[通过] 任务表 {catalog.QuestXmlPath}");
+        line($"[信息] 语言目录 {catalog.Language}｜解析到 {catalog.Quests.Count} 个任务" +
+             $"（标题来自 Text\\Quest\\*.dat 的 {catalog.TitleCount} 条，" +
+             $"其余回落为 LvX 任务ID）｜耗时 {stopwatch.ElapsedMilliseconds} ms");
+
+        var countOk = catalog.Quests.Count > 0;
+        line(countOk
+            ? "[通过] 任务条数 > 0。"
+            : "[失败] 任务表里一条都没解析出来。");
+        if (!countOk)
+        {
+            failures++;
+        }
+
+        var sparta = catalog.Quests.Count(static quest => quest.Faction == 0);
+        var athens = catalog.Quests.Count(static quest => quest.Faction == 1);
+        var unknown = catalog.Quests.Count - sparta - athens;
+        line($"[信息] 阵营分布：斯巴达 {sparta}｜雅典 {athens}｜未标注 {unknown}");
+
+        var levels = catalog.Quests.Select(static quest => quest.MinLevel).ToList();
+        var levelOk = levels.Count > 0 && levels.Min() >= 0 && levels.Max() <= 1000;
+        line(levelOk
+            ? $"[通过] 等级区间合理：{levels.Min()}–{levels.Max()}。"
+            : $"[失败] 等级区间异常：{levels.Min()}–{levels.Max()}。");
+        if (!levelOk)
+        {
+            failures++;
+        }
+
+        // 抽几条逐项校验：ID/等级/阵营/标题都要像样
+        var samples = catalog.Quests
+            .Where(static quest => quest.TitleFromClient)
+            .OrderBy(static _ => Guid.NewGuid())
+            .Take(5)
+            .ToList();
+        if (samples.Count == 0)
+        {
+            line("[失败] 一条标题都没从 Text\\Quest\\*.dat 里读出来（格式变了？）。");
+            failures++;
+        }
+
+        foreach (var quest in samples)
+        {
+            var ok = quest.Id > 0 &&
+                quest.MinLevel >= 0 &&
+                quest.Faction is -1 or 0 or 1 &&
+                quest.Title.Contains("Lv", StringComparison.Ordinal);
+            line(ok
+                ? $"[通过] 抽样 ID={quest.Id} 等级={quest.MinLevel} " +
+                  $"阵营={quest.FactionName} 发布NPC={quest.GiverName} 标题={quest.Title}"
+                : $"[失败] 抽样异常：ID={quest.Id} 等级={quest.MinLevel} " +
+                  $"阵营={quest.Faction} 标题={quest.Title}");
+            if (!ok)
+            {
+                failures++;
+            }
+        }
+
+        // 已知的真实任务：新手任务 518 是斯巴达的 1 级任务（客户端文本 [Lv1]初入斯巴达）
+        var starter = catalog.Quests.FirstOrDefault(static quest => quest.Id == 518);
+        if (starter is null)
+        {
+            line("[信息] 没找到任务 518（这份客户端可能不含新手任务），跳过该抽样。");
+        }
+        else
+        {
+            var starterOk = starter.Faction == 0 && starter.MinLevel == 1;
+            line(starterOk
+                ? $"[通过] 任务 518：等级 {starter.MinLevel}、阵营 {starter.FactionName}、" +
+                  $"标题 {starter.Title}。"
+                : $"[失败] 任务 518 的资料不对：等级 {starter.MinLevel}、" +
+                  $"阵营 {starter.Faction}、标题 {starter.Title}。");
+            if (!starterOk)
+            {
+                failures++;
+            }
+        }
+
+        // 附加属性表（「属性…」弹窗的下拉）：清单来自客户端 ItemAppendAttribute.xml
+        // （真实运行时还会并上服务端 item_attribute_templates），中文名来自 EquipDescription.dat
+        var attributes = ItemAttributeCatalog.Load(settings.ClientRoot, []);
+        var attributesOk = attributes.Attributes.Count > 0;
+        line(attributesOk
+            ? $"[通过] 附加属性表：{attributes.Attributes.Count} 条，其中 " +
+              $"{attributes.ChineseNameCount} 条有中文名（{attributes.ClientTextPath}）"
+            : $"[失败] 没读到附加属性表：{attributes.Error}");
+        if (!attributesOk)
+        {
+            failures++;
+        }
+        else
+        {
+            foreach (var sample in attributes.Attributes.Take(2))
+            {
+                line($"[信息] 属性 {sample.Id} → {sample.DisplayName}" +
+                     $"（{sample.NameKey}，最高 {sample.MaxLevel} 级" +
+                     $"{(sample.Percent ? "，百分比" : string.Empty)}）");
+            }
+
+            if (attributes.ChineseNameCount == 0)
+            {
+                line("[警告] 属性中文名一条都没读到（" + attributes.ClientTextPath +
+                     "），下拉里只能显示英文标签。");
+            }
+        }
+
+        return failures;
+    }
+
+    private static async Task<int> CheckQuestRewardAsync(
+        LootToolSettings settings,
+        IReadOnlyList<ItemRow> items,
+        Action<string> line)
+    {
+        var failures = 0;
+        line(string.Empty);
+        line("── 任务奖励（本次新增） ────────────────────────");
+
+        await using var store = new QuestRewardStore();
+        try
+        {
+            store.Connect(settings.BuildConnectionString());
+        }
+        catch (Exception ex)
+        {
+            line($"[失败] 任务奖励页无法连接数据库：{ex.Message}");
+            return 1;
+        }
+
+        if (!await store.HasQuestRewardSchemaAsync())
+        {
+            // 服务端迁移可能还没跑：这是旧库的正常状态，跳过而不是失败
+            line($"[跳过] {QuestRewardStore.MissingSchemaMessage(store.DatabaseName)}");
+            return 0;
+        }
+
+        line("[通过] 任务奖励 schema 存在（quest_reward_slots + quest_reward_values）。");
+
+        var overridden = await store.LoadQuestRowsAsync();
+        line(overridden.Count == 0
+            ? "[信息] 当前没有任何任务被覆盖（两张表都是空的）。"
+            : $"[信息] 已覆盖任务 {overridden.Count} 个：" + string.Join(
+                "、",
+                overridden.Select(static row => $"{row.QuestId}（{row.Status}）")));
+
+        // 回环目标：本库真实存在的任务（character_quests / quest_monster_references），
+        // 取不到才退回抓包奖励记录里的新手任务 518/519/520（服务端 StarterQuestRewardRecords）。
+        var probeQuestId = await store.FindProbeQuestIdAsync(
+            overridden.Select(static row => row.QuestId).ToHashSet(),
+            [518, 519, 520]);
+        if (probeQuestId == 0)
+        {
+            line("[跳过] 找不到既真实存在、又没有覆盖的任务 ID，跳过回环（不动现有 GM 数据）。");
+            return failures;
+        }
+
+        if (items.Count < 2)
+        {
+            line($"[跳过] 物品目录只有 {items.Count} 条，无法构造两个槽位，跳过回环。");
+            return failures;
+        }
+
+        var firstItemId = items.Any(static item => item.Id == 4001)
+            ? 4001
+            : items.Min(static item => item.Id);
+        var secondItemId = items.First(item => item.Id != firstItemId).Id;
+        var firstSlot = (short)0;
+        var secondSlot = (short)3;
+        var probeValues = new QuestRewardValues(1234, 5, 678, 9);
+        line($"[信息] 回环目标任务：{probeQuestId}（当前未覆盖，测完删干净）；" +
+            $"物品用 {firstItemId} / {secondItemId}。");
+
+        // 校验必须是写库前拦截，所以这里顺手验一遍错误输入不会落库
+        async Task ExpectRejectedAsync(
+            IReadOnlyList<QuestRewardSlotInput> badSlots,
+            bool overrideValues,
+            QuestRewardValues badValues,
+            string what)
+        {
+            try
+            {
+                await store.SaveAsync(
+                    probeQuestId,
+                    badSlots,
+                    overrideValues,
+                    badValues);
+                line($"[失败] {what} 竟然通过了校验。");
+                failures++;
+            }
+            catch (QuestRewardToolException ex)
+            {
+                line($"[通过] {what} 被校验拦截：{ex.Message}");
+            }
+        }
+
+        try
+        {
+            await store.SaveAsync(
+                probeQuestId,
+                [
+                    new QuestRewardSlotInput(firstSlot, firstItemId),
+                    new QuestRewardSlotInput(secondSlot, secondItemId)
+                ],
+                overrideValues: true,
+                probeValues);
+            var slots = await store.LoadSlotsAsync(probeQuestId);
+            var values = await store.LoadValuesAsync(probeQuestId);
+            // 读回来的行永远带一个（可能是空的）属性记录，所以比较时也要带上
+            var roundTripOk = slots.Count == 2 &&
+                slots[0] == new QuestRewardSlot(firstSlot, firstItemId, new ItemAttributeValues()) &&
+                slots[1] == new QuestRewardSlot(secondSlot, secondItemId, new ItemAttributeValues()) &&
+                values == probeValues;
+            line(roundTripOk
+                ? $"[通过] 写入后读回一致：槽位 {slots[0].SlotIndex}/{slots[1].SlotIndex} " +
+                  $"物品 {slots[0].ItemId}/{slots[1].ItemId}，" +
+                  $"数值 经验 {values!.Experience}/TP {values.TalentPoints}/" +
+                  $"银币 {values.Silver}/金币 {values.Gold}"
+                : $"[失败] 写入后读回不一致：槽位 {slots.Count} 个，" +
+                  $"数值 {(values is null ? "无" : "有")}。");
+            if (!roundTripOk)
+            {
+                failures++;
+            }
+
+            var listed = (await store.LoadQuestRowsAsync())
+                .FirstOrDefault(row => row.QuestId == probeQuestId);
+            var listedOk = listed is { SlotCount: 2, HasValues: true };
+            line(listedOk
+                ? $"[通过] 并集列表认出了刚写入的任务：{probeQuestId} → {listed!.Status}。"
+                : $"[失败] 并集列表没有正确反映 {probeQuestId}（{(listed is null ? "没出现" : listed.Status)}）。");
+            if (!listedOk)
+            {
+                failures++;
+            }
+
+            await store.SaveAsync(
+                probeQuestId,
+                [new QuestRewardSlotInput((short)1, secondItemId)],
+                overrideValues: false,
+                new QuestRewardValues(0, 0, 0, 0));
+            var replaced = await store.LoadSlotsAsync(probeQuestId);
+            var uncovered = await store.LoadValuesAsync(probeQuestId);
+            var replaceOk = replaced.Count == 1 &&
+                replaced[0] == new QuestRewardSlot(1, secondItemId, new ItemAttributeValues()) &&
+                uncovered is null;
+            line(replaceOk
+                ? "[通过] 槽位是全量替换：改成只留槽位 1 后，原来的槽位 0/3 已删除；" +
+                  "取消「覆盖数值」后 quest_reward_values 的行也没了（恢复内置）。"
+                : $"[失败] 全量替换语义不对：剩余槽位 {replaced.Count} 个，" +
+                  $"数值行 {(uncovered is null ? "已删除" : "仍在")}。");
+            if (!replaceOk)
+            {
+                failures++;
+            }
+
+            await store.SaveAsync(
+                probeQuestId,
+                [],
+                overrideValues: true,
+                probeValues);
+            var valuesOnly = (await store.LoadQuestRowsAsync())
+                .FirstOrDefault(row => row.QuestId == probeQuestId);
+            var valuesOnlyOk = valuesOnly is { SlotCount: 0, HasValues: true };
+            line(valuesOnlyOk
+                ? $"[通过] 只覆盖数值、不覆盖物品也能保存：{valuesOnly!.Status}。"
+                : $"[失败] 只覆盖数值的结果不对（{(valuesOnly is null ? "没出现" : valuesOnly.Status)}）。");
+            if (!valuesOnlyOk)
+            {
+                failures++;
+            }
+
+            // 12 列「物品属性」回环（任务奖励这一侧）
+            if (!await store.HasItemAttributeColumnsAsync())
+            {
+                line("[跳过] 数据库的 quest_reward_slots 还没有那 12 列物品属性" +
+                     "（服务端迁移 20260927_214 未应用），跳过奖励物品属性回环。");
+                try
+                {
+                    await store.SaveAsync(
+                        probeQuestId,
+                        [new QuestRewardSlotInput(firstSlot, firstItemId, ProbeAttributes)],
+                        overrideValues: false,
+                        new QuestRewardValues(0, 0, 0, 0));
+                    line("[失败] 库里还没有那 12 列物品属性，却把奖励物品属性写进去了。");
+                    failures++;
+                }
+                catch (QuestRewardToolException ex)
+                {
+                    line($"[通过] 缺列时写奖励物品属性被拦住：{ex.Message}");
+                }
+            }
+            else
+            {
+                await store.SaveAsync(
+                    probeQuestId,
+                    [new QuestRewardSlotInput(firstSlot, firstItemId, ProbeAttributes)],
+                    overrideValues: false,
+                    new QuestRewardValues(0, 0, 0, 0));
+                var readSlots = await store.LoadSlotsAsync(probeQuestId);
+                var withAttributes = readSlots
+                    .FirstOrDefault(slot => slot.SlotIndex == firstSlot)
+                    ?.Attributes;
+                var attributesOk = withAttributes == ProbeAttributes;
+                line(attributesOk
+                    ? $"[通过] 奖励物品属性写入后读回一致：{withAttributes!.Summary}"
+                    : $"[失败] 奖励物品属性写回不一致：期望 {ProbeAttributes.Summary}，" +
+                      $"实际 {withAttributes?.Summary ?? "NULL"}。");
+                if (!attributesOk)
+                {
+                    failures++;
+                }
+
+                // 还原成 NULL
+                await store.SaveAsync(
+                    probeQuestId,
+                    [new QuestRewardSlotInput(firstSlot, firstItemId)],
+                    overrideValues: false,
+                    new QuestRewardValues(0, 0, 0, 0));
+                var restored = (await store.LoadSlotsAsync(probeQuestId))
+                    .FirstOrDefault(slot => slot.SlotIndex == firstSlot)
+                    ?.Attributes;
+                var restoredOk = restored is { IsEmpty: true };
+                line(restoredOk
+                    ? "[通过] 奖励物品属性已还原成不配置（12 列 NULL）。"
+                    : $"[失败] 奖励物品属性没有还原干净：{restored?.Summary ?? "NULL"}。");
+                if (!restoredOk)
+                {
+                    failures++;
+                }
+            }
+
+            await ExpectRejectedAsync(
+                [new QuestRewardSlotInput((short)8, firstItemId)],
+                overrideValues: false,
+                new QuestRewardValues(0, 0, 0, 0),
+                "槽位 8 超出 0-7");
+            await ExpectRejectedAsync(
+                [new QuestRewardSlotInput((short)0, 0)],
+                overrideValues: false,
+                new QuestRewardValues(0, 0, 0, 0),
+                "勾选的槽位没有物品");
+            await ExpectRejectedAsync(
+                [new QuestRewardSlotInput(firstSlot, int.MaxValue)],
+                overrideValues: false,
+                new QuestRewardValues(0, 0, 0, 0),
+                "item_templates 里不存在的物品");
+            await ExpectRejectedAsync(
+                [],
+                overrideValues: true,
+                new QuestRewardValues(-1, 0, 0, 0),
+                "负数经验值");
+        }
+        finally
+        {
+            // 不管中间哪一步炸了，写进去的行都要删干净
+            try
+            {
+                await store.DeleteOverridesAsync(probeQuestId);
+                var leftSlots = await store.LoadSlotsAsync(probeQuestId);
+                var leftValues = await store.LoadValuesAsync(probeQuestId);
+                var clean = leftSlots.Count == 0 && leftValues is null;
+                line(clean
+                    ? $"[通过] 已清理自测写入的行，任务 {probeQuestId} 回到未覆盖（沿用内置）。"
+                    : $"[失败] 任务 {probeQuestId} 还有残留：槽位 {leftSlots.Count} 个，" +
+                      $"数值行 {(leftValues is null ? "无" : "有")}。");
+                if (!clean)
+                {
+                    failures++;
+                }
+            }
+            catch (Exception ex)
+            {
+                line($"[失败] 清理自测写入失败：{ex.Message}");
+                failures++;
+            }
+        }
+
+        return failures;
+    }
+
+    /// <summary>三态在报告里怎么念：NULL 就是「NULL（跟随物品模板）」。</summary>
+    private static string DescribeBound(bool? boundOnPickup) => boundOnPickup switch
+    {
+        true => "true（拾取绑定）",
+        false => "false（可交易）",
+        null => "NULL（跟随物品模板）"
+    };
+
+    /// <summary>
+    /// 自测用的物品属性：品质10 / 等级12 / 属性 24 等级5、133（不配等级）、90（不配等级）。
+    /// 摘要正好是「品质10 等级12 属性:24/5、133/-、90/-」。
+    /// </summary>
+    private static ItemAttributeValues ProbeAttributes { get; } = new(
+        Quality: 10,
+        Grade: 12,
+        Attribute1: 24,
+        AttributeLevel1: 5,
+        Attribute2: 133,
+        Attribute3: 90);
 
     private static int Finish(StringBuilder report, int exitCode)
     {

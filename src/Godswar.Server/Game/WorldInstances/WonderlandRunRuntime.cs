@@ -11,7 +11,7 @@ internal sealed class WonderlandRunRuntime
     private readonly WorldInstanceId _instanceId;
     private readonly DateTimeOffset _startedAt;
     private readonly DateTimeOffset _deadline;
-    private readonly ImmutableArray<WonderlandParticipant> _party;
+    private ImmutableArray<WonderlandParticipant> _party;
     private readonly byte _partyCamp;
     private readonly ImmutableArray<WonderlandSpawnPolicy>[] _plans;
     private readonly HashSet<WonderlandMonsterIdentity> _bound = [];
@@ -111,6 +111,37 @@ internal sealed class WonderlandRunRuntime
     public WonderlandSnapshot Advance(DateTimeOffset now)
     {
         lock (_gate) { AdvanceCore(now); return SnapshotCore(); }
+    }
+
+    /// <summary>
+    /// Adds a member who confirmed their entry after the run was sealed, so the
+    /// run's own roster - island travel, allied combat presentation and area
+    /// targeting - covers them.
+    /// </summary>
+    /// <remarks>
+    /// The monster plan is deliberately left exactly as it was built from the
+    /// original roster: re-planning it would change live monster counts and
+    /// health mid-run. The late member fights the monsters that are already
+    /// published.
+    /// </remarks>
+    public bool TryAddLateParticipant(
+        WonderlandParticipant participant,
+        out WonderlandSnapshot snapshot)
+    {
+        lock (_gate)
+        {
+            snapshot = SnapshotCore();
+            if (_state != WonderlandRunState.Active ||
+                participant.Camp != _partyCamp ||
+                _party.Length >= 5 ||
+                _party.Any(member => member.CharacterId == participant.CharacterId))
+            {
+                return false;
+            }
+            _party = _party.Add(participant);
+            snapshot = SnapshotCore();
+            return true;
+        }
     }
 
     public WonderlandSnapshot Cancel(DateTimeOffset now)

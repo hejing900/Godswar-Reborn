@@ -130,6 +130,20 @@ internal sealed partial class GameClientHandler
 
         ReviveTrace.Log("REVIVE-ACCEPT");
 
+        // A Wonderland death revives inside the run at the entrance island. The
+        // generic path below would restore the character's saved entry state,
+        // which is the capital, and tear the run down with it.
+        if (await TryHandleWonderlandReviveAsync(cancellationToken))
+        {
+            return;
+        }
+
+        // 港湾遇袭 revives inside its own run for the same reason.
+        if (await TryHandleHarborAttackReviveAsync(cancellationToken))
+        {
+            return;
+        }
+
         if (!_registry.TryGetPlayerLifeRevision(
                 _session,
                 out _))

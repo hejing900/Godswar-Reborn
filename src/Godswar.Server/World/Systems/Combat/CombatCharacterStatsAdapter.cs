@@ -70,6 +70,15 @@ internal static class CombatCharacterStatsAdapter
         in ClientStatusAggregate modifiers) =>
         attacker with
         {
+            // A Wonderland blessed bird scales both attack channels: its hit
+            // grants the encounter's physical and magical attack multiplier.
+            // Every other producer leaves the multiplier at one.
+            PhysicalAttack = SaturatingMultiply(
+                attacker.PhysicalAttack,
+                modifiers.AttackMultiplier),
+            MagicAttack = SaturatingMultiply(
+                attacker.MagicAttack,
+                modifiers.AttackMultiplier),
             Hit = SaturatingAdd(attacker.Hit, modifiers.Hit),
             Critical = SaturatingAdd(
                 attacker.Critical,
@@ -136,4 +145,13 @@ internal static class CombatCharacterStatsAdapter
 
     private static int SaturatingAdd(int left, int right) =>
         (int)Math.Clamp((long)left + right, int.MinValue, int.MaxValue);
+
+    /// <summary>
+    /// Applies a whole-number attack multiplier without overflowing. One leaves
+    /// the rating untouched, so an absent multiplier never scales an attack.
+    /// </summary>
+    public static int SaturatingMultiply(int value, int multiplier) =>
+        multiplier <= 1
+            ? value
+            : (int)Math.Clamp((long)value * multiplier, int.MinValue, int.MaxValue);
 }

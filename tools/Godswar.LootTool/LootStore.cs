@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Godswar.LootTool;
 
@@ -9,6 +10,11 @@ namespace Godswar.LootTool;
 /// </summary>
 internal sealed class LootStore : IAsyncDisposable
 {
+    /// <summary>服务端迁移 20260927_213 加的三态列。</summary>
+    private const string BoundOnPickupColumn = "bound_on_pickup";
+
+    private const string UndefinedTableSqlState = "42P01";
+
     private NpgsqlDataSource? _dataSource;
 
     private NpgsqlDataSource Source =>
@@ -126,9 +132,27 @@ internal sealed class LootStore : IAsyncDisposable
         string templateKey,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
-            SELECT loot_index, item_id, chance_basis_points,
-                   minimum_quantity, maximum_quantity, enabled
+        // 拾取后绑定与「物品属性」那 12 列都是服务端迁移加的：旧库没有它们时按 NULL 读，
+        // 界面对应的列/按钮会隐藏（见 MainForm），而不是假装它们是 0/false。
+        var columns = await LoadOptionalColumnsAsync(cancellationToken);
+        var hasBoundOnPickup = columns.Contains(BoundOnPickupColumn);
+        var hasAttributes = ItemAttributeColumns.HasAll(columns);
+
+        var select = new List<string>
+        {
+            "loot_index",
+            "item_id",
+            "chance_basis_points",
+            "minimum_quantity",
+            "maximum_quantity",
+            "enabled",
+            hasBoundOnPickup ? BoundOnPickupColumn : "NULL::boolean"
+        };
+        select.AddRange(ItemAttributeColumns.Names.Select(
+            column => hasAttributes ? column : "NULL::smallint"));
+
+        var sql = $"""
+            SELECT {string.Join(", ", select)}
               FROM public.monster_loot_rules
              WHERE template_key = @templateKey
              ORDER BY loot_index;
@@ -145,16 +169,155 @@ internal sealed class LootStore : IAsyncDisposable
                 reader.GetInt32(2),
                 reader.GetInt16(3),
                 reader.GetInt16(4),
-                reader.GetBoolean(5)));
+                reader.GetBoolean(5),
+                reader.IsDBNull(6) ? null : reader.GetBoolean(6),
+                ItemAttributeColumns.Read(reader, 7)));
         }
 
         return rules;
     }
 
     /// <summary>
+    /// <c>monster_loot_rules.bound_on_pickup</c> 在不在（服务端迁移
+    /// <c>20260927_213_monster_loot_bind_on_pickup</c> 加的）。
+    /// 旧库没有这一列时界面把「拾取后」列隐藏，保存也不会去碰它。
+    /// </summary>
+    public async Task<bool> HasBoundOnPickupColumnAsync(
+        CancellationToken cancellationToken = default) =>
+        (await LoadOptionalColumnsAsync(cancellationToken)).Contains(BoundOnPickupColumn);
+
+    /// <summary>
+    /// 那 12 列「物品属性」在不在（服务端迁移
+    /// <c>20260927_214</c> 加的）。缺任何一列就整体当作没有：界面隐藏「属性…」，
+    /// 保存时配过属性的规则会被拦住，不静默按默认值写。
+    /// </summary>
+    public async Task<bool> HasItemAttributeColumnsAsync(
+        CancellationToken cancellationToken = default) =>
+        ItemAttributeColumns.HasAll(await LoadOptionalColumnsAsync(cancellationToken));
+
+    /// <summary>服务端认定的附加属性清单（id / 名称键 / 最高等级），给属性下拉用。</summary>
+    public async Task<List<ItemAttributeTemplateRow>> LoadItemAttributeTemplatesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT id, name_key, max_level, percent
+              FROM public.item_attribute_templates
+             ORDER BY id;
+            """;
+        try
+        {
+            await using var command = Source.CreateCommand(sql);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var rows = new List<ItemAttributeTemplateRow>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add(new ItemAttributeTemplateRow(
+                    reader.GetInt32(0),
+                    reader.GetString(1),
+                    reader.GetInt16(2),
+                    reader.GetBoolean(3)));
+            }
+
+            return rows;
+        }
+        catch (PostgresException ex) when (ex.SqlState == UndefinedTableSqlState)
+        {
+            // 旧库还没建这张表：属性名退化到客户端 XML，不挡着用
+            return [];
+        }
+    }
+
+    private async Task<HashSet<string>> LoadOptionalColumnsAsync(
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT column_name
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = 'monster_loot_rules';
+            """;
+        await using var command = Source.CreateCommand(sql);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var columns = new HashSet<string>(StringComparer.Ordinal);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(0));
+        }
+
+        return columns;
+    }
+
+    /// <summary>
+    /// 按库里实际有哪些可选列拼 upsert：旧库少列时那条 SQL 里就不出现它，
+    /// 免得拿列名去撞「列不存在」。
+    /// </summary>
+    private static string BuildRuleUpsertSql(bool hasBoundOnPickup, bool hasAttributes)
+    {
+        var columns = new List<string>
+        {
+            "template_key",
+            "loot_index",
+            "item_id",
+            "chance_basis_points",
+            "minimum_quantity",
+            "maximum_quantity",
+            "enabled"
+        };
+        var values = new List<string>
+        {
+            "@templateKey",
+            "@lootIndex",
+            "@itemId",
+            "@chance",
+            "@minimum",
+            "@maximum",
+            "@enabled"
+        };
+        var updates = new List<string>
+        {
+            "item_id = EXCLUDED.item_id",
+            "chance_basis_points = EXCLUDED.chance_basis_points",
+            "minimum_quantity = EXCLUDED.minimum_quantity",
+            "maximum_quantity = EXCLUDED.maximum_quantity",
+            "enabled = EXCLUDED.enabled"
+        };
+        if (hasBoundOnPickup)
+        {
+            columns.Add(BoundOnPickupColumn);
+            values.Add("@bound");
+            updates.Add($"{BoundOnPickupColumn} = EXCLUDED.{BoundOnPickupColumn}");
+        }
+
+        if (hasAttributes)
+        {
+            foreach (var column in ItemAttributeColumns.Names)
+            {
+                columns.Add(column);
+                values.Add("@" + column);
+                updates.Add($"{column} = EXCLUDED.{column}");
+            }
+        }
+
+        columns.Add("updated_at");
+        values.Add("now()");
+        return $"""
+            INSERT INTO public.monster_loot_rules ({string.Join(", ", columns)})
+            VALUES ({string.Join(", ", values)})
+            ON CONFLICT (template_key, loot_index) DO UPDATE
+               SET {string.Join(",\n                   ", updates)},
+                   updated_at = now();
+            """;
+    }
+
+    /// <summary>
     /// Writes a header plus its complete rule set in one transaction. Rules that
     /// vanished from the grid are deleted; everything else is upserted.
     /// </summary>
+    /// <remarks>
+    /// 「拾取后绑定」是三态：NULL 必须原样写成 NULL（跟随物品模板），不能落成 false。
+    /// 12 列「物品属性」同理，NULL = 不配置。旧库还没有这些列时，只要界面上没配过就不写
+    /// （写 NULL 等于什么都不改），一旦配过就直接报错，绝不静默按默认值写。
+    /// </remarks>
     public async Task SaveLootAsync(
         string templateKey,
         short maximumDrops,
@@ -163,6 +326,27 @@ internal sealed class LootStore : IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         ValidateLoot(templateKey, maximumDrops, rules);
+
+        var columns = await LoadOptionalColumnsAsync(cancellationToken);
+        var hasBoundOnPickup = columns.Contains(BoundOnPickupColumn);
+        var hasAttributes = ItemAttributeColumns.HasAll(columns);
+        if (!hasBoundOnPickup &&
+            rules.Any(static rule => rule.BoundOnPickup is not null))
+        {
+            throw new LootValidationException(
+                "数据库的 monster_loot_rules 还没有 bound_on_pickup 列" +
+                "（服务端迁移 20260927_213 未应用），写不了「可交易 / 拾取绑定」。" +
+                "请先重启一次游戏服务端让它跑迁移，或把这些规则改回「跟随物品(默认)」。");
+        }
+
+        if (!hasAttributes &&
+            rules.Any(static rule => rule.Attributes is { IsEmpty: false }))
+        {
+            throw new LootValidationException(
+                "数据库的 monster_loot_rules 还没有那 12 列物品属性" +
+                "（服务端迁移 20260927_214 未应用），写不了品质/等级/附加属性。" +
+                "请先重启一次游戏服务端让它跑迁移，或把这些规则的属性清空。");
+        }
 
         await using var connection = await Source.OpenConnectionAsync(cancellationToken);
         await using var transaction =
@@ -187,23 +371,12 @@ internal sealed class LootStore : IAsyncDisposable
             await header.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        var upsertSql = BuildRuleUpsertSql(hasBoundOnPickup, hasAttributes);
+
         foreach (var rule in rules)
         {
             await using var upsert = new NpgsqlCommand(
-                """
-                INSERT INTO public.monster_loot_rules (
-                    template_key, loot_index, item_id, chance_basis_points,
-                    minimum_quantity, maximum_quantity, enabled, updated_at)
-                VALUES (@templateKey, @lootIndex, @itemId, @chance,
-                        @minimum, @maximum, @enabled, now())
-                ON CONFLICT (template_key, loot_index) DO UPDATE
-                   SET item_id = EXCLUDED.item_id,
-                       chance_basis_points = EXCLUDED.chance_basis_points,
-                       minimum_quantity = EXCLUDED.minimum_quantity,
-                       maximum_quantity = EXCLUDED.maximum_quantity,
-                       enabled = EXCLUDED.enabled,
-                       updated_at = now();
-                """,
+                upsertSql,
                 connection,
                 transaction);
             upsert.Parameters.AddWithValue("templateKey", templateKey);
@@ -213,6 +386,24 @@ internal sealed class LootStore : IAsyncDisposable
             upsert.Parameters.AddWithValue("minimum", rule.MinimumQuantity);
             upsert.Parameters.AddWithValue("maximum", rule.MaximumQuantity);
             upsert.Parameters.AddWithValue("enabled", rule.Enabled);
+            if (hasBoundOnPickup)
+            {
+                // 显式声明类型，好让 null 以 boolean 的 NULL 发出去（否则 Npgsql 推不出类型）
+                upsert.Parameters.Add(new NpgsqlParameter(
+                    "bound",
+                    NpgsqlDbType.Boolean)
+                {
+                    Value = rule.BoundOnPickup is { } bound
+                        ? bound
+                        : DBNull.Value
+                });
+            }
+
+            if (hasAttributes)
+            {
+                ItemAttributeColumns.AddParameters(upsert, rule.Attributes);
+            }
+
             await upsert.ExecuteNonQueryAsync(cancellationToken);
         }
 

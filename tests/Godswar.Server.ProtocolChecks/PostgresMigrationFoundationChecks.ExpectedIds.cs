@@ -174,6 +174,13 @@ internal static partial class PostgresMigrationFoundationChecks
         "20260924_166_quest_experience_appraisal",
         "20260924_167_pet_delete_audit_operation",
         "20260926_200_lelantine_farm_points",
-        "20260926_210_lelantine_farm_personal_scores"
+        "20260926_210_lelantine_farm_personal_scores",
+        "20260927_211_quest_reward_item_claims",
+        "20260927_212_quest_reward_overrides",
+        "20260927_213_monster_loot_bind_on_pickup",
+        "20260927_214_reward_item_attributes",
+        "20260928_215_wonderland_unlimited_entries",
+        "20260929_216_harbor_attack_daily_entry",
+        "20260930_217_atlantis_partial_rewards"
     ];
 }

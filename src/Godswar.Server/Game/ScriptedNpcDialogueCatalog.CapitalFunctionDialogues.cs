@@ -133,7 +133,15 @@ internal sealed partial class GameClientHandler
         OpeningMenu: [100, 101, 102, 103],
         Steps: new Dictionary<int, int[]>
         {
-            [100] = [110, 111, 112, 113],
+            // Captured on 2026-09-28 (session c202c633, npc 5041 = Sparta_044 at
+            // local 02:07:21): the reference answered the first entry with
+            // [110, 111, 112, 113, 114] and the follow-up submission 112 - the
+            // client keeps 100 in +16 and puts the chosen class in +20 - with
+            // 202, the script's own "take your equipment off first" line. The
+            // extra 114 (the removal instructions) and the 112 arm are the two
+            // numbers this capture added.
+            [100] = [110, 111, 112, 113, 114],
+            [112] = [202],
             [101] = [116, 117, 118, 119],
             [103] = [128]
         });

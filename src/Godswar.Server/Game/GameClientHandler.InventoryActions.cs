@@ -242,6 +242,12 @@ internal sealed partial class GameClientHandler
     private async Task HandleBagItemActionAsync(GamePacket packet, CancellationToken cancellationToken)
     {
         LogInventoryPacket(packet);
+        // The raw frame goes to the readable trace file as well: the console
+        // boundary folds these diagnostics into counters, and this opcode is the
+        // one that decides whether a picked-up item is written at all.
+        MonsterLootTrace.Log(
+            $"10056-raw character={_character?.Name} len={packet.Buffer.Length} " +
+            $"hex={Convert.ToHexString(packet.Buffer)}");
 
         if (_account is null || _character is null)
         {
@@ -250,6 +256,14 @@ internal sealed partial class GameClientHandler
         }
 
         if (await TryHandleGroundLootPickupAsync(packet, cancellationToken))
+        {
+            return;
+        }
+
+        // A quest reward item arrives in the same 40-byte shape with no ground
+        // item behind it, so it is offered the chance to be paid before the
+        // request is read as a move.
+        if (await TryHandleQuestRewardItemGrantAsync(packet, cancellationToken))
         {
             return;
         }
@@ -282,13 +296,50 @@ internal sealed partial class GameClientHandler
             "BagItemActionInspectAck");
     }
 
-    private void HandleItemInfoRequest(GamePacket packet)
+    /// <summary>
+    /// Opcode 10114 is how the installed client announces the item it just put
+    /// into its bag - a corpse pickup and a quest reward both arrive this way -
+    /// and it is the only thing it sends for a pickup: the 40-byte 10056
+    /// descriptor only follows as its echo of the bag records this server pushes
+    /// back. So the announcement is offered the two writes it can mean before it
+    /// is read as a plain inspection.
+    /// </summary>
+    private async Task HandleItemInfoRequestAsync(
+        GamePacket packet,
+        CancellationToken cancellationToken)
     {
         LogInventoryPacket(packet);
 
+        if (_account is null || _character is null ||
+            !TryReadItemInfoRequest(
+                packet.Payload,
+                out var sourceSlot,
+                out var itemId))
+        {
+            Console.WriteLine(
+                "[equip-re] ItemInfoRequest ignored: payload does not match the authoritative kitbag item");
+            return;
+        }
+
+        if (await TryHandleQuestRewardItemGrantAsync(
+                packet,
+                sourceSlot,
+                itemId,
+                cancellationToken))
+        {
+            return;
+        }
+
+        if (await TryHandleAnnouncedGroundPickupAsync(
+                sourceSlot,
+                itemId,
+                cancellationToken))
+        {
+            return;
+        }
+
         Console.WriteLine(
-            TryReadItemInfoRequest(packet.Payload, out var sourceSlot, out var itemId)
-            && MatchesCurrentKitBagItem(_character, sourceSlot, itemId)
+            MatchesCurrentKitBagItem(_character, sourceSlot, itemId)
                 ? $"[equip-re] ItemInfoRequest sourceSlot={sourceSlot} item={itemId}"
                 : "[equip-re] ItemInfoRequest ignored: payload does not match the authoritative kitbag item");
     }

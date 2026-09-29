@@ -10,17 +10,70 @@ internal readonly record struct AtlantisCompletionRewardAward(int HardPoints, ui
 
 internal static class AtlantisCompletionRewardPolicy
 {
-    public const string Revision = "atlantis-completion-v1";
+    public const string Revision = "atlantis-completion-v2";
     public const int CompletedHardPoints = 2800;
+
+    /// <summary>Team points that complete the run.</summary>
+    public const int CompletionTeamPoints = 850;
+
     public const uint SeabedExplorerTitleId = 5013;
     public const uint DeepSeaHunterTitleId = 5014;
 
-    public static AtlantisCompletionRewardAward Resolve(int admittedMemberCount) => admittedMemberCount switch
+    /// <summary>
+    /// Team points to HardPoints for a run that ends before completion.
+    /// </summary>
+    /// <remarks>
+    /// Published operator table. A tier is earned by reaching its score, so a
+    /// score between tiers takes the highest tier at or below it ("floor"): 63
+    /// points pay the 50 tier, 720 pay the 700 tier.
+    /// </remarks>
+    private static readonly (int Score, int HardPoints)[] IncompleteTiers =
+    [
+        (0, 200),
+        (50, 600),
+        (80, 900),
+        (100, 1_000),
+        (150, 1_200),
+        (180, 1_300),
+        (220, 1_420),
+        (250, 1_540),
+        (350, 1_660),
+        (400, 1_820),
+        (500, 2_000),
+        (600, 2_200),
+        (700, 2_400)
+    ];
+
+    /// <summary>
+    /// The award an ending run earned: the completed party award at the
+    /// completion threshold, otherwise the highest incomplete tier at or below
+    /// the team points, with no title.
+    /// </summary>
+    public static AtlantisCompletionRewardAward Resolve(
+        int teamPoints,
+        int admittedMemberCount)
     {
-        1 => new(CompletedHardPoints, DeepSeaHunterTitleId, "Deep Sea Hunter"),
-        >= 2 and <= 5 => new(CompletedHardPoints, SeabedExplorerTitleId, "Seabed Explorer"),
-        _ => throw new ArgumentOutOfRangeException(nameof(admittedMemberCount))
-    };
+        if (teamPoints >= CompletionTeamPoints)
+        {
+            return admittedMemberCount switch
+            {
+                1 => new(CompletedHardPoints, DeepSeaHunterTitleId, "Deep Sea Hunter"),
+                >= 2 and <= 5 => new(CompletedHardPoints, SeabedExplorerTitleId, "Seabed Explorer"),
+                _ => throw new ArgumentOutOfRangeException(nameof(admittedMemberCount))
+            };
+        }
+
+        var hardPoints = IncompleteTiers[0].HardPoints;
+        foreach (var tier in IncompleteTiers)
+        {
+            if (teamPoints < tier.Score)
+            {
+                break;
+            }
+            hardPoints = tier.HardPoints;
+        }
+        return new(hardPoints, 0, string.Empty);
+    }
 }
 
 /// <summary>
@@ -33,23 +86,35 @@ internal sealed class AtlantisCompletionRewardRequest
     public AtlantisCompletionRewardRequest(WorldInstanceId worldInstanceId, RealmId realmId,
         Guid admissionReservationId, DateTimeOffset startedAtUtc, DateTimeOffset completedAtUtc,
         int finalScore, IReadOnlyCollection<AtlantisCompletionMember> admittedMembers,
-        IReadOnlyCollection<AtlantisCompletionMember> frozenMembers)
+        IReadOnlyCollection<AtlantisCompletionMember> frozenMembers,
+        IReadOnlyCollection<Guid>? admissionReservationIds = null)
     {
         ArgumentNullException.ThrowIfNull(admittedMembers);
         ArgumentNullException.ThrowIfNull(frozenMembers);
+        var reservations = (admissionReservationIds ?? [admissionReservationId])
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .Order()
+            .ToArray();
         var admitted = admittedMembers.OrderBy(member => member.CharacterId).ToArray();
         var members = frozenMembers.OrderBy(member => member.CharacterId).ToArray();
         if (!worldInstanceId.IsValid || !realmId.IsValid || admissionReservationId == Guid.Empty ||
+            reservations.Length == 0 || !reservations.Contains(admissionReservationId) ||
             startedAtUtc == default || startedAtUtc.Offset != TimeSpan.Zero || completedAtUtc.Offset != TimeSpan.Zero ||
-            completedAtUtc < startedAtUtc || completedAtUtc - startedAtUtc >= TimeSpan.FromMinutes(40) ||
-            finalScore != 850 || !IsValidRoster(admitted) || !IsValidRoster(members) ||
-            members.Any(member => !admitted.Contains(member)))
+            completedAtUtc < startedAtUtc ||
+            // A run that reaches its own forty-minute deadline terminalizes exactly
+            // on it, so the bound is inclusive: only a run that outlived its limit
+            // is invalid evidence.
+            completedAtUtc - startedAtUtc > TimeSpan.FromMinutes(40) ||
+            finalScore is < 0 or > AtlantisCompletionRewardPolicy.CompletionTeamPoints ||
+            !IsValidRoster(admitted) || !IsValidRoster(members))
         {
             throw new ArgumentException("Invalid authoritative Atlantis completion evidence.");
         }
         WorldInstanceId = worldInstanceId;
         RealmId = realmId;
         AdmissionReservationId = admissionReservationId;
+        AdmissionReservationIds = Array.AsReadOnly(reservations);
         StartedAtUtc = startedAtUtc;
         CompletedAtUtc = completedAtUtc;
         FinalScore = finalScore;
@@ -57,7 +122,7 @@ internal sealed class AtlantisCompletionRewardRequest
         AdmittedCharacterIds = Array.AsReadOnly(admitted.Select(member => member.CharacterId).ToArray());
         FrozenMembers = Array.AsReadOnly(members);
         CharacterIds = Array.AsReadOnly(members.Select(member => member.CharacterId).ToArray());
-        Award = AtlantisCompletionRewardPolicy.Resolve(admitted.Length);
+        Award = AtlantisCompletionRewardPolicy.Resolve(finalScore, admitted.Length);
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
         {
@@ -82,6 +147,11 @@ internal sealed class AtlantisCompletionRewardRequest
                 writer.Write(member.AccountId);
                 writer.Write(member.CharacterId);
             }
+            writer.Write(reservations.Length);
+            foreach (var reservation in reservations)
+            {
+                writer.Write(reservation.ToByteArray());
+            }
         }
         RequestHash = Convert.ToHexString(SHA256.HashData(stream.ToArray()));
     }
@@ -89,6 +159,13 @@ internal sealed class AtlantisCompletionRewardRequest
     public WorldInstanceId WorldInstanceId { get; }
     public RealmId RealmId { get; }
     public Guid AdmissionReservationId { get; }
+
+    /// <summary>
+    /// Every admission reservation that put a member into this run: the leader's
+    /// own and, for a member who confirmed the party window after the run was
+    /// sealed, that member's own. The ledger check reads them as a set.
+    /// </summary>
+    public IReadOnlyList<Guid> AdmissionReservationIds { get; }
     public DateTimeOffset StartedAtUtc { get; }
     public DateTimeOffset CompletedAtUtc { get; }
     public TimeSpan Elapsed => CompletedAtUtc - StartedAtUtc;

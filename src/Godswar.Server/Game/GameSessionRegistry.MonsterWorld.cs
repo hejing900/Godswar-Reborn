@@ -19,6 +19,20 @@ internal sealed partial class GameSessionRegistry
     {
         CancelAbandonedAtlantisRuns(now);
         await RetryPendingAtlantisRetirementsAsync(cancellationToken);
+
+        // The Wonderland run advances once per tick, before the monster sweep
+        // below: this is what publishes the current island's monsters into the
+        // map runtime the sweep delivers from, and what re-sends the panel's
+        // remaining-time/roster frames that keep the client's window alive.
+        await AdvanceWonderlandWorldAsync(now, cancellationToken);
+
+        // 港湾遇袭 owns no monster roster, so its world pass is only the clock,
+        // the repetition panel, terminal egress and retirement.
+        await AdvanceHarborAttackWorldAsync(now, cancellationToken);
+        // Member entries confirmed through an Enter window are admitted from here,
+        // exactly like a registered party member: the registry pulls the member
+        // in, instead of the member's own packet performing the transfer.
+        await AdvanceMemberEntryJoinsAsync(now, cancellationToken);
         var ticks = new List<WorldInstanceMonsterTick>();
         var atlantisDeliveries = new List<AtlantisRunDelivery>();
         var medusaLeaderUiDeliveries =
@@ -42,7 +56,14 @@ internal sealed partial class GameSessionRegistry
             if (CaptureAtlantisRunDelivery(runtime, now) is { } atlantis)
             {
                 atlantisDeliveries.Add(atlantis);
+                // A run whose registered leader has left keeps an ending
+                // authority: the earliest present member takes the leadership.
+                MaintainAtlantisLeader(atlantis);
             }
+
+            // Wonderland's scheduled casts, reflected hits and allied combat are
+            // driven per instance; the method returns immediately for other maps.
+            await AdvanceWonderlandCombatAsync(runtime, now, cancellationToken);
 
             if (!await DrainMedusaPeriodicDamageAsync(
                     runtime,
@@ -67,14 +88,15 @@ internal sealed partial class GameSessionRegistry
             {
                 medusaLeaderUiDeliveries.Add(leaderUi);
             }
+            medusaLeaderUiDeliveries.AddRange(
+                CaptureMedusaMemberUiDeliveries(runtime, now));
             medusaInstanceRosterDeliveries.AddRange(
-                CaptureMedusaInstanceRosterDeliveries(runtime));
-            if (CaptureMedusaCompletionEgress(runtime, now) is
+                CaptureMedusaInstanceRosterDeliveries(runtime));            if (CaptureMedusaCompletionEgress(runtime, now) is
                 { } completionEgress)
             {
                 medusaCompletionEgresses.Add(completionEgress);
             }
-            if (CaptureMedusaTerminationEgress(runtime) is
+            if (CaptureMedusaTerminationEgress(runtime, now) is
                 { } terminationEgress)
             {
                 medusaTerminationEgresses.Add(terminationEgress);
@@ -201,6 +223,21 @@ internal sealed partial class GameSessionRegistry
         {
             await PublishAtlantisRunDeliveryAsync(delivery, cancellationToken);
         }
+
+        // A committed Wonderland kill only records its boss corpse; the loot
+        // window every member can click, and the boss-debuff icon layer, are
+        // published from this pump. One failed send must not fault the roaming
+        // loop, so it is logged and retried on the next tick.
+        try
+        {
+            await PublishPendingWonderlandBossLootAsync(now, cancellationToken);
+            await ReconcileWonderlandStatusesOnceAsync(now, cancellationToken);
+        }
+        catch (Exception error) when (error is not OperationCanceledException ||
+            !cancellationToken.IsCancellationRequested)
+        {
+            Console.Error.WriteLine($"[wonderland] loot/status publication deferred: {error.Message}");
+        }
     }
 
     private static IReadOnlyList<MonsterTickDelivery>
@@ -321,6 +358,14 @@ internal sealed partial class GameSessionRegistry
                      !returnedInsideViewerAoi.Contains(objectId) &&
                      !returnedOutsideViewerAoi.Contains(objectId)))
         {
+            // A retired Wonderland boss corpse has to clear the native loot
+            // state before its scene object disappears; every other corpse
+            // returns immediately from this call.
+            await ClearExpiredWonderlandCorpseLootAsync(
+                context.Session,
+                map,
+                objectId,
+                cancellationToken);
             await context.Session.SendAsync(
                 PacketBuilder.RemoveWorldObjects(objectId),
                 cancellationToken,

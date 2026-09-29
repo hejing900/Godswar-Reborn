@@ -11,7 +11,7 @@ internal static class DynamicDungeonContentMapPolicyChecks
 
     public static Task RunAsync()
     {
-        byte[] dungeonMaps = [200, 204, 205, 207];
+        byte[] dungeonMaps = [200, 204, 205, 207, 208, 209];
         foreach (var mapId in dungeonMaps)
         {
             Check.True(
@@ -35,7 +35,7 @@ internal static class DynamicDungeonContentMapPolicyChecks
                 $"authoritative egress accepts dynamic dungeon {mapId}");
         }
 
-        foreach (var mapId in new[] { -1, 0, 1, 199, 201, 203, 206, 208 })
+        foreach (var mapId in new[] { -1, 0, 1, 199, 201, 203, 206, 210 })
         {
             Check.True(
                 !DynamicDungeonContentMapPolicy.IsDynamicDungeonMap(mapId),
@@ -48,6 +48,12 @@ internal static class DynamicDungeonContentMapPolicyChecks
             !DynamicDungeonContentMapPolicy.IsMedusaMap(205) &&
             !DynamicDungeonContentMapPolicy.IsMedusaMap(207),
             "Medusa-specific behavior remains scoped to maps 200 and 204");
+        Check.True(
+            DynamicDungeonContentMapPolicy.IsHarborAttackMap(208) &&
+            DynamicDungeonContentMapPolicy.IsHarborAttackMap(209) &&
+            !DynamicDungeonContentMapPolicy.IsHarborAttackMap(207) &&
+            !DynamicDungeonContentMapPolicy.IsHarborAttackMap(205),
+            "港湾遇袭 behavior is scoped to the two Salame maps");
         Check.True(
             !AuthoritativeInstanceTransitionPolicy.IsSupported(
                 GameDefaults.AthensCapitalMap,

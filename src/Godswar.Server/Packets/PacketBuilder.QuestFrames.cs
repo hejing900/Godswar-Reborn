@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Godswar.Server.Application.World.Content;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Protocol;
 
@@ -6,6 +7,16 @@ namespace Godswar.Server.Packets;
 
 internal static partial class PacketBuilder
 {
+    /// <summary>Where a reward record carries its item id.</summary>
+    private const int RewardSlotItemIdOffset = 8;
+
+    /// <summary>
+    /// The shape of a free reward slot, taken from the captured answer that
+    /// carried no reward at all.
+    /// </summary>
+    private static ReadOnlySpan<byte> EmptyQuestRewardSlot =>
+        ReadRewardSlot(EmptyQuestRewardArea, 0);
+
     /// <summary>
     /// Where the 10082 accept answer carries its eight 72-byte reward slots.
     /// </summary>
@@ -352,6 +363,19 @@ internal static partial class PacketBuilder
                 captured.AsSpan(4, sizeof(uint)), giverNpcId);
             BinaryPrimitives.WriteUInt32LittleEndian(
                 captured.AsSpan(8, sizeof(uint)), responderNpcId);
+            // A quest answered from a captured frame never reaches the builder
+            // below, so a reward menu the GM tool replaced has to be written here
+            // as well. Without an override the captured bytes stay untouched.
+            if (QuestRewardContentCatalog.Current.TryGetSlots(questId, out _))
+            {
+                ApplyQuestRewardRecords(
+                    captured,
+                    QuestAnswerRecordOffset,
+                    questId,
+                    StarterQuestRewardRecords.AreaBytes,
+                    4u);
+            }
+
             return captured;
         }
 
@@ -565,31 +589,114 @@ internal static partial class PacketBuilder
         int bytes,
         uint objectiveKind)
     {
-        if (CapturedQuestRewardAreas.TryGetValue(
+        var area = ResolveQuestRewardArea(questId, objectiveKind);
+        var length = Math.Min(bytes, area.Length);
+        area.AsSpan(0, length).CopyTo(packet.AsSpan(offset, length));
+    }
+
+    /// <summary>
+    /// The reward area a quest's frames carry, in the order the sources are
+    /// consulted: the captured answer whose objective kind matches the shape
+    /// being sent, then the quest's own captured records, and otherwise the free
+    /// template.
+    /// </summary>
+    /// <remarks>
+    /// One area serves both directions: the accept answer copies its leading 576
+    /// bytes (eight 72-byte slots) and the follow-up detail its leading 288 (four
+    /// slots). <see cref="QuestRewardItemCatalog"/> reads the item ids out of the
+    /// same bytes, so what this server tells the client it will pay and what it
+    /// records as payable can never drift apart.
+    /// </remarks>
+    internal static byte[] ResolveQuestRewardArea(uint questId, uint objectiveKind)
+    {
+        var area = ResolveBaseQuestRewardArea(questId, objectiveKind);
+        return QuestRewardContentCatalog.Current.TryGetSlots(
+            questId,
+            out var overrides)
+            ? ApplyRewardSlotOverrides(area, overrides)
+            : area;
+    }
+
+    /// <summary>
+    /// The reward area the quest shipped with, ignoring any GM override.
+    /// </summary>
+    /// <remarks>
+    /// The client keeps the menu it was shown when it accepted the quest, so a
+    /// hand-in can legitimately announce an item from this area even though the
+    /// current answer offers a replaced one.
+    /// </remarks>
+    internal static byte[] ResolveBaseQuestRewardArea(
+        uint questId,
+        uint objectiveKind)
+    {        if (CapturedQuestRewardAreas.TryGetValue(
                 (questId, objectiveKind),
                 out var areaHex) ||
             CapturedQuestRewardAreas.TryGetValue(
                 (questId, objectiveKind == 8u ? 4u : 8u),
                 out areaHex))
         {
-            var area = Convert.FromHexString(areaHex);
-            var capturedLength = Math.Min(bytes, area.Length);
-            area.AsSpan(0, capturedLength)
-                .CopyTo(packet.AsSpan(offset, capturedLength));
-            return;
+            return Convert.FromHexString(areaHex);
         }
 
-        if (StarterQuestRewardRecords.Find(questId) is { } records)
-        {
-            var length = Math.Min(bytes, records.Length);
-            records.AsSpan(0, length).CopyTo(packet.AsSpan(offset, length));
-            return;
-        }
-
-        var emptyLength = Math.Min(bytes, EmptyQuestRewardArea.Length);
-        EmptyQuestRewardArea.AsSpan(0, emptyLength)
-            .CopyTo(packet.AsSpan(offset, emptyLength));
+        return StarterQuestRewardRecords.Find(questId) ?? EmptyQuestRewardArea;
     }
+
+    /// <summary>
+    /// Builds the reward menu the GM tool replaced: every slot the override names
+    /// takes the shape of the slot the quest already shipped, with its item id
+    /// swapped in, and every slot it leaves out is empty.
+    /// </summary>
+    /// <remarks>
+    /// Only the item id is rewritten. The rest of a 72-byte slot - the icon words
+    /// at +16/+20 and the icon file at +24 - is copied from the quest's own
+    /// captured slot when it had one, and otherwise from the captured empty slot,
+    /// so a replacement keeps the shape the client already renders. Writing those
+    /// words from the new item's own icon data is not done here: the mapping
+    /// between an item template's icon column and these words is not verified.
+    /// </remarks>
+    private static byte[] ApplyRewardSlotOverrides(
+        byte[] area,
+        IReadOnlyList<QuestRewardSlotOverride> overrides)
+    {
+        var result = new byte[QuestRewardItemCatalog.MaximumSlots * QuestRewardItemCatalog.RecordBytes];
+        for (var slot = 0; slot < QuestRewardItemCatalog.MaximumSlots; slot++)
+        {
+            var captured = ReadRewardSlot(area, slot);
+            var template = IsEmptyRewardSlot(captured)
+                ? EmptyQuestRewardSlot
+                : captured;
+            var target = result.AsSpan(
+                slot * QuestRewardItemCatalog.RecordBytes,
+                QuestRewardItemCatalog.RecordBytes);
+            var length = Math.Min(target.Length, template.Length);
+            template[..length].CopyTo(target);
+            foreach (var item in overrides)
+            {
+                if (item.SlotIndex == slot)
+                {
+                    BinaryPrimitives.WriteUInt32LittleEndian(
+                        target.Slice(RewardSlotItemIdOffset, sizeof(uint)),
+                        item.ItemId);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static ReadOnlySpan<byte> ReadRewardSlot(byte[] area, int slot)
+    {
+        var offset = slot * QuestRewardItemCatalog.RecordBytes;
+        return offset + QuestRewardItemCatalog.RecordBytes <= area.Length
+            ? area.AsSpan(offset, QuestRewardItemCatalog.RecordBytes)
+            : [];
+    }
+
+    private static bool IsEmptyRewardSlot(ReadOnlySpan<byte> slot) =>
+        slot.Length < RewardSlotItemIdOffset + sizeof(uint) ||
+        BinaryPrimitives.ReadUInt32LittleEndian(
+            slot.Slice(RewardSlotItemIdOffset, sizeof(uint))) is
+            0 or uint.MaxValue;
 
     /// <summary>
     /// Writes every target a quest names into the frame's parallel objective

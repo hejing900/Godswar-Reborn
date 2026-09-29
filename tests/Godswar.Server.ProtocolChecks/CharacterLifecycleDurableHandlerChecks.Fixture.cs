@@ -59,12 +59,25 @@ internal static partial class CharacterLifecycleDurableHandlerChecks
     private static LifecycleFixture CreateMixedRawFixture(
         CharacterAccountSnapshot initialSnapshot,
         params CharacterAccountSnapshot[] projections) =>
+        CreateMixedRawFixture(
+            initialSnapshot,
+            CharacterLifecycleExecutionResult.InvalidIntent(),
+            projections);
+
+    /// <summary>
+    /// A raw session whose durable executor answers with the result the check
+    /// needs. The default is an invalid intent, which is what the raw profile used
+    /// to receive for every request because the handler refused it outright.
+    /// </summary>
+    private static LifecycleFixture CreateMixedRawFixture(
+        CharacterAccountSnapshot initialSnapshot,
+        CharacterLifecycleExecutionResult executionResult,
+        params CharacterAccountSnapshot[] projections) =>
         CreateFixture(
             new LifecycleRawTransport(),
             initialSnapshot,
             projections,
-            new LifecycleExecutor(
-                CharacterLifecycleExecutionResult.InvalidIntent()),
+            new LifecycleExecutor(executionResult),
             injectLifecycleExecutor: true);
 
     private static LifecycleFixture CreateFixture(

@@ -353,8 +353,14 @@ internal sealed partial class PlayerCombatEcsAdapter
         var stats = CharacterStats.FromCharacter(character);
         return new PlayerCombatOffenseComponent(
             character.Profession,
-            stats.PhysicalAttack,
-            stats.MagicAttack,
+            // The Wonderland blessed-bird hit multiplies both attack channels
+            // for its duration; every other status leaves the multiplier at one.
+            CombatCharacterStatsAdapter.SaturatingMultiply(
+                stats.PhysicalAttack,
+                runtimeModifiers.AttackMultiplier),
+            CombatCharacterStatsAdapter.SaturatingMultiply(
+                stats.MagicAttack,
+                runtimeModifiers.AttackMultiplier),
             stats.PhysicalDamageBonus,
             stats.MagicDamageBonus,
             stats.PhysicalAppendDamage,

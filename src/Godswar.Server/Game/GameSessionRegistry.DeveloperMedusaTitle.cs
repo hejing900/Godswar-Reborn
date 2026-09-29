@@ -40,6 +40,7 @@ internal sealed partial class GameSessionRegistry
             WorldInstanceId.New(),
             expected.RealmId,
             MedusaEncounterDifficulty.Mythic,
+            completed: true,
             DateTimeOffset.UtcNow,
             TimeSpan.FromMinutes(10),
             MedusaIslandPolicy.VictoryScore,

@@ -168,7 +168,16 @@ internal sealed partial class GameClientHandler
             case Opcodes.Sell:
                 // The same opcode carries an inventory move and the corpse
                 // click that opens a loot window, so the loot source is claimed
-                // before the log-only inventory path.
+                // before the log-only inventory path. A Wonderland boss corpse
+                // sends its own 20-byte click while every other corpse uses the
+                // 16-byte ground descriptor, so both are offered the packet.
+                if (await TryHandleWonderlandNativeLootPickupAsync(
+                        packet,
+                        cancellationToken))
+                {
+                    break;
+                }
+
                 if (await TryHandleGroundLootSourceAsync(
                         packet,
                         cancellationToken))
@@ -188,7 +197,7 @@ internal sealed partial class GameClientHandler
                 await HandleBagItemActionAsync(packet, cancellationToken);
                 break;
             case Opcodes.ItemInfoRequest:
-                HandleItemInfoRequest(packet);
+                await HandleItemInfoRequestAsync(packet, cancellationToken);
                 break;
             case Opcodes.ForgeSelection:
                 HandleForgeSelection(packet);
@@ -390,6 +399,13 @@ internal sealed partial class GameClientHandler
                 break;
             case GuildMemberActionProtocol.MemberDelRequest:
                 await HandleGuildMemberDelRequestAsync(packet, cancellationToken);
+                break;
+            // A member inside a running instance names another character, who
+            // then receives the party's own Enter window.
+            case Opcodes.RepetitionInvitation:
+                await HandleInstanceInvitationRequestAsync(
+                    packet,
+                    cancellationToken);
                 break;
             default:
                 Console.WriteLine(

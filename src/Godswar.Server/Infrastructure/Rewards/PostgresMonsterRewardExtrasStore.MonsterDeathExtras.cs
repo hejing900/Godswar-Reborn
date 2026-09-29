@@ -3,6 +3,7 @@ using Godswar.Server.State;
 using System.Data;
 using System.Text.Json;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Godswar.Server.Infrastructure.Rewards;
 
@@ -15,6 +16,8 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
         int lootIndex,
         uint itemId,
         int quantity,
+        bool? boundOnPickup = null,
+        ItemGrantAttributes? attributes = null,
         CancellationToken cancellationToken = default)
     {
         if (accountId <= 0 || characterId <= 0 ||
@@ -38,7 +41,14 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
             await transaction.CommitAsync(cancellationToken);
             return new(MonsterLootPickupStatus.Unsupported, null);
         }
-        var (stackCap, bound) = itemPolicy.Value;
+        // The rule decides whether this drop binds; a rule that says nothing
+        // keeps the item template's own BindType. Two stacks of one item only
+        // merge when their bind flag matches, so a tradeable drop beside a bound
+        // stack takes a slot of its own - which is what the client shows.
+        var (stackCap, templateBound) = itemPolicy.Value;
+        var bound = boundOnPickup is { } forcedBind
+            ? (forcedBind ? (short)1 : (short)0)
+            : templateBound;
         await LockDeathIdentityAsync(
             connection,
             transaction,
@@ -105,6 +115,7 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
             checked((int)itemId),
             bound,
             plan,
+            attributes ?? ItemGrantAttributes.None,
             cancellationToken);
         var nextRevision = checked(inventoryRevision.Value + 1);
         await AdvanceLootInventoryRevisionAsync(
@@ -331,6 +342,7 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
             int itemId,
             short bound,
             LootPlan plan,
+            ItemGrantAttributes attributes,
             CancellationToken cancellationToken)
     {
         var mutations = new List<LootMutation>(
@@ -367,9 +379,19 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
                 INSERT INTO public.character_items (
                     user_id, item_location, slot_index, prop_id,
                     item_quality, item_grade, bound, stack,
-                    item_exp, holy_suit_code)
+                    item_exp, holy_suit_code,
+                    attribute1, attribute_level1,
+                    attribute2, attribute_level2,
+                    attribute3, attribute_level3,
+                    attribute4, attribute_level4,
+                    attribute5, attribute_level5)
                 VALUES (@characterId, 1, @slot, @itemId,
-                        1, 1, @bound, @stack, 0, 0)
+                        @quality, @grade, @bound, @stack, 0, 0,
+                        @attribute1, @attributeLevel1,
+                        @attribute2, @attributeLevel2,
+                        @attribute3, @attributeLevel3,
+                        @attribute4, @attributeLevel4,
+                        @attribute5, @attributeLevel5)
                 RETURNING id, to_jsonb(character_items)::text;
                 """,
                 connection,
@@ -379,6 +401,38 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
             command.Parameters.AddWithValue("itemId", itemId);
             command.Parameters.AddWithValue("bound", bound);
             command.Parameters.AddWithValue("stack", insert.Stack);
+            command.Parameters.AddWithValue("quality", attributes.Quality);
+            command.Parameters.AddWithValue("grade", attributes.Grade);
+            AddAttributeSlot(
+                command.Parameters,
+                "attribute1",
+                "attributeLevel1",
+                attributes.Attribute1,
+                attributes.AttributeLevel1);
+            AddAttributeSlot(
+                command.Parameters,
+                "attribute2",
+                "attributeLevel2",
+                attributes.Attribute2,
+                attributes.AttributeLevel2);
+            AddAttributeSlot(
+                command.Parameters,
+                "attribute3",
+                "attributeLevel3",
+                attributes.Attribute3,
+                attributes.AttributeLevel3);
+            AddAttributeSlot(
+                command.Parameters,
+                "attribute4",
+                "attributeLevel4",
+                attributes.Attribute4,
+                attributes.AttributeLevel4);
+            AddAttributeSlot(
+                command.Parameters,
+                "attribute5",
+                "attributeLevel5",
+                attributes.Attribute5,
+                attributes.AttributeLevel5);
             await using var reader =
                 await command.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken))
@@ -393,6 +447,33 @@ internal sealed partial class PostgresMonsterRewardExtrasStore
                 reader.GetString(1)));
         }
         return mutations;
+    }
+
+    /// <summary>
+    /// Writes one attribute slot, empty slots as real <c>NULL</c>.
+    /// </summary>
+    /// <remarks>
+    /// The parameter types are explicit because a <c>null</c> value with an
+    /// inferred type sends nothing usable, and a slot left empty has to be
+    /// <c>NULL</c>: attribute id 0 is <c>AttackA</c>, a real attribute the client
+    /// draws as "physical attack I", so writing 0 puts a phantom line on every
+    /// item that configured fewer than five.
+    /// </remarks>
+    private static void AddAttributeSlot(
+        NpgsqlParameterCollection parameters,
+        string idName,
+        string levelName,
+        short? id,
+        short? level)
+    {
+        parameters.Add(new NpgsqlParameter(idName, NpgsqlDbType.Smallint)
+        {
+            Value = id.HasValue ? id.Value : DBNull.Value
+        });
+        parameters.Add(new NpgsqlParameter(levelName, NpgsqlDbType.Smallint)
+        {
+            Value = id.HasValue && level.HasValue ? level.Value : DBNull.Value
+        });
     }
 
     private sealed record LootBag(

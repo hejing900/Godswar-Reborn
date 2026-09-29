@@ -283,6 +283,13 @@ internal sealed partial class GameClientHandler
     internal const int KitBagSlotsPerPage = 24;
     internal const int KitBagPageCount = 4;
 
+    /// <summary>
+    /// Payload bytes of the 40-byte 10056 descriptor: the ground pickup, the
+    /// quest reward item the client pays itself, and a bag-to-equipment move all
+    /// arrive in this one shape.
+    /// </summary>
+    internal const int GroundLootPickupPayloadBytes = 36;
+
     private static bool TryReadBagItemAction(
         ReadOnlySpan<byte> payload,
         out int sourceSlot,
@@ -321,8 +328,7 @@ internal sealed partial class GameClientHandler
         groundKeyHigh = 0;
         groundKeyLow = 0;
 
-        const int descriptorPayloadLength = 36;
-        if (payload.Length != descriptorPayloadLength)
+        if (payload.Length != GroundLootPickupPayloadBytes)
         {
             return false;
         }

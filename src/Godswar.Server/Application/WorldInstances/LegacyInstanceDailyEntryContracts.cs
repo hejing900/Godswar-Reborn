@@ -19,8 +19,27 @@ internal static class LegacyInstanceDailyEntryPolicy
         InstanceCallerEntryKind instanceKind) => instanceKind switch
     {
         InstanceCallerEntryKind.Atlantis => 1,
-        InstanceCallerEntryKind.Wonderland => 0,
+        // Unlimited 飘渺幻境 entries by the operator's decision (2026-09-28). The
+        // reference allowed three free entries a day and no paid retry, which
+        // blocked a fourth attempt; a null retry limit is what both claim paths
+        // read as "no daily entry limit", so they stop counting and stop marking
+        // characters as owing an opal.
+        InstanceCallerEntryKind.Wonderland => null,
+        // 港湾遇袭 has no paid retry at all.
+        InstanceCallerEntryKind.HarborAttack => 0,
         _ => throw new ArgumentOutOfRangeException(nameof(instanceKind))
+    };
+
+    /// <summary>
+    /// Free entries a day for a kind whose policy has not been published to the
+    /// database yet. 港湾遇袭 grants the single daily opportunity its own client
+    /// text states; the reviewed instances keep the shared default.
+    /// </summary>
+    public static ushort GetDefaultFreeEntryLimit(
+        InstanceCallerEntryKind instanceKind) => instanceKind switch
+    {
+        InstanceCallerEntryKind.HarborAttack => 1,
+        _ => DefaultFreeEntryLimit
     };
 
     public static ushort? GetDefaultDailyEntryLimit(
@@ -28,7 +47,7 @@ internal static class LegacyInstanceDailyEntryPolicy
     {
         var paidRetryLimit = GetDefaultPaidRetryLimit(instanceKind);
         return paidRetryLimit is ushort paid
-            ? checked((ushort)(DefaultFreeEntryLimit + paid))
+            ? checked((ushort)(GetDefaultFreeEntryLimit(instanceKind) + paid))
             : null;
     }
 }

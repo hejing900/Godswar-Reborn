@@ -15,6 +15,7 @@ internal sealed class MainForm : Form
     private readonly LootStore _store = new();
     private readonly PetPanel _petPanel = new();
     private readonly FarmPanel _farmPanel = new();
+    private readonly QuestRewardPanel _questPanel = new();
     private readonly ConnectionPanel _connection = new();
     private readonly TextBox _filterBox = new();
     private readonly ComboBox _filterMode = new();
@@ -37,15 +38,19 @@ internal sealed class MainForm : Form
     private ClientTextCatalog _catalog = ClientTextCatalog.Load(null);
     private Dictionary<int, ItemRow> _items = new();
     private List<MonsterRow> _monsters = [];
+    private List<ItemAttributeTemplateRow> _itemAttributeTemplates = [];
+    private ItemAttributeCatalog _attributeCatalog = ItemAttributeCatalog.Empty;
     private string? _currentKey;
     private bool _dirty;
     private bool _pendingRestart;
+    private bool _boundColumnAvailable = true;
+    private bool _attributeColumnsAvailable = true;
     private bool _suppressSelection;
     private bool _suppressHeaderEvents;
 
     public MainForm()
     {
-        Text = "Godswar GM 工具（利兰丁农场 + 掉落表 + 宠物档位）";
+        Text = "Godswar GM 工具（利兰丁农场 + 掉落表 + 任务奖励 + 宠物档位）";
         Width = 1420;
         Height = 880;
         StartPosition = FormStartPosition.CenterScreen;
@@ -54,6 +59,7 @@ internal sealed class MainForm : Form
         BuildUi();
         _ruleGrid = new LootRuleGrid(_ruleGridControl);
         _ruleGrid.SetItemDescriber(DescribeItem);
+        _ruleGrid.EditAttributes = EditItemAttributes;
         _ruleGrid.Changed += (_, _) => MarkDirty();
 
         _connection.ConnectRequested += async (_, _) => await ConnectAsync();
@@ -65,7 +71,7 @@ internal sealed class MainForm : Form
 
     protected override async void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_dirty)
+        if (_dirty || _questPanel.IsDirty)
         {
             var answer = MessageBox.Show(
                 this,
@@ -83,6 +89,7 @@ internal sealed class MainForm : Form
         await _store.DisposeAsync();
         await _petPanel.DisposeAsync();
         await _farmPanel.DisposeAsync();
+        await _questPanel.DisposeAsync();
         base.OnFormClosing(e);
     }
 
@@ -107,12 +114,15 @@ internal sealed class MainForm : Form
         };
         var lootPage = new TabPage("怪物掉落表");
         lootPage.Controls.Add(BuildBody());
+        var questPage = new TabPage("任务奖励");
+        questPage.Controls.Add(_questPanel);
         var petPage = new TabPage("宠物档位");
         petPage.Controls.Add(_petPanel);
         var farmPage = new TabPage("利兰丁农场");
         farmPage.Controls.Add(_farmPanel);
         tabs.TabPages.Add(farmPage);
         tabs.TabPages.Add(lootPage);
+        tabs.TabPages.Add(questPage);
         tabs.TabPages.Add(petPage);
         root.Controls.Add(tabs, 0, 1);
         _statusLabel.Dock = DockStyle.Fill;
@@ -451,6 +461,7 @@ internal sealed class MainForm : Form
             await ReadAllAsync();
             await ConnectPetPanelAsync();
             await ConnectFarmPanelAsync();
+            await ConnectQuestPanelAsync();
         }
         catch (Exception ex)
         {
@@ -506,6 +517,25 @@ internal sealed class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// The quest reward tab reads its own connection as well; its two tables only
+    /// exist once the server migration has run, and an old database must still
+    /// leave every other tab usable.
+    /// </summary>
+    private async Task ConnectQuestPanelAsync()
+    {
+        try
+        {
+            // 任务列表来自客户端任务表，所以客户端目录也一起交过去
+            _questPanel.SetClientRoot(_settings.ClientRoot);
+            await _questPanel.ConnectAndReadAsync(_settings.BuildConnectionString());
+        }
+        catch (Exception ex)
+        {
+            _questPanel.SetStatus($"任务奖励页读取失败：{ex.Message}");
+        }
+    }
+
     private async Task ReadAllAsync()    {
         if (!_store.IsConnected)
         {
@@ -523,6 +553,13 @@ internal sealed class MainForm : Form
             _catalog = ClientTextCatalog.Load(_settings.ClientRoot);
             ApplyChineseNames();
             await LoadItemsAsync();
+            // 「拾取后」和 12 列「物品属性」都是服务端迁移加的：旧库没有就把对应列藏起来
+            _boundColumnAvailable = await _store.HasBoundOnPickupColumnAsync();
+            _ruleGrid?.SetBoundColumnVisible(_boundColumnAvailable);
+            _attributeColumnsAvailable = await _store.HasItemAttributeColumnsAsync();
+            _ruleGrid?.SetAttributeColumnsVisible(_attributeColumnsAvailable);
+            _questPanel.SetAttributeColumnsVisible(_attributeColumnsAvailable);
+            await LoadItemAttributesAsync();
             RefreshMonsterGrid();
             try
             {
@@ -542,11 +579,30 @@ internal sealed class MainForm : Form
                 _farmPanel.SetStatus($"农场页读取失败：{ex.Message}");
             }
 
+            try
+            {
+                await _questPanel.ReadAsync();
+            }
+            catch (Exception ex)
+            {
+                _questPanel.SetStatus($"任务奖励页读取失败：{ex.Message}");
+            }
+
             var configured = _monsters.Count(static m => m.HasLootTable);
             _connection.SetStatus("连接正常", healthy: true);
             _statusLabel.Text =
                 $"数据库 {_settings.Database}｜怪物模板 {_monsters.Count} 个（已配置掉落 {configured} 个）" +
-                $"｜物品 {_items.Count} 个｜中文名：怪物 {_catalog.MonsterNameCount} 条 / 物品 {_catalog.ItemNameCount} 条";
+                $"｜物品 {_items.Count} 个｜中文名：怪物 {_catalog.MonsterNameCount} 条 / 物品 {_catalog.ItemNameCount} 条" +
+                (_boundColumnAvailable
+                    ? string.Empty
+                    : "｜⚠ monster_loot_rules 缺 bound_on_pickup 列（服务端迁移未应用），「拾取后」列已隐藏") +
+                (_attributeColumnsAvailable
+                    ? string.Empty
+                    : "｜⚠ 缺 12 列物品属性（迁移 20260927_214 未应用），「属性…」已隐藏") +
+                (_attributeCatalog.Attributes.Count > 0
+                    ? $"｜附加属性表 {_attributeCatalog.Attributes.Count} 条" +
+                      $"（中文名 {_attributeCatalog.ChineseNameCount} 条）"
+                    : "｜⚠ 没读到附加属性表，「属性…」只能填数字 id");
         }
         catch (Exception ex)
         {
@@ -582,6 +638,39 @@ internal sealed class MainForm : Form
             {
                 ChineseName = _catalog.ItemName(item.NameKey, string.Empty)
             });
+        // 任务奖励页签也用这份物品目录（中文名来自同一个 ClientTextCatalog）
+        _questPanel.SetItems(_items.Values.ToList());
+    }
+
+    /// <summary>
+    /// 附加属性表：属性 id/等级上限取服务端 item_attribute_templates，
+    /// 中文名取客户端 Text\EquipDescription.dat。两边都交给「属性…」弹窗用。
+    /// </summary>
+    private async Task LoadItemAttributesAsync()
+    {
+        _itemAttributeTemplates = await _store.LoadItemAttributeTemplatesAsync();
+        RefreshAttributeCatalog();
+    }
+
+    /// <summary>换客户端目录后也要重来一遍（中文名来自客户端）。</summary>
+    private void RefreshAttributeCatalog()
+    {
+        _attributeCatalog = ItemAttributeCatalog.Load(
+            _settings.ClientRoot,
+            _itemAttributeTemplates);
+        _questPanel.SetAttributeCatalog(_attributeCatalog);
+    }
+
+    /// <summary>「属性…」弹窗：返回 null 表示取消（调用方保持原值）。</summary>
+    private ItemAttributeValues? EditItemAttributes(
+        string itemDescription,
+        ItemAttributeValues values)
+    {
+        using var dialog = new ItemAttributeDialog(
+            _attributeCatalog,
+            itemDescription.Length > 0 ? itemDescription : "（未选择物品）",
+            values);
+        return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Values : null;
     }
 
     private void BrowseClientRoot()
@@ -611,6 +700,10 @@ internal sealed class MainForm : Form
 
         RefreshMonsterGrid();
         _ruleGrid?.SetItemDescriber(DescribeItem);
+        _questPanel.SetItems(_items.Values.ToList());
+        // 换了客户端：任务表与属性中文名都要按新客户端重来
+        _questPanel.SetClientRoot(_settings.ClientRoot);
+        RefreshAttributeCatalog();
     }
 
     private void RefreshMonsterGrid()
@@ -785,6 +878,19 @@ internal sealed class MainForm : Form
                 ? "该怪物尚未配置掉落：新增规则后点「确认修改」即可创建掉落表。"
                 : $"已加载 {rules.Count} 条规则。概率是每条独立掷骰、按序号从小到大，" +
                   "凑够「单次最多掉落件数」后立刻停止；所以序号越靠后，实际到手率越低。";
+            if (!_boundColumnAvailable)
+            {
+                // 这一列是服务端迁移加的；旧库没有它时整列已隐藏，保存不会去写它
+                hint += "「拾取后」列因为库里还没有 bound_on_pickup 字段已隐藏" +
+                        "（重启一次服务端跑迁移后回来点「一键读取数据」即可出现）。";
+            }
+
+            if (!_attributeColumnsAvailable)
+            {
+                hint += "「属性…」按钮因为库里还没有那 12 列物品属性已隐藏" +
+                        "（迁移 20260927_214，重启服务端后点「一键读取数据」即可出现）。";
+            }
+
             if (monster is not null && !monster.IsSpawned)
             {
                 _tableHint.ForeColor = Color.Firebrick;

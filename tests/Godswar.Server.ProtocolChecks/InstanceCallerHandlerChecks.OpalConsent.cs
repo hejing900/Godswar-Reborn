@@ -257,11 +257,31 @@ internal static partial class InstanceCallerHandlerChecks
             });
 
         await OpenAtlantisPageAsync(fixture.Leader);
+        // The application publishes the leader's own Enter window to every
+        // admitted member; the members answer it before the leader commits.
         await InvokeAsync(
             fixture.Leader.Handler,
             CreateActionPacket(
                 InstanceCallerProtocol.AtlantisRootSubId,
-                InstanceCallerProtocol.AtlantisOpalSubId));
+                InstanceCallerProtocol.AtlantisOpalSubId),
+            confirmEntry: false);
+        foreach (var follower in fixture.Followers)
+        {
+            await InvokeAsync(
+                follower.Handler,
+                CreateRepetitionResponse(
+                    InstanceCallerProtocol.AtlantisClientSceneId,
+                    0,
+                    true),
+                confirmEntry: false);
+        }
+        await InvokeAsync(
+            fixture.Leader.Handler,
+            CreateRepetitionResponse(
+                InstanceCallerProtocol.AtlantisClientSceneId,
+                0,
+                true),
+            confirmEntry: false);
 
         var admitted = new HashSet<int>
         {

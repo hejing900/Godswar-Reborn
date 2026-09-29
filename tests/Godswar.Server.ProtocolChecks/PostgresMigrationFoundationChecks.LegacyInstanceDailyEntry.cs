@@ -109,5 +109,37 @@ internal static partial class PostgresMigrationFoundationChecks
             "migration 136 upgrades Atlantis to three free entries plus " +
             "one paid retry, permits a database-owned unlimited Atlantis " +
             "policy, and keeps Wonderland free-only");
+
+        var harborAttack = PostgresSchemaMigrationCatalog.All.Single(
+            candidate => candidate.Id ==
+                "20260929_216_harbor_attack_daily_entry");
+        Check.True(
+            harborAttack.Sql.Contains(
+                "legacy_instance_settings",
+                StringComparison.Ordinal) &&
+            harborAttack.Sql.Contains(
+                "legacy_instance_daily_entries",
+                StringComparison.Ordinal) &&
+            harborAttack.Sql.Contains(
+                "kind_column.attname = 'instance_kind'",
+                StringComparison.Ordinal) &&
+            harborAttack.Sql.Contains(
+                "contype = 'c'",
+                StringComparison.Ordinal) &&
+            harborAttack.Sql.Contains(
+                "CHECK (instance_kind BETWEEN 1 AND 3)",
+                StringComparison.Ordinal) &&
+            harborAttack.Sql.Contains(
+                "VALUES (3, 1, 0)",
+                StringComparison.Ordinal) &&
+            !harborAttack.Sql.Contains(
+                "DELETE FROM public.legacy_instance_daily_entries",
+                StringComparison.OrdinalIgnoreCase) &&
+            !harborAttack.Sql.Contains(
+                "DROP TABLE",
+                StringComparison.OrdinalIgnoreCase),
+            "港湾遇袭 widens both instance-kind domains to a third kind and " +
+            "seeds one free daily entry with no paid retry, without deleting " +
+            "any existing claim");
     }
 }

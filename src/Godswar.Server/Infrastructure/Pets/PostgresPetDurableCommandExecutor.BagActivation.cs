@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Application.Pets;
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.State;
 using Npgsql;
 
@@ -54,6 +55,21 @@ internal sealed partial class PostgresPetDurableCommandExecutor
                 command.KitBagSlot,
                 item,
                 capture,
+                character,
+                cancellationToken);
+        }
+
+        // Boss sacks are the one consumable whose reward the client cannot
+        // predict: the closed sack, its twelve native identities and the
+        // reward table are all server-owned.
+        if (WonderlandSackRewardPolicy.IsSack(checked((uint)item.PropId)))
+        {
+            return await OpenWonderlandSackAsync(
+                connection,
+                transaction,
+                envelope.Subject.CharacterId,
+                command.KitBagSlot,
+                item,
                 character,
                 cancellationToken);
         }

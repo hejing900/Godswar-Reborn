@@ -14,6 +14,24 @@ internal sealed partial class GameSessionRegistry
         ClientSession routingSession,
         MonsterRuntimeSnapshot target,
         DateTimeOffset authoritativeAt,
+        in CombatTargetStats original) =>
+        // The encounter layer is applied after the shared elemental one so a
+        // Wonderland boss keeps its authored level, defenses, per-mechanic
+        // damage reduction and direct-rating accuracy.
+        AdjustWonderlandMonsterTarget(
+            routingSession,
+            target,
+            authoritativeAt,
+            ApplyPveMonsterStatusAdjustment(
+                routingSession,
+                target,
+                authoritativeAt,
+                original));
+
+    private CombatTargetStats ApplyPveMonsterStatusAdjustment(
+        ClientSession routingSession,
+        MonsterRuntimeSnapshot target,
+        DateTimeOffset authoritativeAt,
         in CombatTargetStats original)
     {
         if (!TryGetPveMonsterStatusForRead(
@@ -46,6 +64,25 @@ internal sealed partial class GameSessionRegistry
     }
 
     internal MonsterCombatProfile AdjustPveMonsterAttackerProfile(
+        ClientSession routingSession,
+        MonsterRuntimeSnapshot source,
+        DateTimeOffset authoritativeAt,
+        in MonsterCombatProfile original) =>
+        // The encounter layer is applied after the shared elemental one so a
+        // Wonderland monster keeps its plan-authored level, attack ratings,
+        // damage channel, range and boss flag. The captured attack calibration
+        // then resolves those ratings against the exact capture evidence.
+        AdjustWonderlandMonsterProfile(
+            routingSession,
+            source,
+            authoritativeAt,
+            ApplyPveMonsterStatusAdjustment(
+                routingSession,
+                source,
+                authoritativeAt,
+                original));
+
+    private MonsterCombatProfile ApplyPveMonsterStatusAdjustment(
         ClientSession routingSession,
         MonsterRuntimeSnapshot source,
         DateTimeOffset authoritativeAt,

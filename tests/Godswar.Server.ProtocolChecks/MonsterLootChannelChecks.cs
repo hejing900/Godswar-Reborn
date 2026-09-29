@@ -23,7 +23,48 @@ internal static class MonsterLootChannelChecks
         CheckGroundKeys();
         CheckCapturedPickupDescriptor();
         CheckCapturedCorpseClickReply();
+        CheckBindOnPickupRule();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// A loot rule decides whether its drop binds: <c>NULL</c> follows the item
+    /// template, and the roll carries the rule's choice to the pickup so the item
+    /// is written with the flag the GM chose.
+    /// </summary>
+    private static void CheckBindOnPickupRule()
+    {
+        var migration = PostgresSchemaMigrationCatalog.All.Single(
+            static migration => migration.Id ==
+                "20260927_213_monster_loot_bind_on_pickup");
+        Check.True(
+            migration.Sql.Contains(
+                "ADD COLUMN IF NOT EXISTS bound_on_pickup boolean NULL",
+                StringComparison.Ordinal) &&
+            migration.Sql.Contains(
+                "NULL follows the item template BindType",
+                StringComparison.Ordinal),
+            "the bind flag is a nullable per-rule column");
+
+        // A rule that says nothing keeps the template's own behaviour, so the
+        // default record carries no flag at all.
+        var untouched = new MonsterLootRule(
+            "A_normal_stub_001",
+            0,
+            4529u,
+            2_500,
+            1,
+            1);
+        Check.True(
+            untouched.BoundOnPickup is null,
+            "a rule without a choice follows the item template");
+
+        var forcedTradeable = untouched with { BoundOnPickup = false };
+        var forcedBound = untouched with { BoundOnPickup = true };
+        Check.True(
+            forcedTradeable.BoundOnPickup == false &&
+            forcedBound.BoundOnPickup == true,
+            "a rule can force either answer");
     }
 
     /// <summary>

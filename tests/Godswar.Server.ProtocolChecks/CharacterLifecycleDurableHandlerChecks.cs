@@ -41,7 +41,7 @@ internal static partial class CharacterLifecycleDurableHandlerChecks
         await CheckCrossRealmReceiptFailsClosedAsync();
         await CheckSecureMissingIdentityFailsClosedAsync();
         await CheckInWorldLifecycleFailsClosedAsync();
-        await CheckMixedRawPostgresProfileFailsClosedAsync();
+        await CheckRawProfileUsesCompatibilityPathAsync();
         await CheckRawLegacyCompatibilityAsync();
     }
 

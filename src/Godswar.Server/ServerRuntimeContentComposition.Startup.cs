@@ -52,9 +52,13 @@ internal static partial class ServerRuntimeContentComposition
         var monsterLoot =
             await PostgresMonsterLootContentSnapshotReader.LoadAsync(
                 options.Storage.PostgresConnectionString);
+        var questRewards =
+            await PostgresQuestRewardContentSnapshotReader.LoadAsync(
+                options.Storage.PostgresConnectionString);
         MedusaRewardPolicyCatalog.Install(medusaRewards);
         MedusaMonsterContentCatalog.Install(medusaMonsters);
         MonsterLootContentCatalog.Install(monsterLoot);
+        QuestRewardContentCatalog.Install(questRewards);
         var world = await ServerWorldContentComposition.TryLoadAsync(options);
         if (world is null)
         {

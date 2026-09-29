@@ -28,8 +28,14 @@ internal sealed partial class MapInstance
                 if (_monsterRuntime is not null)
                 {
                     // Readiness may request the ordinary map seed after this
-                    // instance has attached its owner-managed Atlantis waves.
-                    if (ReferenceEquals(_monsterRuntime, _atlantisMonsters))
+                    // instance has attached its owner-managed roster. Atlantis
+                    // and the Wonderland islands both own their monsters and pin
+                    // the respawn policy to Never, so the seed is already
+                    // satisfied: handing the existing runtime back is what keeps
+                    // the transition completion from reading the pinned policy
+                    // as an illegal change and faulting the session.
+                    if (ReferenceEquals(_monsterRuntime, _atlantisMonsters) ||
+                        ReferenceEquals(_monsterRuntime, _wonderlandMonsters))
                     {
                         return _monsterRuntime;
                     }

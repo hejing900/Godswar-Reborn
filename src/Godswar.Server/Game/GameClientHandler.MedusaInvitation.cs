@@ -12,6 +12,17 @@ internal sealed partial class GameClientHandler
         GamePacket packet,
         CancellationToken cancellationToken)
     {
+        // A party member's own Enter window answers with the same zero-token
+        // frame the leader's window sends, and the countdown reader below claims
+        // every such frame, so the member's window is consulted first. It only
+        // claims frames that belong to a window this session was actually given.
+        if (await TryHandleMemberEntryWindowResponseAsync(
+                packet,
+                cancellationToken))
+        {
+            return;
+        }
+
         // Instance-entry countdown acknowledgements share opcode 10217 with
         // Medusa member invitations, so the countdown window claims its own
         // zero-token traffic before the invitation reader sees it.
@@ -299,6 +310,16 @@ internal sealed partial class GameClientHandler
                 "[instance-caller] Medusa member transfer rejected " +
                 $"character={member.CharacterName}");
             return;
+        }
+
+        if (!_registry.TryRegisterMedusaMemberUi(
+                _session,
+                invitation.TargetWorldInstanceId))
+        {
+            Console.Error.WriteLine(
+                "[instance-caller] Medusa member UI registration deferred " +
+                $"character={member.CharacterName} " +
+                $"instance={invitation.TargetWorldInstanceId}");
         }
 
         Console.WriteLine(

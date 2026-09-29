@@ -43,7 +43,7 @@ internal sealed partial class GameSessionRegistry
         lock (_gate)
         {
             var freeEntryLimit = LegacyInstanceDailyEntryPolicy
-                .DefaultFreeEntryLimit;
+                .GetDefaultFreeEntryLimit(instanceKind);
             var paidRetryLimit = LegacyInstanceDailyEntryPolicy
                 .GetDefaultPaidRetryLimit(instanceKind);
             var dailyEntryLimit = LegacyInstanceDailyEntryPolicy
@@ -82,14 +82,17 @@ internal sealed partial class GameSessionRegistry
                     paidRetryLimit);
             }
 
-            IReadOnlySet<int> paymentRequiredCharacterIds = keys
-                .Where(key =>
-                    _localLegacyInstanceDailyEntries.TryGetValue(
-                        key,
-                        out var reservations) &&
-                    reservations.Count >= freeEntryLimit)
-                .Select(static key => key.characterId)
-                .ToHashSet();
+            IReadOnlySet<int> paymentRequiredCharacterIds =
+                paidRetryLimit is null
+                    ? new HashSet<int>()
+                    : keys
+                        .Where(key =>
+                            _localLegacyInstanceDailyEntries.TryGetValue(
+                                key,
+                                out var reservations) &&
+                            reservations.Count >= freeEntryLimit)
+                        .Select(static key => key.characterId)
+                        .ToHashSet();
 
             foreach (var key in keys)
             {

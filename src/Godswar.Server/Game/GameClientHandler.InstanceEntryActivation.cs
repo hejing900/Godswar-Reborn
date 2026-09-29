@@ -3,7 +3,6 @@ using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Packets;
 
 namespace Godswar.Server.Game;
-
 internal sealed partial class GameClientHandler
 {
     private async Task ActivatePendingInstanceEntryAsync(PendingInstanceEntry pending,
@@ -24,8 +23,37 @@ internal sealed partial class GameClientHandler
         {
             var result = await HandleLegacyInstanceEntryAsync(pending.NpcId, pending.DialogIndex,
                 legacyDestination, pending.Legacy!, cancellationToken);
-            if (!_session.IsDisconnected && _registry.TryGetSessionWorldInstanceId(_session, out var current) &&
-                current == pending.Legacy!.Party.Members[0].SourceWorldInstanceId)
+            // A per-member instance published the party's own windows before this
+            // point. They stay open for their own sixty seconds so every member
+            // can still confirm and join the committed run; only a leader who
+            // never entered leaves them nothing to join.
+            var hasCommittedInstance = _registry.TryGetSessionWorldInstanceId(
+                _session,
+                out var committedInstance);
+            var sourceInstanceId =
+                pending.Legacy!.Party.Members[0].SourceWorldInstanceId;
+            if (InstanceCallerProtocol.UsesPerMemberEntryWindow(
+                    legacyDestination.Kind))
+            {
+                if (!_session.IsDisconnected &&
+                    hasCommittedInstance &&
+                    committedInstance != sourceInstanceId)
+                {
+                    _registry.BindMemberEntryRun(
+                        _session,
+                        committedInstance,
+                        legacyDestination.TargetMapId,
+                        legacyDestination.TargetX,
+                        legacyDestination.TargetZ);
+                }
+                else
+                {
+                    await _registry.CloseMemberEntryWindowsAsync(_session);
+                }
+            }
+            if (!_session.IsDisconnected &&
+                hasCommittedInstance &&
+                committedInstance == sourceInstanceId)
                 await RejectPendingInstanceEntryAsync(pending, result.Outcome.ToString(),
                     LegacyEntryRejectionMessage(pending, result), cancellationToken);
             return;

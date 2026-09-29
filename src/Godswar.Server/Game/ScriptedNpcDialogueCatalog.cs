@@ -26,10 +26,22 @@ internal sealed partial class GameClientHandler
     /// draws, so a number outside it is not a button of this dialogue's and is left
     /// unanswered.
     /// </param>
+    /// <param name="PageSelections">
+    /// What a button <em>on</em> a page answers with, keyed by the page's own
+    /// number and then by the chosen entry. The client keeps the page's number in
+    /// <c>+20</c> and puts the entry it clicked in the first argument word, so a
+    /// dialogue whose pages carry buttons of their own needs the pair to tell the
+    /// two apart: the battlefield awarder answers <c>174</c> with
+    /// <c>3001</c>-<c>3003</c> and then answers <c>3001</c> itself, so one flat
+    /// table would re-send the page instead of the selection's result. Dialogues
+    /// with a single level of buttons leave this empty.
+    /// </param>
     internal readonly record struct ScriptedNpcDialogue(
         int FunctionNumber,
         IReadOnlyList<int> OpeningMenu,
-        IReadOnlyDictionary<int, int[]> Steps);
+        IReadOnlyDictionary<int, int[]> Steps,
+        IReadOnlyDictionary<int, IReadOnlyDictionary<int, int[]>>?
+            PageSelections = null);
 
     /// <summary>
     /// The Mysterious Elder, who hands out Sheepskin Scrolls and pieces the Lost
@@ -145,12 +157,28 @@ internal sealed partial class GameClientHandler
     /// announcement sends players to. The transports themselves are not wired, so
     /// each entry is answered with the script's own line about the event: the
     /// missing-spell refusal for Sicily and the opening hours for Troy.
+    ///
+    /// The opening page is the capture's, not the script's order: the September
+    /// 28 2026 session (c202c633, npc 5069 = Sparta_072 at local 02:01:43)
+    /// advertised <c>[200, 700, 501, 600, 202]</c> - 诅咒之地二, 西西里岛,
+    /// 多德卡尼斯群岛, 爱情岛猎苑区 and 商旅宝库 - so the two numbers this
+    /// table used to open with are now two of five, and <c>900</c> is no longer
+    /// advertised (it stays answerable, because the script still owns it).
+    /// Clicking <c>200</c> answered <c>2001</c> "等级不符合要求不能传送" and
+    /// clicking either <c>600</c> or <c>202</c> answered <c>1010</c>, the
+    /// 商旅宝库 opening hours - both captured, both page two.
     /// </remarks>
     private static readonly ScriptedNpcDialogue EventTransporterDialogue = new(
         FunctionNumber: 1,
-        OpeningMenu: [700, 900],
+        OpeningMenu: [200, 700, 501, 600, 202],
         Steps: new Dictionary<int, int[]>
         {
+            // Captured: the level refusal and the treasure-vault hours.
+            [200] = [2001],
+            [600] = [1010],
+            [202] = [1010],
+
+            // Transcribed from the script; not clicked in the capture.
             [700] = [2702],
             [701] = [2702],
             [900] = [2801]
@@ -165,14 +193,22 @@ internal sealed partial class GameClientHandler
     /// Page 1 prints <c>NF_L0_97</c> ("Please choose a quest for all guild
     /// members:") for every number and raises its two entries at <c>25,135</c> and
     /// <c>25,160</c>, so one reply carries both. The script's own <c>3</c> and
-    /// <c>4</c> are aliases of those two buttons and <c>5</c>/<c>7</c> ("War
-    /// Material Transportation") is drawn with <c>Visible(false)</c>, so none of
-    /// them are sent. Issuing a guild quest is not run here, so both entries are
-    /// answered with the script's own line for a player who may not issue one.
+    /// <c>4</c> are aliases of those two buttons, so they are not sent. Issuing a
+    /// guild quest is not run here, so both entries are answered with the script's
+    /// own line for a player who may not issue one.
+    ///
+    /// The September 28 2026 capture (session c202c633, npc 5036 = Sparta_039 at
+    /// local 02:06:24) settles the third number: the reference advertised
+    /// <c>[1, 2, 5]</c> and answered a click on <c>1</c> with <c>1001</c>, the
+    /// same refusal this table already sends. <c>5</c> is 战争物资运输; the
+    /// client paints its label and then calls <c>Visible(false)</c> on the same
+    /// button, so the reference shipped a hidden entry that draws nothing. It is
+    /// advertised here for the same reason - the reply stays byte-faithful - and
+    /// it was never clicked, so it owns no answer.
     /// </remarks>
     private static readonly ScriptedNpcDialogue GuildQuestSupervisorDialogue = new(
         FunctionNumber: 6,
-        OpeningMenu: [1, 2],
+        OpeningMenu: [1, 2, 5],
         Steps: new Dictionary<int, int[]>
         {
             [1] = [1001],
@@ -453,6 +489,14 @@ internal sealed partial class GameClientHandler
             selection = subId;
         }
 
+        // The entry clicked on the page the last reply opened, if any. Read here
+        // rather than beside its use because the payload is a span and cannot
+        // survive the awaits below.
+        var pageSelection = payload.Length >= 24
+            ? System.Buffers.Binary.BinaryPrimitives
+                .ReadInt32LittleEndian(payload.Slice(20, 4))
+            : -1;
+
         if (selection < 0)
         {
             // The client is asking for the current page's entries.
@@ -474,6 +518,27 @@ internal sealed partial class GameClientHandler
                 selection,
                 cancellationToken))
         {
+            return;
+        }
+
+        // A selection made on the page the last reply opened. The client keeps
+        // that page's number in +20 - which is the `selection` above - and puts
+        // the entry it clicked in the first argument word, so the pair is what
+        // names the click. Checking it first is what keeps a number that is both
+        // a page's answer and another page's button from being answered as the
+        // wrong one.
+        if (pageSelection >= 0 &&
+            dialogue.PageSelections is { } pageSelections &&
+            pageSelections.TryGetValue(selection, out var pageEntries) &&
+            pageEntries.TryGetValue(pageSelection, out var pageReply))
+        {
+            await SendScriptedNpcDialogueReplyAsync(
+                npc,
+                dialogue,
+                dialogIndex,
+                pageSelection,
+                pageReply,
+                cancellationToken);
             return;
         }
 

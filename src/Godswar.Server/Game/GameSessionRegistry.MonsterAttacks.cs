@@ -147,11 +147,14 @@ internal sealed partial class GameSessionRegistry
                                 attack.Monster,
                                 damageResolvedAt,
                                 monsterProfile);
-                        resolution = MonsterIncomingCombatPolicy.ResolveAttack(
+                        resolution = ResolveWonderlandMonsterAttack(
+                                runtime,
+                                attack,
+                                targetContext,
                                 effectiveMonsterProfile,
-                                targetContext.Character,
                                 runtimeMitigation,
-                                combatEventId);
+                                combatEventId,
+                                damageResolvedAt);
                         if (!TryClaimMonsterIncomingAttack(
                                 targetContext,
                                 attack.Monster,
@@ -321,10 +324,10 @@ internal sealed partial class GameSessionRegistry
                 await TrySendWorldInstancePacketAsync(
                     runtime,
                     targetContext,
-                    PacketBuilder.PlayerDeath(
+                    PlayerDeathFrame(
+                        runtime,
                         LocalPlayerObjectId,
                         target.PositionX,
-                        0f,
                         target.PositionZ,
                         target.CurrentMap),
                     cancellationToken,
@@ -391,10 +394,10 @@ internal sealed partial class GameSessionRegistry
                     await TrySendWorldInstancePacketAsync(
                         runtime,
                         observer,
-                        PacketBuilder.PlayerDeath(
+                        PlayerDeathFrame(
+                            runtime,
                             worldTargetObjectId,
                             target.PositionX,
-                            0f,
                             target.PositionZ,
                             target.CurrentMap),
                         cancellationToken,

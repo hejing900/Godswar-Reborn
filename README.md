@@ -23,6 +23,9 @@ NPC对话链路技术文档以总结（后续可添加所有NPC对话链路根�
 修复炎域技能没有后续伤害，现在持续10秒1秒一次伤害.
 修复第五属性无法显示.
 修复宠物收回会影响祭坛的BUG.
+新增港湾副本（未刷怪未配置掉落），所有副本现在都可以组队进入，并且可以使用邀请功能.
+
+The Harbor Attack instance is added (no monster spawning and no drop configuration yet), and all instances can now be entered as a party with the invite function.
 
 The Lelantine Farm event donation point broadcast is implemented (end rewards and monster respawn are not implemented). The issue where some pets could not be used is fixed. The missing damage display when an area skill one-shots monsters is fixed. The Flame Field skill now deals follow-up damage for 10 seconds, once per second. The fifth attribute now displays correctly. The bug where recalling a pet affected the guild altar is fixed.
 宠物所有技能，所有功能已经实现，创建工会建筑，供奉，加成以实现.
@@ -290,6 +293,8 @@ Implemented:
 - Combat: fixed the missing damage display when an area skill one-shots monsters
 - Flame Field: follow-up damage is now applied for 10 seconds, once per second
 - Items: fixed the fifth attribute not displaying
+- Harbor Attack: the instance entry route is implemented (no monster spawning and no drop configuration yet) ([record](docs/harbor-attack-entry-20260929.md))
+- Instances: all instances can now be entered as a party, and the invite function works
 
 The multiplayer, NPC, and captured-monster synchronization above is server-side. It does not require game client code changes; a client already configured to connect to this server can use it as-is. The patches below cover separate extended-grade, rank, aura, talent, and native client-stability work.
 

@@ -11,13 +11,20 @@ internal static class DynamicDungeonContentMapPolicy
     public const byte MedusaIslandAlternateMapId = 204;
     public const byte AtlantisPortalMapId = 205;
     public const byte WonderlandMapId = 207;
+    public const byte HarborAttackFirstMapId = 208;
+    public const byte HarborAttackSecondMapId = 209;
 
     public static bool IsDynamicDungeonMap(int mapId) =>
         mapId is
             MedusaIslandMapId or
             MedusaIslandAlternateMapId or
             AtlantisPortalMapId or
-            WonderlandMapId;
+            WonderlandMapId or
+            HarborAttackFirstMapId or
+            HarborAttackSecondMapId;
+
+    public static bool IsHarborAttackMap(int mapId) =>
+        mapId is HarborAttackFirstMapId or HarborAttackSecondMapId;
 
     public static bool IsMedusaMap(int mapId) =>
         mapId is MedusaIslandMapId or MedusaIslandAlternateMapId;

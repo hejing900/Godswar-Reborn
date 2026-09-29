@@ -16,10 +16,17 @@ internal sealed partial class GameSessionRegistry
         DateTimeOffset now, CancellationToken cancellationToken)
     {
         var completed = run.State == WonderlandRunState.Completed;
+        // An ended or timed-out run shows the same native leave countdown a
+        // completed run does, and members are carried out when it expires.
+        var ending = !completed && WonderlandCompletionPolicy.IsEndWindowOpen(run, now);
         var remaining = checked((int)Math.Clamp(Math.Ceiling(completed
             ? (run.TerminalAt!.Value + WonderlandCompletionPolicy.TreasureWindow - now).TotalSeconds
-            : (run.Deadline - run.LastObservedAt).TotalSeconds), 0,
-            completed ? WonderlandCompletionPolicy.TreasureWindow.TotalSeconds : 2400));
+            : ending
+                ? (run.TerminalAt!.Value + WonderlandCompletionPolicy.EndWindow - now).TotalSeconds
+                : (run.Deadline - run.LastObservedAt).TotalSeconds), 0,
+            completed ? WonderlandCompletionPolicy.TreasureWindow.TotalSeconds
+                : ending ? WonderlandCompletionPolicy.EndWindow.TotalSeconds
+                : 2400));
         var roster = members.Select(member => new RepetitionInstanceMember(member.CharacterId,
             member.Character.Name, member.Character.Level, true, member.Character.Profession)).ToArray();
         var signature = string.Join('|', roster.Select(member =>
@@ -40,17 +47,18 @@ internal sealed partial class GameSessionRegistry
                 _wonderlandUi.TryGetValue(member.Session, out var previous);
                 if (previous == stamp || previous?.InstanceId == stamp.InstanceId &&
                     (previous.CompletedIslands > stamp.CompletedIslands ||
-                     previous.State == WonderlandRunState.Completed && completed)) continue;
+                     previous.State == WonderlandRunState.Completed && completed ||
+                     ending && previous.State == stamp.State)) continue;
                 var packets = new List<ReadOnlyMemory<byte>>();
                 // Nonzero10231 only opens its native countdown while the
                 // client's repetition state is5/6. Reassert state5 in the
                 // completion batch instead of relying on its entry-time sync.
-                if (completed || previous?.InstanceId != stamp.InstanceId)
+                if (completed || ending || previous?.InstanceId != stamp.InstanceId)
                     packets.Add(PacketBuilder.RepetitionSync(WonderlandClientSceneId, 0, 0, 5, admission.DailyLimit));
                 if (previous?.InstanceId != stamp.InstanceId || previous.Roster != signature)
                     packets.Add(PacketBuilder.RepetitionInstanceMembers(roster));
                 packets.Add(PacketBuilder.RepetitionFightInfo(remaining, run.CompletedIslands));
-                if (completed)
+                if (completed || ending)
                 {
                     packets.Add(PacketBuilder.RepetitionPanelCompletion());
                     packets.Add(PacketBuilder.RepetitionCompletionState(WonderlandClientSceneId, true));
@@ -66,9 +74,10 @@ internal sealed partial class GameSessionRegistry
                 try
                 {
                     await write;
-                    if (completed)
-                        Console.WriteLine($"[wonderland] completion countdown published instance={runtime.InstanceId} " +
-                            $"character={member.CharacterId} seconds={remaining}");
+                    if (completed || ending)
+                        Console.WriteLine($"[wonderland] {(ending ? "end" : "completion")} countdown published " +
+                            $"instance={runtime.InstanceId} character={member.CharacterId} seconds={remaining} " +
+                            $"state={run.State}");
                 }
                 catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 { member.Session.Disconnect(); }

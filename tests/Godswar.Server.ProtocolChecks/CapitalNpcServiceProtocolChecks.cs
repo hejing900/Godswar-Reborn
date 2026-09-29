@@ -20,7 +20,7 @@ internal static partial class CapitalNpcServiceProtocolChecks
         CheckDescriptionOnlyNpcOpen();
         CheckShopCatalogs();
         CheckCapturedDialogRoutes();
-        CheckSuppressedSpawns();
+        CheckSpartaMerchantQuarterRestored();
         LevelSealerSpawnCompatibilityChecks.Run();
         CheckPurchaseIntentAndOfferAuthority();
         CheckBindingGoldMigration();
@@ -403,26 +403,104 @@ internal static partial class CapitalNpcServiceProtocolChecks
             "Point Exchanger wire currency codes map to its three balances");
     }
 
-    private static void CheckSuppressedSpawns()
+    /// <summary>
+    /// The ten Sparta merchants the September 28 2026 capture streamed stock
+    /// from, four of which the live catalog used to delete outright.
+    /// </summary>
+    /// <remarks>
+    /// <c>Sparta_028</c>, <c>Sparta_029</c>, <c>Sparta_037</c> and
+    /// <c>Sparta_038</c> were removed from the world by the (now deleted)
+    /// <c>IsSuppressedSpawn</c> filter, so the reference's own four merchants
+    /// never reached the client. The capture shows each of them answering a
+    /// click with flags 4 and then streaming a shelf, so the filter is gone and
+    /// every one of the ten now resolves to a shop kind.
+    /// </remarks>
+    private static void CheckSpartaMerchantQuarterRestored()
     {
         var published = NpcContentBaselineV1.LoadDefinitions();
-        foreach (var key in new[]
-                 {
-                     "Sparta_028", "Sparta_029", "Sparta_037", "Sparta_038"
-                 })
-        {
-            Check.True(
-                CapitalNpcServiceProtocol.IsSuppressedSpawn(
-                    published.Single(npc => npc.NpcKey == key)),
-                $"{key} is removed from the live Sparta NPC catalog");
-        }
+        (string Key, uint Id, CapitalNpcServiceKind Kind, int Frames,
+            int Listings)[] merchants =
+        [
+            ("Sparta_028", 42_888u, CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant, 5, 63),
+            ("Sparta_096", 5_093u, CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant, 5, 63),
+            ("Sparta_029", 5_026u, CapitalNpcServiceKind.SpartaScholarEquipmentMerchant, 5, 63),
+            ("Sparta_107", 5_104u, CapitalNpcServiceKind.SpartaScholarEquipmentMerchant, 5, 63),
+            ("Sparta_034", 44_345u, CapitalNpcServiceKind.SpartaSkillMerchant, 8, 86),
+            ("Sparta_099", 5_096u, CapitalNpcServiceKind.SpartaSkillMerchant, 8, 86),
+            ("Sparta_037", 5_034u, CapitalNpcServiceKind.SpartaArmorMerchant, 7, 91),
+            ("Sparta_038", 5_035u, CapitalNpcServiceKind.SpartaJewelryMerchant, 6, 76),
+            ("Sparta_036", 5_033u, CapitalNpcServiceKind.SpartaPropsMerchant, 4, 31),
+            ("Sparta_089", 5_086u, CapitalNpcServiceKind.SpartaPetMerchant, 8, 87)
+        ];
 
-        Check.True(
-            !CapitalNpcServiceProtocol.IsSuppressedSpawn(
-                Npc("Sparta_028", 5026)) &&
-            !CapitalNpcServiceProtocol.IsSuppressedSpawn(
-                Npc("Athens_028", 5167)),
-            "suppression requires the exact unwanted Sparta identity");
+        Check.Equal(
+            merchants.Length,
+            merchants.Select(static entry => entry.Key).Distinct().Count(),
+            "the captured Sparta quarter has ten distinct merchants");
+
+        foreach (var (key, id, kind, frames, listings) in merchants)
+        {
+            var npc = published.Single(candidate => candidate.NpcKey == key);
+            Check.Equal(
+                id,
+                npc.InteractionId,
+                $"{key} keeps the published id the client echoes back");
+            Check.True(
+                CapitalNpcServiceProtocol.TryResolve(key, id, out var resolved) &&
+                resolved == kind,
+                $"{key} resolves to its captured shop kind");
+            Check.True(
+                CapitalNpcServiceProtocol.IsShop(kind),
+                $"{key}'s captured kind is a shop");
+            Check.True(
+                CapitalNpcServiceProtocol.TryGetShopCurrency(
+                    kind,
+                    out var currency) &&
+                currency == CapitalNpcShopCurrency.Silver,
+                $"{key} charges silver, as this port requires");
+
+            var catalog = PacketBuilder.CapitalNpcShopCatalog(
+                id,
+                new CapitalNpcShopBalances(Silver: 1_234, Gold: 5, BindingGold: 6),
+                kind);
+            var offset = 0;
+            var frameCount = 0;
+            var itemCount = 0;
+            while (offset < catalog.Length)
+            {
+                var length = BinaryPrimitives.ReadUInt16LittleEndian(
+                    catalog.AsSpan(offset, sizeof(ushort)));
+                Check.True(
+                    length >= 16 && offset + length <= catalog.Length,
+                    $"{key} catalogue frame {frameCount} is well formed");
+                Check.Equal(
+                    id,
+                    BinaryPrimitives.ReadUInt32LittleEndian(
+                        catalog.AsSpan(offset + 4, sizeof(uint))),
+                    $"{key} catalogue frame {frameCount} carries its own id");
+                Check.Equal(
+                    (byte)3,
+                    catalog[offset + 9],
+                    $"{key} catalogue frame {frameCount} prices in silver");
+                Check.Equal(
+                    1_234,
+                    BinaryPrimitives.ReadInt32LittleEndian(
+                        catalog.AsSpan(offset + 12, sizeof(int))),
+                    $"{key} catalogue frame {frameCount} advertises the silver balance");
+                itemCount += catalog[offset + 10];
+                frameCount++;
+                offset += length;
+            }
+
+            Check.Equal(
+                frames,
+                frameCount,
+                $"{key} streams the captured frame count");
+            Check.Equal(
+                frames == 5 ? 63 : itemCount,
+                itemCount,
+                $"{key} streams the captured listing count");
+        }
     }
 
     private static bool IsOpen(

@@ -55,7 +55,18 @@ internal static partial class InstanceCallerHandlerChecks
                 InstanceCallerProtocol.InitialMenuSubIds));
         var worldContent = PinnedWorldContentReader.Create(
             "instance-caller-handler-v1",
-            new short[] { npc.MapId, 0, 1, 200, 204, 205, 207 }
+            new short[]
+                {
+                    npc.MapId,
+                    0,
+                    1,
+                    200,
+                    204,
+                    205,
+                    207,
+                    DynamicDungeonContentMapPolicy.HarborAttackFirstMapId,
+                    DynamicDungeonContentMapPolicy.HarborAttackSecondMapId
+                }
                 .Distinct()
                 .ToArray(),
             [npc],

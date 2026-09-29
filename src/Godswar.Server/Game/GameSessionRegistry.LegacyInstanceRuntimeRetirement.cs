@@ -32,6 +32,7 @@ internal sealed partial class GameSessionRegistry
             WorldInstanceRuntimeDirectoryStatus.InstanceNotFound)
         {
             ForgetAtlantisRun(createdDescriptor.InstanceId);
+            ForgetHarborAttackRun(createdDescriptor.InstanceId);
             return true;
         }
         if (drain.Status != WorldInstanceRuntimeDirectoryStatus.Draining ||
@@ -69,6 +70,7 @@ internal sealed partial class GameSessionRegistry
         if (removed)
         {
             ForgetAtlantisRun(createdDescriptor.InstanceId);
+            ForgetHarborAttackRun(createdDescriptor.InstanceId);
         }
         return removed;
     }

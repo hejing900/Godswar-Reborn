@@ -218,6 +218,15 @@ internal static partial class PacketBuilder
             CapitalNpcServiceKind.AthensMythcraftingRecipeVendor or
             CapitalNpcServiceKind.AthensScholarshipRecipeVendor =>
                 GetCapturedAthensMerchantCatalogSource(service),
+            // The Sparta merchant quarter captured on 2026-09-28.
+            CapitalNpcServiceKind.SpartaWarriorEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaScholarEquipmentMerchant or
+            CapitalNpcServiceKind.SpartaSkillMerchant or
+            CapitalNpcServiceKind.SpartaArmorMerchant or
+            CapitalNpcServiceKind.SpartaJewelryMerchant or
+            CapitalNpcServiceKind.SpartaPropsMerchant or
+            CapitalNpcServiceKind.SpartaPetMerchant =>
+                GetCapturedSpartaMerchantCatalogSource(service),
             _ => GetCapturedCapitalShopCatalogSource(service)
         };
 

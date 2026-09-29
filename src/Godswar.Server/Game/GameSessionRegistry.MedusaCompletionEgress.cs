@@ -231,14 +231,33 @@ internal sealed partial class GameSessionRegistry
         MedusaCompletionRewardReceipt receipt;
         try
         {
+            // Entitlement is the instance's own result granted to every character
+            // still inside it at completion: a member who confirmed the party
+            // window after the run was sealed is entitled exactly like the
+            // leader, and a character who left or dropped before this moment is
+            // not. The egress list itself stays untouched, so whoever must be
+            // carried home still is.
+            var recipients = egress.Members
+                .Select(member => member.CharacterId)
+                .Distinct()
+                .Order()
+                .ToArray();
+            if (recipients.Length == 0)
+            {
+                _medusaCompletionRewardSettled.TryAdd(
+                    egress.SourceWorldInstanceId,
+                    0);
+                return true;
+            }
             var request = new MedusaCompletionRewardRequest(
                 egress.SourceWorldInstanceId,
                 egress.RealmId,
                 egress.Difficulty,
+                egress.Completed,
                 egress.Completion.CompletedAt,
                 egress.Completion.Elapsed,
                 egress.Completion.FinalScore,
-                egress.AdmittedCharacterIds);
+                recipients);
             receipt = await store.SettleAsync(request, cancellationToken);
         }
         catch (Exception error) when (
@@ -530,7 +549,8 @@ internal sealed partial class GameSessionRegistry
         MedusaRunCompletionMarker Completion,
         IReadOnlyList<int> AdmittedCharacterIds,
         IReadOnlyList<MedusaCompletionEgressMember> Members,
-        bool ExitPlayers);
+        bool ExitPlayers,
+        bool Completed = true);
 
     private readonly record struct MedusaCompletionEgressMember(
         ClientSession Session,

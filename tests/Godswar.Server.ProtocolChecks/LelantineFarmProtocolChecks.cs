@@ -363,9 +363,17 @@ internal static class LelantineFarmProtocolChecks
                 "PRIMARY KEY (character_id, faction)",
                 StringComparison.Ordinal),
             "credited kills are keyed by the camp they were earned for");
+        // The release must still be registered, and no later release may be
+        // backdated behind it: a forward-only history means the next release
+        // becomes the new head, so pinning this one as the head outright would
+        // fail the moment anything else ships.
         Check.True(
-            PostgresSchemaMigrationCatalog.All[^1].Id == migration.Id,
-            "the score-summing release is the catalog head");
+            PostgresSchemaMigrationCatalog.All.Any(candidate =>
+                candidate.Id == migration.Id) &&
+            string.CompareOrdinal(
+                PostgresSchemaMigrationCatalog.All[^1].Id,
+                migration.Id) >= 0,
+            "the score-summing release is registered and nothing backdates it");
     }
 
     /// <summary>

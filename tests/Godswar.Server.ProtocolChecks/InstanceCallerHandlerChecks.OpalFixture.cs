@@ -91,7 +91,12 @@ internal static partial class InstanceCallerHandlerChecks
                         InstanceCallerProtocol.InitialMenuSubIds));
                 var worldContent = PinnedWorldContentReader.Create(
                     $"atlantis-opal-member-{index}",
-                    [(short)character.CurrentMap, 205],
+                    [
+                        (short)character.CurrentMap,
+                        205,
+                        DynamicDungeonContentMapPolicy.HarborAttackFirstMapId,
+                        DynamicDungeonContentMapPolicy.HarborAttackSecondMapId
+                    ],
                     [npc],
                     [],
                     [],
@@ -117,7 +122,11 @@ internal static partial class InstanceCallerHandlerChecks
                     new InstanceCallerGameStore(),
                     leader.Registry,
                     CharacterSnapshotReaderTestFixtures.Unused,
-                    worldContent);
+                    worldContent,
+                    // Production injects the daily-entry store into every
+                    // handler; a member who claims an entry on their own behalf
+                    // must reach the same store the leader's claim does.
+                    legacyInstanceDailyEntries: dailyEntries);
                 SetHandlerField(
                     handler,
                     "_account",

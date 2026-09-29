@@ -29,7 +29,12 @@ internal sealed partial class GameSessionRegistry
                     character.MedusaHonorPoints = reward.HonorAfter;
                     character.MedusaRewardRevision = reward.RewardRevision;
                 }
-                character.AddOwnedTitle(reward.AwardedTitleId);
+                // Only a completed run grants a title; an incomplete settlement
+                // pays HardPoints alone.
+                if (reward.AwardedTitleId != 0)
+                {
+                    character.AddOwnedTitle(reward.AwardedTitleId);
+                }
                 recipient = current.Session;
                 var packets = new ReadOnlyMemory<byte>[]
                 {
@@ -48,9 +53,16 @@ internal sealed partial class GameSessionRegistry
             evidence.Members[0].Name;
         var solo = request.AdmittedMembers.Count == 1;
         var subject = new string(name.Take(32).Select(character => character <= 127 ? character : '?').ToArray());
-        var announcement = solo
-            ? $"{subject} cleared Atlantis solo! +2,800 HardPoints and the title Deep Sea Hunter."
-            : $"{subject}'s party cleared Atlantis! +2,800 HardPoints each and the title Seabed Explorer.";
+        // A completed run keeps its original wording; a run that ended before the
+        // completion threshold announces the tier it actually earned, with no
+        // title.
+        var announcement = receipt.Award.TitleId == 0
+            ? solo
+                ? $"{subject} left Atlantis with +{receipt.Award.HardPoints} HardPoints."
+                : $"{subject}'s party left Atlantis with +{receipt.Award.HardPoints} HardPoints each."
+            : solo
+                ? $"{subject} cleared Atlantis solo! +2,800 HardPoints and the title Deep Sea Hunter."
+                : $"{subject}'s party cleared Atlantis! +2,800 HardPoints each and the title Seabed Explorer.";
         var notice = PacketBuilder.CenteredAnnouncement(announcement);
         var writes = new List<(ClientSession Session, Task Write)>();
         lock (_gate)

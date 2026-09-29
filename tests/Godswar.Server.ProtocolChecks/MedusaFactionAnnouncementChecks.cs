@@ -49,6 +49,7 @@ internal static class MedusaFactionAnnouncementChecks
         Check.True(
             MedusaCompletionRewardPolicy.TryResolve(
                 MedusaEncounterDifficulty.Enhanced,
+                completed: true,
                 MedusaIslandPolicy.VictoryScore,
                 TimeSpan.FromMinutes(10),
                 out var award),

@@ -13,16 +13,24 @@ $exe = Join-Path $OutputPath 'Godswar.LootTool.exe'
 $selfContained = if ($Mode -eq 'self-contained') { 'true' } else { 'false' }
 
 Write-Host "发布 Godswar.LootTool（$Mode，win-x64 单文件）..."
-dotnet publish $project `
-    --configuration Release `
-    --runtime win-x64 `
-    --self-contained $selfContained `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true `
-    -p:PublishTrimmed=false `
-    --nologo -v q `
-    --output $OutputPath
+# Compression is a self-contained-only option: passing it for a framework
+# dependent publish fails the build with NETSDK1176.
+$publishArgs = @(
+    $project,
+    '--configuration', 'Release',
+    '--runtime', 'win-x64',
+    '--self-contained', $selfContained,
+    '-p:PublishSingleFile=true',
+    '-p:IncludeNativeLibrariesForSelfExtract=true',
+    '-p:PublishTrimmed=false',
+    '--nologo', '-v', 'q',
+    '--output', $OutputPath
+)
+if ($Mode -eq 'self-contained') {
+    $publishArgs += '-p:EnableCompressionInSingleFile=true'
+}
+
+dotnet publish @publishArgs
 if ($LASTEXITCODE -ne 0) { throw '发布失败。' }
 
 # Carry the operator's saved connection/client settings into the new folder so

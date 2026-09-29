@@ -7,6 +7,10 @@ namespace Godswar.LootTool;
 /// form: index/item/percent/quantity columns stay authoritative here, and the
 /// item-name column is always recomputed from the selected item id.
 /// </summary>
+/// <remarks>
+/// 「拾取后」列是下拉选择而不是复选框：它有三态（跟随物品模板 / 可交易 / 拾取绑定），
+/// 用复选框会把「跟随物品模板」和「可交易」压成同一个值。
+/// </remarks>
 internal sealed class LootRuleGrid
 {
     private const int IndexColumn = 0;
@@ -16,6 +20,17 @@ internal sealed class LootRuleGrid
     private const int MinimumColumn = 4;
     private const int MaximumColumn = 5;
     private const int EnabledColumn = 6;
+    private const int BoundColumn = 7;
+    private const int AttributeColumn = 8;
+    private const int AttributeButtonColumn = 9;
+
+    /// <summary>行里存的那件物品的属性（DataGridView 不绑数据源，就挂在行上）。</summary>
+    private const string AttributeTagKey = "attributes";
+
+    /// <summary>下拉里三个选项的文字，也是单元格的取值（不额外做隐式转换）。</summary>
+    internal const string BoundFollowLabel = "跟随物品(默认)";
+    internal const string BoundTradeableLabel = "可交易";
+    internal const string BoundPickupLabel = "拾取绑定";
 
     private readonly DataGridView _grid;
     private Func<int, string> _describeItem = static _ => string.Empty;
@@ -74,12 +89,52 @@ internal sealed class LootRuleGrid
             Width = 50,
             SortMode = DataGridViewColumnSortMode.NotSortable
         });
+        var boundColumn = new DataGridViewComboBoxColumn
+        {
+            HeaderText = "拾取后",
+            Width = 128,
+            SortMode = DataGridViewColumnSortMode.NotSortable,
+            FlatStyle = FlatStyle.Flat,
+            // 不用进编辑态就能看出这是个下拉，省一次点击
+            DisplayStyle = DataGridViewComboBoxDisplayStyle.ComboBox
+        };
+        boundColumn.Items.AddRange(
+            BoundFollowLabel,
+            BoundTradeableLabel,
+            BoundPickupLabel);
+        _grid.Columns.Add(boundColumn);
+        _grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            HeaderText = "物品属性",
+            Width = 250,
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.NotSortable
+        });
+        _grid.Columns.Add(new DataGridViewButtonColumn
+        {
+            HeaderText = "属性",
+            Width = 66,
+            Text = "属性…",
+            UseColumnTextForButtonValue = true,
+            FlatStyle = FlatStyle.Flat,
+            SortMode = DataGridViewColumnSortMode.NotSortable
+        });
         _grid.CellValueChanged += OnCellValueChanged;
         _grid.CurrentCellDirtyStateChanged += OnCurrentCellDirtyStateChanged;
+        _grid.CellContentClick += OnCellContentClick;
+        // 下拉列的取值只可能来自上面三个标签；万一出现意外值，宁可让 ReadRules 报一句
+        // 人话，也不要弹系统的 DataGridView 错误框。
+        _grid.DataError += (_, e) => e.ThrowException = false;
     }
 
     /// <summary>Raised whenever a cell edit changes persisted content.</summary>
     public event EventHandler? Changed;
+
+    /// <summary>
+    /// 「属性…」按钮的落地实现由主窗口给（弹窗在那儿）。入参是这一行的物品描述，
+    /// 返回 null = 取消。
+    /// </summary>
+    public Func<string, ItemAttributeValues, ItemAttributeValues?>? EditAttributes { get; set; }
 
     public void SetItemDescriber(Func<int, string> describeItem)
     {
@@ -90,6 +145,20 @@ internal sealed class LootRuleGrid
     public bool IsEmpty => _grid.Rows.Count == 0;
 
     public int RowCount => _grid.Rows.Count;
+
+    /// <summary>
+    /// 旧库还没有 <c>bound_on_pickup</c> 列时把「拾取后」整列藏起来：
+    /// 留着它只会让 GM 以为能设，保存时才报错。
+    /// </summary>
+    public void SetBoundColumnVisible(bool visible) =>
+        _grid.Columns[BoundColumn].Visible = visible;
+
+    /// <summary>旧库还没有那 12 列物品属性时，把「物品属性」与「属性…」两列一起藏起来。</summary>
+    public void SetAttributeColumnsVisible(bool visible)
+    {
+        _grid.Columns[AttributeColumn].Visible = visible;
+        _grid.Columns[AttributeButtonColumn].Visible = visible;
+    }
 
     /// <summary>Replaces the grid content without raising change events.</summary>
     public void Bind(IReadOnlyList<LootRule> rules)
@@ -109,6 +178,8 @@ internal sealed class LootRuleGrid
                 row.Cells[MinimumColumn].Value = rule.MinimumQuantity;
                 row.Cells[MaximumColumn].Value = rule.MaximumQuantity;
                 row.Cells[EnabledColumn].Value = rule.Enabled;
+                row.Cells[BoundColumn].Value = ToBoundLabel(rule.BoundOnPickup);
+                SetRowAttributes(row, rule.Attributes ?? new ItemAttributeValues());
             }
         }
         finally
@@ -138,6 +209,9 @@ internal sealed class LootRuleGrid
             row.Cells[MinimumColumn].Value = (short)1;
             row.Cells[MaximumColumn].Value = (short)1;
             row.Cells[EnabledColumn].Value = true;
+            // 新规则默认「跟随物品模板」，和服务端的旧行为一致；属性默认不配置
+            row.Cells[BoundColumn].Value = BoundFollowLabel;
+            SetRowAttributes(row, new ItemAttributeValues());
         }
         finally
         {
@@ -315,10 +389,78 @@ internal sealed class LootRuleGrid
                 basisPoints,
                 minimum,
                 maximum,
-                enabled));
+                enabled,
+                ReadBoundOnPickup(row),
+                RowAttributes(row)));
         }
 
         return rules;
+    }
+
+    /// <summary>
+    /// 下拉标签 → 三态。<b>不做隐式转换</b>：认不出的取值直接报错，
+    /// 免得把「没选」悄悄存成「可交易」这种改变语义的值。
+    /// </summary>
+    private static bool? ReadBoundOnPickup(DataGridViewRow row)
+    {
+        var text = Convert.ToString(
+            row.Cells[BoundColumn].Value,
+            CultureInfo.InvariantCulture);
+        return text switch
+        {
+            BoundFollowLabel => null,
+            BoundTradeableLabel => false,
+            BoundPickupLabel => true,
+            _ => throw new LootValidationException(
+                $"第 {row.Index + 1} 行：拾取后必须是「{BoundFollowLabel}」/" +
+                $"「{BoundTradeableLabel}」/「{BoundPickupLabel}」之一。")
+        };
+    }
+
+    private static string ToBoundLabel(bool? boundOnPickup) => boundOnPickup switch
+    {
+        true => BoundPickupLabel,
+        false => BoundTradeableLabel,
+        null => BoundFollowLabel
+    };
+
+    /// <summary>把这一行的属性放进 Tag 并刷新摘要列。</summary>
+    private void SetRowAttributes(DataGridViewRow row, ItemAttributeValues attributes)
+    {
+        row.Tag = attributes;
+        row.Cells[AttributeColumn].Value = attributes.Summary;
+    }
+
+    private static ItemAttributeValues RowAttributes(DataGridViewRow row) =>
+        row.Tag as ItemAttributeValues ?? new ItemAttributeValues();
+
+    /// <summary>「属性…」按钮：弹窗归主窗口，这里只负责把结果写回行里。</summary>
+    private void OnCellContentClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != AttributeButtonColumn || EditAttributes is null)
+        {
+            return;
+        }
+
+        var row = _grid.Rows[e.RowIndex];
+        var itemId = row.Cells[ItemIdColumn].Value is int value ? value : 0;
+        var updated = EditAttributes(_describeItem(itemId), RowAttributes(row));
+        if (updated is null)
+        {
+            return;
+        }
+
+        _suppressChanged = true;
+        try
+        {
+            SetRowAttributes(row, updated);
+        }
+        finally
+        {
+            _suppressChanged = false;
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnCurrentCellDirtyStateChanged(object? sender, EventArgs e)

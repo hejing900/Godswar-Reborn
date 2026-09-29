@@ -4,7 +4,8 @@ namespace Godswar.LootTool;
 
 /// <summary>
 /// Item search dialog over <c>item_templates</c>, with the client's Chinese name
-/// shown next to the server's English one.
+/// shown next to the server's English one. Shared by the loot and quest reward
+/// tabs, so the caption is the caller's.
 /// </summary>
 internal sealed class ItemPickerForm : Form
 {
@@ -15,10 +16,13 @@ internal sealed class ItemPickerForm : Form
     private readonly DataGridView _grid = new();
     private readonly Label _summary = new();
 
-    public ItemPickerForm(IReadOnlyList<ItemRow> items, int initialItemId)
+    public ItemPickerForm(
+        IReadOnlyList<ItemRow> items,
+        int initialItemId,
+        string title = "选择掉落物品")
     {
         _items = items;
-        Text = "选择掉落物品";
+        Text = title;
         Width = 900;
         Height = 560;
         StartPosition = FormStartPosition.CenterParent;

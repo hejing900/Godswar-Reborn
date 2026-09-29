@@ -1,5 +1,6 @@
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Networking;
+using Godswar.Server.Protocol;
 
 namespace Godswar.Server.Game;
 
@@ -111,9 +112,18 @@ internal sealed partial class GameSessionRegistry
                 return LegacyInstanceEntryStatus.PartyTooLarge;
             }
         }
-        else if (characterIds.Length > 5)
+        else
         {
-            return LegacyInstanceEntryStatus.PartyTooLarge;
+            // The cap is the shared party maximum; a destination may also demand
+            // a minimum roster (港湾遇袭 requires at least three players).
+            if (characterIds.Length > PartyProtocol.MaximumMembers)
+            {
+                return LegacyInstanceEntryStatus.PartyTooLarge;
+            }
+            if (characterIds.Length < destination.MinimumPartySize)
+            {
+                return LegacyInstanceEntryStatus.PartyTooSmall;
+            }
         }
 
         var members = new List<LegacyInstancePartyMember>(

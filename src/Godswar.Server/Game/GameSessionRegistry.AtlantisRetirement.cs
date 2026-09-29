@@ -23,6 +23,14 @@ internal sealed partial class GameSessionRegistry
         {
             return;
         }
+        if (_atlantisCompletionRewards is not null &&
+            !_atlantisCompletionRewardSettled.ContainsKey(delivery.Runtime.InstanceId))
+        {
+            // Removing the runtime discards the only copy of the run result, so a
+            // terminal run whose durable reward has not settled yet is held open.
+            // Every tick retries the settlement and logs a failure to retry.
+            return;
+        }
 
         _pendingAtlantisRetirements.TryAdd(delivery.Runtime.InstanceId, 0);
         await TryFinishAtlantisRetirementAsync(

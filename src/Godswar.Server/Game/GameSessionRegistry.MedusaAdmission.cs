@@ -12,7 +12,11 @@ internal sealed partial class GameSessionRegistry
             runtime,
             map => (!map.TryGetAtlantisRunSnapshot(out var atlantis) ||
                     atlantis.State == AtlantisRunState.Active) &&
-                map.CheckMedusaCharacterAdmission(characterId).MayEnter);
+                map.CheckMedusaCharacterAdmission(characterId).MayEnter &&
+                // Wonderland is admission-only: its instance is created for one
+                // reserved party, so a transfer that is not on that party's
+                // roster must never enter the run. Every other map returns true.
+                MayEnterWonderlandMap(map, characterId));
         return admission;
     }
 

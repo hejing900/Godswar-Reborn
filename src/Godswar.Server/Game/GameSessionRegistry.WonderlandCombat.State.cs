@@ -172,13 +172,23 @@ internal sealed partial class GameSessionRegistry
         var changed = false;
         if (policy.MechanicKey == "petbird")
         {
+            // A refresh inside the window must not re-log; the first hit that
+            // grants the blessing is what an operator needs to see.
+            var fresh = effects.AttackUntil <= now;
             effects.AttackUntil = now.AddSeconds(15);
             changed = true;
+            if (fresh)
+                Console.WriteLine($"[wonderland] petbird blessing character={target.Character.Name} " +
+                    "physical-and-magic-attack=5x seconds=15");
         }
         if (policy.MechanicKey == "putridbird")
         {
+            var fresh = effects.HitUntil <= now;
             effects.HitUntil = now.AddSeconds(15);
             changed = true;
+            if (fresh)
+                Console.WriteLine($"[wonderland] putridbird blessing character={target.Character.Name} " +
+                    "hit=+25000 seconds=15");
         }
         if (policy.Stage == 4 && !policy.IsBoss && resolution.Hit && appliedDamage > 0 &&
             (attack.Monster.ControlsAt(now) & WonderlandSkillBlockingControls) == 0)

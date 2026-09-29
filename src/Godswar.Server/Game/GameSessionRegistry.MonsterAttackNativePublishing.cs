@@ -165,10 +165,10 @@ internal sealed partial class GameSessionRegistry
                         decision.AfterLifeRevision,
                         targetContext,
                         decision.AfterLifeRevision,
-                        PacketBuilder.PlayerDeath(
+                        PlayerDeathFrame(
+                            runtime,
                             LocalPlayerObjectId,
                             target.PositionX,
-                            0f,
                             target.PositionZ,
                             target.CurrentMap),
                         cancellationToken,
@@ -310,10 +310,10 @@ internal sealed partial class GameSessionRegistry
                         captured.LifeRevision,
                         targetContext,
                         decision.AfterLifeRevision,
-                        PacketBuilder.PlayerDeath(
+                        PlayerDeathFrame(
+                            runtime,
                             worldTargetObjectId,
                             target.PositionX,
-                            0f,
                             target.PositionZ,
                             target.CurrentMap),
                         cancellationToken,

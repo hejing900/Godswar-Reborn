@@ -27,12 +27,11 @@ internal static class LegacyInstanceAdmissionPolicy
         }
 
         var local = calendar.ToRealmTime(instant);
-        if (local.DayOfWeek is not
-            (DayOfWeek.Saturday or DayOfWeek.Sunday))
-        {
-            return LegacyInstanceScheduleStatus.WrongDay;
-        }
 
+        // The reference only opened 飘渺幻境 on Saturday and Sunday. This server
+        // runs it every day by the operator's decision (2026-09-28), so only the
+        // daily cut-off remains - the part the client's own text states: the
+        // instance is free to enter before 23:00 server time (Asia/Manila).
         return TimeOnly.FromDateTime(local.DateTime) < WonderlandCutoff
             ? LegacyInstanceScheduleStatus.Open
             : LegacyInstanceScheduleStatus.DailyCutoffPassed;

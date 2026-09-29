@@ -153,7 +153,14 @@ internal sealed partial class GameClientHandler
                 party.RealmId,
                 new WorldMapId(checked((short)destination.TargetMapId)),
                 InstanceKind.Dungeon,
-                party.Members.Count,
+                // Room for a whole party, not just the characters who registered.
+                // A member who confirms their own Enter window after the run was
+                // sealed - or a member invited by name from inside it - is pulled
+                // into this instance later, and an instance sized to the original
+                // headcount refuses them as InstanceFull.
+                Math.Max(
+                    party.Members.Count,
+                    Godswar.Server.Protocol.PartyProtocol.MaximumMembers),
                 cancellationToken);
         }
         catch (OperationCanceledException)
@@ -324,7 +331,11 @@ internal sealed partial class GameClientHandler
         try
         {
             leaderMoved = TryStartLegacyInstanceEncounter(destination, target.InstanceId,
-                    claimResult.DailyEntryLimit ?? 1, party, reservationId) &&
+                    // The daily limit the client's window is told about. A null
+                    // limit means "no limit" (Wonderland's current setting), and
+                    // the window has only a ushort to show, so the maximum stands
+                    // in for unlimited.
+                    claimResult.DailyEntryLimit ?? ushort.MaxValue, party, reservationId) &&
                 await TryBeginAuthoritativeInstanceTransitionAsync(
                     leaderCommand,
                     cancellationToken);
@@ -431,7 +442,17 @@ internal sealed partial class GameClientHandler
             reservationId,
             new[] { leader.CharacterId });
 
-        await TransferLegacyInstanceFollowersAsync(party, destination, npc, target, reservationId, opalsCharged);
+        // A per-member instance admits only the members who confirmed the same
+        // window the leader confirmed; a member who never confirmed keeps the
+        // daily attempt they never spent.
+        IReadOnlySet<int>? confirmedFollowers = null;
+        if (InstanceCallerProtocol.UsesPerMemberEntryWindow(destination.Kind))
+        {
+            confirmedFollowers =
+                _registry.ConfirmedMemberEntryMembers(_session);
+        }
+        await TransferLegacyInstanceFollowersAsync(party, destination, npc, target, reservationId,
+            opalsCharged, confirmedFollowers);
         return new(LegacyEntryOutcome.Admitted);
     }
 

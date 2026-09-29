@@ -36,6 +36,8 @@ internal static partial class Program
             .. CoreRuntimeCheckCatalog.All,
             .. WorldTravelCheckCatalog.All,
             .. LegacyInstanceCheckCatalog.All,
+            (HarborAttackEntryProtocolChecks.CheckName,
+                HarborAttackEntryProtocolChecks.RunAsync),
             ("Native local-player scene-change packet", MapSceneChangePacketChecks.RunAsync),
             ("Player combat and committed-progression ECS parity", PlayerCombatEcsParityChecks.RunAsync),
             ("Live reversible player-combat ECS adapter", PlayerCombatEcsLiveAdapterChecks.RunAsync),

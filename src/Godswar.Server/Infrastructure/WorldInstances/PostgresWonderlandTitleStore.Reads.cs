@@ -98,9 +98,9 @@ internal sealed partial class PostgresWonderlandTitleStore
     {
         await using var command = new NpgsqlCommand("""
             SELECT realm_id,instance_kind,character_id,claimed_at FROM public.legacy_instance_daily_entries
-            WHERE reservation_id=@reservation AND admitted_at IS NOT NULL ORDER BY character_id FOR SHARE;
+            WHERE reservation_id=ANY(@reservations) AND admitted_at IS NOT NULL ORDER BY character_id FOR SHARE;
             """, connection, transaction);
-        command.Parameters.AddWithValue("reservation", request.AdmissionReservationId);
+        command.Parameters.AddWithValue("reservations", request.AdmissionReservationIds.ToArray());
         var index = 0;
         await using var reader = await command.ExecuteReaderAsync(token);
         while (await reader.ReadAsync(token))

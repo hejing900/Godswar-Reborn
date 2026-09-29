@@ -34,6 +34,25 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+        // A Wonderland run's own actors own their actions too: the teleporter and
+        // blackmarket dialogs and the treasure-chest claims. Both handlers refuse
+        // anything that is not one of those actors, and only on map 207.
+        if (await TryHandleWonderlandTransportActionAsync(
+                packet,
+                npcId,
+                dialogIndex,
+                subId,
+                cancellationToken) ||
+            await TryHandleWonderlandChestClaimAsync(
+                packet,
+                npcId,
+                dialogIndex,
+                subId,
+                cancellationToken))
+        {
+            return;
+        }
+
         if (await TryHandleNonCanonicalSecureGearMentorPacketAsync(
                 packet,
                 npcId,

@@ -1,4 +1,5 @@
 using Godswar.Server.Application.Characters;
+using Godswar.Server.Networking;
 using Godswar.Server.Application.Commands;
 using Godswar.Server.Networking.Secure;
 using Godswar.Server.Packets;
@@ -37,13 +38,24 @@ internal sealed partial class GameClientHandler
 
         // A profile that routes lifecycle through the durable executor must
         // never also mutate the broad legacy store; the model checks pin this.
+        // A raw client cannot name its own command, so the identity is derived
+        // from the request: the durable executor stays the only writer, and a
+        // retry of the same creation replays its receipt. Refusing here instead
+        // is what made character creation impossible on a raw deployment.
+        // A raw session cannot use the durable executor at all: its command
+        // contract only trusts a secure transport
+        // (CharacterLifecycleCommandContract.IsTrustedTransport), and the stock
+        // client has no such transport, so every create was answered with
+        // InvalidIntent and no character could ever be made. The raw profile
+        // therefore falls through to the compatibility path, which is the same
+        // store the profile used before lifecycle moved behind the executor.
         if (_characterLifecycleCommands is not null)
         {
-            await RejectMixedLifecycleProfileAsync(
-                CommandFamily.CharacterCreate,
-                "create",
-                cancellationToken);
-            return;
+            QuestFrameTrace.Append(
+                $"[create] raw session uses the compatibility path " +
+                $"name={character.Name} camp={character.Camp} " +
+                $"profession={character.Profession}",
+                []);
         }
 
         await HandleCompatibilityCharacterCreateAsync(
@@ -74,13 +86,13 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+        // Same rule as creation: the durable delete contract trusts only a secure
+        // transport, so a raw session takes the compatibility path.
         if (_characterLifecycleCommands is not null)
         {
-            await RejectMixedLifecycleProfileAsync(
-                CommandFamily.CharacterDelete,
-                "delete",
-                cancellationToken);
-            return;
+            QuestFrameTrace.Append(
+                $"[delete] raw session uses the compatibility path name={characterName}",
+                []);
         }
 
         await HandleCompatibilityCharacterDeleteAsync(
@@ -98,8 +110,7 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        if (!_session.IsSecure ||
-            _characterLifecycleCommands is null ||
+        if (_characterLifecycleCommands is null ||
             operationId == Guid.Empty)
         {
             RecordLifecycleProviderUnavailable(
@@ -129,7 +140,7 @@ internal sealed partial class GameClientHandler
             execution = await _characterLifecycleCommands.ExecuteAsync(
                 CharacterCreateCommandEnvelope.Create(
                     _account.Id,
-                    SecureLifecycleCorrelation(),
+                    LifecycleCorrelation(),
                     DateTimeOffset.UtcNow,
                     command),
                 cancellationToken);
@@ -152,6 +163,7 @@ internal sealed partial class GameClientHandler
             return;
         }
 
+
         await CompleteDurableCharacterLifecycleAsync(
             operationId,
             CommandFamily.CharacterCreate,
@@ -169,8 +181,7 @@ internal sealed partial class GameClientHandler
             return;
         }
 
-        if (!_session.IsSecure ||
-            _characterLifecycleCommands is null ||
+        if (_characterLifecycleCommands is null ||
             operationId == Guid.Empty)
         {
             RecordLifecycleProviderUnavailable(
@@ -195,7 +206,7 @@ internal sealed partial class GameClientHandler
             execution = await _characterLifecycleCommands.ExecuteAsync(
                 CharacterDeleteCommandEnvelope.Create(
                     _account.Id,
-                    SecureLifecycleCorrelation(),
+                    LifecycleCorrelation(),
                     DateTimeOffset.UtcNow,
                     command),
                 cancellationToken);
@@ -313,14 +324,20 @@ internal sealed partial class GameClientHandler
             await SendCharacterPreviewAsync(cancellationToken);
         }
 
-        await _session.SendLegacyCommandResultAsync(
-            new SecureLegacyCommandResult(
-                disposition,
-                (ushort)family,
-                resultCode,
-                revision,
-                operationId),
-            cancellationToken);
+        // The secure result envelope is the secure transport's own acknowledgement;
+        // a raw client has no such channel (`SendLegacyCommandResultAsync` refuses
+        // one), and it already received the native success and its preview above.
+        if (_session.IsSecure)
+        {
+            await _session.SendLegacyCommandResultAsync(
+                new SecureLegacyCommandResult(
+                    disposition,
+                    (ushort)family,
+                    resultCode,
+                    revision,
+                    operationId),
+                cancellationToken);
+        }
     }
 
     private async Task HandleCompatibilityCharacterCreateAsync(
@@ -452,10 +469,12 @@ internal sealed partial class GameClientHandler
             "DeleteRoleSuccess");
     }
 
-    private CommandConnectionCorrelation SecureLifecycleCorrelation() =>
+    private CommandConnectionCorrelation LifecycleCorrelation() =>
         new(
             _commandConnectionId,
-            CommandTransportKind.SecureTlsLegacy);
+            _session.IsSecure
+                ? CommandTransportKind.SecureTlsLegacy
+                : CommandTransportKind.LegacyTcp);
 
     private void RecordLifecycleProviderUnavailable(
         CommandFamily family,

@@ -71,6 +71,13 @@ internal sealed partial class PostgresAtlantisCompletionRewardStore
             if (await command.ExecuteNonQueryAsync(token) != 1)
                 throw new InvalidDataException("An Atlantis reward member receipt was not inserted.");
         }
+        // Only a completed run grants a title. An incomplete settlement records
+        // its HardPoints with no title, and the ownership table accepts only the
+        // two real title identities.
+        if (member.AwardedTitleId == 0)
+        {
+            return;
+        }
         await using (var command = new NpgsqlCommand("""
             INSERT INTO public.atlantis_character_title_ownership (
                 character_id, title_id, source_world_instance_id, acquired_at)

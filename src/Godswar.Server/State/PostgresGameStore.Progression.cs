@@ -175,9 +175,30 @@ internal sealed partial class PostgresGameStore
 
     public Task<MonsterLootPickupResult> PickupMonsterLootAsync(
         int accountId, int characterId, Guid deathEventId, int lootIndex,
-        uint itemId, int quantity, CancellationToken cancellationToken = default) =>
+        uint itemId, int quantity, bool? boundOnPickup = null,
+        ItemGrantAttributes? attributes = null,
+        CancellationToken cancellationToken = default) =>
         _monsterRewardExtras.PickupMonsterLootAsync(accountId, characterId,
-            deathEventId, lootIndex, itemId, quantity, cancellationToken);
+            deathEventId, lootIndex, itemId, quantity, boundOnPickup,
+            attributes, cancellationToken);
+
+    /// <summary>
+    /// Writes a quest reward item into the character's kit bag.
+    /// </summary>
+    /// <remarks>
+    /// This store implements <see cref="IMonsterRewardExtrasStore"/> by forwarding
+    /// to the dedicated reward store, and a member it forgets to forward silently
+    /// falls back to the interface's default implementation - which refuses the
+    /// work. A quest reward was answered with <c>Unsupported</c> and never written
+    /// for exactly that reason, so every member of the interface is forwarded here.
+    /// </remarks>
+    public Task<QuestRewardItemGrantResult> GrantQuestRewardItemAsync(
+        int accountId, int characterId, uint questId, int slotIndex,
+        uint itemId, int quantity, ItemGrantAttributes attributes,
+        CancellationToken cancellationToken = default) =>
+        _monsterRewardExtras.GrantQuestRewardItemAsync(accountId, characterId,
+            questId, slotIndex, itemId, quantity, attributes,
+            cancellationToken);
 
     public Task<PetMonsterExperienceResult> ApplyPetMonsterKillExperienceAsync(
         int accountId, int characterId, Guid deathEventId, int experience,

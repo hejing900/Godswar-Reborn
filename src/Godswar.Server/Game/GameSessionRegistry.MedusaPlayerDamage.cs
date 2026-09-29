@@ -84,6 +84,14 @@ internal sealed partial class GameSessionRegistry
                     committedAt,
                     requestedResolution));
             applied = commit.Applied;
+            // Every player attack, skill and area hit on a Wonderland island
+            // commits through this one method, so this is the only place the
+            // run can observe a committed kill: the island clear, the panel's
+            // cleared-island score and the teleporters' score gate all read
+            // from that observation. The observer time-gates and de-duplicates
+            // by health revision, and ignores every other map instance.
+            if (applied && commit.DamageResult is { } wonderlandDamage)
+                ObserveWonderlandMonsterDamageCommitted(runtime, wonderlandDamage, committedAt, context);
             defeatInvariantFault = commit.Defeat?.GateOutcome ==
                 MedusaOwnedOperationGateOutcome.InvariantFault;
             clockInvariantFault = commit.Outcome ==
