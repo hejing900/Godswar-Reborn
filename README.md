@@ -40,6 +40,8 @@ All pet skills and all pet features are implemented; guild building creation, wo
 
 如果你愿意支持我，请添加我的企鹅502890055.
 
+![工会系统界面：人物属性、装备面板与工会列表](docs/images/guild-system.png)
+
 
 
 
