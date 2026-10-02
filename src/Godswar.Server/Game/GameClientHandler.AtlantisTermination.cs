@@ -7,38 +7,23 @@ internal sealed partial class GameClientHandler
 {
     // Both native repetition controls share the existing packet-shape checks.
     // The current server-owned instance, never the supplied repetition ID,
-    // decides which dungeon receives the action.
-    private async Task<bool> TryHandleAtlantisTerminationAsync(
-        int? repetitionId, int repetitionIndex, CancellationToken cancellationToken)
+    // decides which dungeon receives the action. Atlantis contributes only the
+    // rule for ending its own active run; the terminal flow itself - the four
+    // frames, the thirty-second countdown, the leaving member and the list clear
+    // - is the shared InstanceRunEnding implementation.
+    private bool TryHandleAtlantisTermination(int? repetitionId,
+        int repetitionIndex)
     {
         if (_character?.CurrentMap != DynamicDungeonContentMapPolicy.AtlantisPortalMapId)
         {
             return false;
         }
-        var terminated = repetitionId is { } id
+        // The run is terminal from here. The world tick publishes the native leave
+        // countdown to every member inside, exactly as 飘渺幻境, 港湾遇袭 and
+        // 美杜莎之岛 do, so no reset is sent: a zero-second 10231 here wiped the
+        // panel the leader had just been given and left him unable to leave.
+        return repetitionId is { } id
             ? _registry.TryEndAtlantisRunFromLeader(_session, id, repetitionIndex, DateTimeOffset.UtcNow)
             : _registry.TryTerminateAtlantisRunFromLeader(_session, DateTimeOffset.UtcNow);
-        if (!terminated)
-        {
-            // The run may already be terminal - the leader ended it or it ran out
-            // of time - and this same native control is then the member's own
-            // "leave the instance" during the countdown.
-            if (_registry.TryResolveAtlantisTerminationLeave(_session, repetitionId,
-                    repetitionIndex, DateTimeOffset.UtcNow, out var leave))
-            {
-                var transferred = await TryBeginAuthoritativeInstanceTransitionAsync(
-                    leave,
-                    cancellationToken);
-                Console.WriteLine(
-                    "[atlantis] end-window leave character=" +
-                    $"{_character?.Name ?? "<none>"} transferred={transferred}");
-                return true;
-            }
-            Console.WriteLine("[atlantis] rejected non-authoritative terminate action");
-            return true;
-        }
-        await _session.SendAsync(PacketBuilder.RepetitionReset(), cancellationToken,
-            "AtlantisLeaderInstanceTerminate");
-        return true;
     }
 }

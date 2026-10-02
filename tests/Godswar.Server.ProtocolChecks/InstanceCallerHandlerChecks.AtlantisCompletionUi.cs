@@ -135,8 +135,13 @@ internal static partial class InstanceCallerHandlerChecks
             Check.True(runtime.Map.Population == 1 && leader.Character.CurrentMap == 205,
                 "neither manual completion nor the cancellation egress bypasses unsettled rewards");
             await PublishAtlantisCompletionUiCheckAsync(registry, delivery, true);
+            // The leader's own native Leave is the only early exit: it is the
+            // shared clicker-only flow, so he is carried home at once while any
+            // teammate keeps his own countdown.
+            await InvokeAsync(leader.Handler, CreateRepetitionPanelAction(0, 0));
             Check.True(runtime.Map.Population == 0 && leader.Character.CurrentMap != 205,
-                "a settled manual completion exits before the automatic deadline");
+                "once rewards settle, the completed run's own Leave carries its clicker " +
+                "out before the automatic deadline");
         }
         finally
         {
@@ -158,15 +163,23 @@ internal static partial class InstanceCallerHandlerChecks
         foreach (var (packets, index) in fixture.ReadAllPackets().Select((packets, index) => (packets, index)))
         {
             var emitted = packets.Skip(before[index]).Where(IsAtlantisPanelPacket).ToArray();
-            Check.True(emitted.Select(ReadOpcode).SequenceEqual(new[]
+            // The four end-of-run frames are the shared flow's; it reasserts the
+            // native run state (10232 state 5) in front of them, exactly as
+            // 飘渺幻境 and 港湾遇袭 do, so the countdown can open at all.
+            var frames = emitted.Where(packet => ReadOpcode(packet) is
+                Opcodes.RepetitionFightInfo or Opcodes.RepetitionPanelAction or
+                Opcodes.RepetitionCompletionState or Opcodes.RepetitionReset).ToArray();
+            Check.True(frames.Select(ReadOpcode).SequenceEqual(new[]
                 {
                     Opcodes.RepetitionFightInfo, Opcodes.RepetitionPanelAction,
                     Opcodes.RepetitionCompletionState, Opcodes.RepetitionReset
-                }), "completion uses Medusa's native result then countdown packet order");
-            var countdown = emitted[^1];
+                }) &&
+                emitted[^1].SequenceEqual(frames[^1]),
+                "completion uses Medusa's native result then countdown packet order");
+            var countdown = frames[^1];
             Check.True(countdown.SequenceEqual(PacketBuilder.RepetitionCountdown(remaining)) &&
-                BinaryPrimitives.ReadInt32LittleEndian(emitted[0].AsSpan(4)) == remaining &&
-                BinaryPrimitives.ReadInt32LittleEndian(emitted[0].AsSpan(16)) == 850,
+                BinaryPrimitives.ReadInt32LittleEndian(frames[0].AsSpan(4)) == remaining &&
+                BinaryPrimitives.ReadInt32LittleEndian(frames[0].AsSpan(16)) == 850,
                 "the countdown uses completion age, with the authoritative final score preserved");
         }
     }

@@ -34,8 +34,14 @@ internal sealed partial class GameSessionRegistry
             }
             if (!InvokeWorldOwnerAuthoritativeMutation(runtime, map =>
                 map.TryConfigureWonderland(_gameplayCatalogs.Content, participants, startedAt))) return false;
-            _wonderlandAdmissions[instanceId] = new(reservationId, dailyLimit, members[0].CharacterId,
+            _wonderlandAdmissions[instanceId] = new(this, instanceId, reservationId, dailyLimit,
                 members.ToArray(), startedAt.ToUniversalTime());
+            // 飘渺's leader is the run's own mutable character id, the same one
+            // every dungeon keeps in the shared per-run leader store.
+            BeginInstanceRunLeader(instanceId, members[0].CharacterId);
+            // The one per-run member record the roster publishes from opens here,
+            // with the party this run was registered for.
+            BeginInstanceRunMembership(instanceId, [.. members.Select(ToRosterEntry)]);
             _wonderlandReservations[reservationId] = instanceId;
             return true;
         }
@@ -156,6 +162,7 @@ internal sealed partial class GameSessionRegistry
                 context.CharacterId,
                 context.CharacterName,
                 context.Character.Level,
+                context.Character.Profession,
                 context.RealmId,
                 context.WorldInstanceId,
                 context.MapId,
@@ -276,30 +283,19 @@ internal sealed partial class GameSessionRegistry
 
     /// <summary>
     /// Moves 飘渺's leader to the earliest still-present participant when the
-    /// registered leader has left the run. Called from the tick under the
+    /// registered leader has left the run, through the one leader-transfer
+    /// implementation every dungeon shares. Called from the tick under the
     /// registry gate; the run's own end control follows the new leader.
     /// </summary>
     private void MaintainWonderlandLeaderLocked(
         WorldInstanceId instanceId,
-        WonderlandAdmission admission,
         WonderlandSnapshot run,
-        GameSessionContext[] members)
-    {
-        var present = OrderInstanceMembers(
+        GameSessionContext[] members) =>
+        MaintainInstanceRunLeader(
+            instanceId,
+            "Wonderland",
             [.. run.Participants.Select(static participant => participant.CharacterId)],
             [.. members.Select(static member => member.CharacterId)]);
-        if (TryResolveInstanceLeaderSuccessor(
-                instanceId,
-                "Wonderland",
-                admission.LeaderId,
-                present,
-                out var successor))
-        {
-            admission.LeaderId = successor;
-            // The panel publishes every tick from this same snapshot, so the
-            // refreshed roster reaches the members on this pass.
-        }
-    }
 
     private bool IsCurrentWonderlandMember(GameSessionContext member, WorldInstanceId instanceId) =>
         _sessions.TryGetValue(member.Session, out var current) && current.WorldReady &&
@@ -309,14 +305,18 @@ internal sealed partial class GameSessionRegistry
         current.Character.CurrentMap == WonderlandMapId &&
         IsCurrentAccountSession(member.AccountId, member.Session, member.Ownership);
 
-    private sealed class WonderlandAdmission(Guid reservationId, ushort dailyLimit, int leaderId,
+    private sealed class WonderlandAdmission(GameSessionRegistry owner, WorldInstanceId instanceId,
+        Guid reservationId, ushort dailyLimit,
         LegacyInstancePartyMember[] originalMembers, DateTimeOffset startedAt)
     {
         public Guid ReservationId { get; } = reservationId;
         public ushort DailyLimit { get; } = dailyLimit;
-        // Transferable: the run's leader moves to the earliest still-present
-        // participant when the registered leader leaves or drops.
-        public int LeaderId { get; set; } = leaderId;
+        /// <summary>
+        /// The run's one leader identity: the shared per-run leader store, read
+        /// here because the shared roster implementation publishes from this
+        /// record. Transferable, and written only through the shared transfer.
+        /// </summary>
+        public int LeaderId => owner.InstanceRunLeaderCharacterId(instanceId);
         public LegacyInstancePartyMember[] OriginalMembers { get; } = originalMembers;
 
         /// <summary>

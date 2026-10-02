@@ -87,6 +87,12 @@ internal sealed partial class GameClientHandler
             await PushGuildWindowToMemberAsync(memberId, cancellationToken);
         }
 
+        // Leaving clears the leaver's own duty and contribution, which their
+        // character panel prints, and it clears the guild on their object, which
+        // the players around them draw; the repaint goes out with the rest of the
+        // leave answer.
+        await RefreshCharacterGuildPresenceAsync(leaverId, cancellationToken);
+
         await _session.SendAsync(
             PacketBuilder.ServerNote($"You have left {guild.Name}."),
             cancellationToken,
@@ -148,6 +154,8 @@ internal sealed partial class GameClientHandler
             "GuildMemberListBroadcast");
         Console.WriteLine(
             $"[guild] window broadcast character={characterId} " +
-            $"guild='{guild.Name}' members={guild.Members.Count}");
+            $"guild='{guild.Name}' members={guild.Members.Count} " +
+            $"online={members.Count(static member => member.Online)} " +
+            $"roster={FormatRoster(members)}");
     }
 }

@@ -32,25 +32,31 @@ internal sealed partial class GameSessionRegistry
             return null;
         }
 
-        var run = InvokeWorldOwner(
+        var ownership = InvokeWorldOwner(
             runtime,
             static map => map.TryGetMedusaOwnershipSnapshot(
-                    out var ownership)
-                ? ownership.Run
+                    out var snapshot)
+                ? snapshot
                 : null);
+        var run = ownership?.Run;
         if (run is not
             {
                 State: MedusaRunState.Completed,
                 CompletionMarker: not null
-            })
+            } ||
+            !MedusaIslandRosterPolicy.TryResolveClientSceneIdByContentMap(
+                ownership!.ContentMapId.Value, out var clientSceneId))
         {
             return null;
         }
 
+        // Nobody's click carries the party out: the member who pressed leave
+        // during the countdown left on his own, through the shared clicker-only
+        // leave, and everyone still inside is carried home when the shared
+        // thirty-second countdown expires.
         var exitPlayers =
-            _medusaCompletionExitRequested.ContainsKey(runtime.InstanceId) ||
             now >= run.CompletionMarker.Value.CompletedAt +
-                MedusaCompletionExitDelay;
+                InstanceRunEndDelay;
         if (!exitPlayers)
         {
             return null;
@@ -86,19 +92,20 @@ internal sealed partial class GameSessionRegistry
             }
         }
 
+        var leaderId = InstanceRunLeaderCharacterId(runtime.InstanceId);
         return new(
                 runtime.InstanceId,
                 runtime.RealmId,
                 run.Difficulty,
-                _medusaLeaderUi.TryGetValue(
-                    runtime.InstanceId,
-                    out var leaderRegistration)
-                    ? leaderRegistration.LeaderCharacterId
-                    : run.AdmittedCharacterIds.FirstOrDefault(),
+                leaderId != 0 ? leaderId : run.AdmittedCharacterIds.FirstOrDefault(),
                 run.CompletionMarker.Value,
                 run.AdmittedCharacterIds.ToArray(),
                 members,
-                ExitPlayers: true);
+                ExitPlayers: true,
+                BeginInstanceRunEnd(runtime.InstanceId, InstanceRunKind.Medusa,
+                    "Medusa", runtime.MapId, checked((ushort)clientSceneId),
+                    MedusaDailyEntryLimit(runtime.InstanceId), run.TeamScore,
+                    run.CompletionMarker.Value.CompletedAt));
     }
 
     private async Task PublishMedusaCompletionEgressAsync(
@@ -125,74 +132,31 @@ internal sealed partial class GameSessionRegistry
                 return;
             }
 
-            if (_medusaLeaderUi.TryRemove(
-                    egress.SourceWorldInstanceId,
-                    out var leaderUi))
-            {
-                try
-                {
-                    await leaderUi.Session.SendAsync(
-                        PacketBuilder.RepetitionReset(),
-                        cancellationToken,
-                        "MedusaCompletionCountdownClose");
-                }
-                catch (Exception error) when (
-                    error is IOException or ObjectDisposedException)
-                {
-                    Remove(leaderUi.Session);
-                }
-            }
+            // The leader's registration is dropped once the run's panel is done;
+            // the native list clear is not sent here, because the shared
+            // end-of-run flow sends the one 10231 with zero seconds when the
+            // member actually leaves the instance. An empty 10218 roster is never
+            // published: the stock handler reads a first member when the count is
+            // zero.
+            _medusaLeaderUi.TryRemove(egress.SourceWorldInstanceId, out _);
 
-            var allTransferred = true;
-            foreach (var member in egress.Members)
-            {
-                var targetMapId = member.Camp == GameDefaults.SpartaCamp
-                    ? GameDefaults.SpartaCapitalMap
-                    : GameDefaults.AthensCapitalMap;
-                try
-                {
-                    var target = GetOrCreateDefaultWorldInstance(
-                        targetMapId);
-                    var command = new MedusaInstanceTransitionCommand(
-                        member.CharacterId,
-                        member.SourceWorldInstanceId,
-                        member.SourceMapId,
-                        member.Ownership,
-                        target.InstanceId,
-                        targetMapId,
-                        GameDefaults.StartingPositionX,
-                        GameDefaults.StartingPositionZ);
-                    if (!await TransitionPartyMemberToInstanceAsync(
-                            member.Session,
-                            command,
-                            cancellationToken))
-                    {
-                        allTransferred = false;
-                        Console.WriteLine(
-                            "[instance] Medusa completion egress will retry " +
-                            $"character={member.CharacterId} instance=" +
-                            egress.SourceWorldInstanceId);
-                    }
-                }
-                catch (Exception error) when (
-                    error is not OperationCanceledException ||
-                    !cancellationToken.IsCancellationRequested)
-                {
-                    allTransferred = false;
-                    Console.WriteLine(
-                        "[instance] Medusa completion egress failed " +
-                        $"character={member.CharacterId}: {error.Message}");
-                }
-            }
+            // The one automatic exit every dungeon shares. Only the members this
+            // capture still found inside are carried home; whoever pressed leave
+            // during the countdown already left on his own.
+            var allTransferred = await EgressInstanceRunEndAsync(
+                egress.Ending,
+                [.. egress.Members.Select(static member => new InstanceRunEndMember(
+                    member.Session, member.CharacterId, member.Ownership,
+                    member.Camp))],
+                TransitionMedusaMemberHomeAsync,
+                cancellationToken);
 
             if (allTransferred)
             {
                 _medusaCompletionExitSettled.TryAdd(
                     egress.SourceWorldInstanceId,
                     0);
-                _medusaCompletionExitRequested.TryRemove(
-                    egress.SourceWorldInstanceId,
-                    out _);
+                ForgetInstanceRunEnd(egress.SourceWorldInstanceId);
                 Console.WriteLine(
                     "[instance] Medusa final score " +
                     $"instance={egress.SourceWorldInstanceId} " +
@@ -550,6 +514,7 @@ internal sealed partial class GameSessionRegistry
         IReadOnlyList<int> AdmittedCharacterIds,
         IReadOnlyList<MedusaCompletionEgressMember> Members,
         bool ExitPlayers,
+        InstanceRunEnding Ending,
         bool Completed = true);
 
     private readonly record struct MedusaCompletionEgressMember(

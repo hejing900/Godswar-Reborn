@@ -81,6 +81,11 @@ internal sealed partial class GameClientHandler
                 cancellationToken,
                 createdResponse: true,
                 creatorObjectId: creatorId);
+            // The founder's object now carries a guild too, and the players
+            // standing around them were told otherwise when they became visible.
+            await RefreshCharacterGuildPresenceAsync(
+                _character.Id,
+                cancellationToken);
         }
 
         // Probe: the drawn answer's shape is still being established.
@@ -123,7 +128,10 @@ internal sealed partial class GameClientHandler
         // The altar bonus is derived from the guild's own altar levels, so it is
         // re-read whenever the window that shows them is built; the client's
         // status is repainted when it moved.
-        await PushAltarBonusAsync(cancellationToken);
+        var panelChanged = await RefreshGuildPanelStatusAsync(
+            _character.Id,
+            cancellationToken);
+        var altarStatusSent = await PushAltarBonusAsync(cancellationToken);
 
         await _session.SendAsync(
             PacketBuilder.GuildBaseInfo(guild),
@@ -151,10 +159,22 @@ internal sealed partial class GameClientHandler
             PacketBuilder.GuildMemberList(members, _character.Id),
             cancellationToken,
             "GuildMemberList");
+        // Opening the window is also when the panel's guild rows are re-read: the
+        // duty and contribution can have moved since the last status frame, and
+        // the altar's own repaint above may already have carried them.
+        if (panelChanged && !altarStatusSent)
+        {
+            await _session.SendAsync(
+                BuildLocalPlayerStatusUpdate(),
+                cancellationToken,
+                "GuildPanelStatus");
+        }
         Console.WriteLine(
             $"[guild] window pushed character={_character.Name} " +
             $"guild='{guild.Name}' level={guild.Level} " +
-            $"members={guild.Members.Count}");
+            $"members={guild.Members.Count} " +
+            $"online={members.Count(static member => member.Online)} " +
+            $"roster={FormatRoster(members)}");
     }
 
     /// <summary>

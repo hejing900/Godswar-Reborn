@@ -98,7 +98,7 @@ internal static partial class InstanceCallerHandlerChecks
         Check.True(fixture.Registry.TryStartAtlantisEncounter(runtime.InstanceId, 3,
             [(fixture.Character.Id, 120)], runtime.Descriptor.CreatedAt, reservation,
             [new(fixture.Session, fixture.Character.AccountId, fixture.Character.Id, fixture.Character.Name,
-                120, RealmId.Tempest, GetSourceInstanceId(fixture), 207, ownership)]),
+                120, fixture.Character.Profession, RealmId.Tempest, GetSourceInstanceId(fixture), 207, ownership)]),
             "the admission fixture starts a real Atlantis encounter");
         fixture.Character.CurrentMap = 205;
         fixture.Registry.JoinWorldInstance(fixture.Session, fixture.Character.AccountId, fixture.Character,

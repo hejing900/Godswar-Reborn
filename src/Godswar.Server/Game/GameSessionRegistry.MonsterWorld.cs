@@ -43,6 +43,7 @@ internal sealed partial class GameSessionRegistry
             new List<MedusaCompletionEgress>();
         var medusaTerminationEgresses =
             new List<MedusaTerminationEgress>();
+        var medusaRunEnds = new List<MedusaRunEnd>();
         foreach (var runtime in WorldInstances.Snapshot())
         {
             if (runtime.Descriptor.LifecycleState ==
@@ -88,10 +89,18 @@ internal sealed partial class GameSessionRegistry
             {
                 medusaLeaderUiDeliveries.Add(leaderUi);
             }
+            // A run whose registered leader has left keeps an ending authority:
+            // the earliest present member takes the leadership over.
+            MaintainMedusaInstanceLeader(runtime);
+            if (CaptureMedusaRunEnd(runtime) is { } medusaRunEnd)
+            {
+                medusaRunEnds.Add(medusaRunEnd);
+            }
             medusaLeaderUiDeliveries.AddRange(
                 CaptureMedusaMemberUiDeliveries(runtime, now));
             medusaInstanceRosterDeliveries.AddRange(
-                CaptureMedusaInstanceRosterDeliveries(runtime));            if (CaptureMedusaCompletionEgress(runtime, now) is
+                CaptureMedusaInstanceRosterDeliveries(runtime, now));
+            if (CaptureMedusaCompletionEgress(runtime, now) is
                 { } completionEgress)
             {
                 medusaCompletionEgresses.Add(completionEgress);
@@ -205,6 +214,19 @@ internal sealed partial class GameSessionRegistry
                     Remove(delivery.Context.Session);
                 }
             });
+
+        foreach (var ending in medusaRunEnds)
+        {
+            // The one end-of-run flow every dungeon shares: the four native
+            // frames and the thirty-second countdown, with 美杜莎之岛's own score
+            // and scene. Its rewards keep their own settlement and retry.
+            await PublishInstanceRunEndAsync(
+                ending.Ending,
+                ending.Members,
+                now,
+                settle: null,
+                cancellationToken);
+        }
 
         foreach (var egress in medusaCompletionEgresses)
         {
@@ -509,3 +531,4 @@ internal sealed partial class GameSessionRegistry
         GameSessionContext Context,
         MonsterRuntimeTick Tick);
 }
+

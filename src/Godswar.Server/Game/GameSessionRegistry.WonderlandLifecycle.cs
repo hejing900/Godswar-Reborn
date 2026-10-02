@@ -59,7 +59,6 @@ internal sealed partial class GameSessionRegistry
                             // takes the leadership over.
                             MaintainWonderlandLeaderLocked(
                                 instanceId,
-                                entry.Value,
                                 run,
                                 members);
                         }
@@ -75,7 +74,7 @@ internal sealed partial class GameSessionRegistry
                     // until it expires; they are carried out afterwards.
                     if (WonderlandCompletionPolicy.IsTreasureWindowOpen(run, now) ||
                         WonderlandCompletionPolicy.IsEndWindowOpen(run, now)) continue;
-                    await ExitWonderlandMembersAsync(runtime, run, members, cancellationToken);
+                    await ExitWonderlandMembersAsync(runtime, entry.Value, run, members, cancellationToken);
                     _wonderlandRetirements.TryAdd(instanceId, 0);
                     await TryRetireWonderlandRuntimeAsync(instanceId, cancellationToken);
                 }
@@ -126,29 +125,33 @@ internal sealed partial class GameSessionRegistry
         _wonderlandDepartures.TryAdd(previous.WorldInstanceId, 0);
         _wonderlandUi.TryRemove(previous.Session, out _);
         ClearWonderlandPlayerEffects(previous.Session);
-        if (current is null || previous.Session.IsDisconnected) return null;
-        previous.Session.TryAdmitExactBatch([PacketBuilder.RepetitionReset()], out var write);
-        return write;
+        // The native list clear is not sent here: the shared end-of-run flow
+        // sends the one 10231 with zero seconds when a member leaves any of the
+        // four runs.
+        return null;
     }
 
-    private async Task ExitWonderlandMembersAsync(WorldInstanceRuntime runtime, WonderlandSnapshot run,
+    private async Task ExitWonderlandMembersAsync(WorldInstanceRuntime runtime,
+        WonderlandAdmission admission, WonderlandSnapshot run,
         IReadOnlyList<GameSessionContext> members, CancellationToken cancellationToken)
     {
-        foreach (var member in members)
+        // The one automatic exit every dungeon shares: the countdown expired, so
+        // whoever is still inside is carried home.
+        var transferred = await EgressInstanceRunEndAsync(
+            BeginInstanceRunEnd(runtime.InstanceId, InstanceRunKind.Wonderland,
+                "Wonderland", WonderlandMapId, WonderlandClientSceneId,
+                admission.DailyLimit, run.CompletedIslands,
+                run.TerminalAt ?? DateTimeOffset.UtcNow,
+                window: run.State == WonderlandRunState.Completed
+                    ? WonderlandCompletionPolicy.TreasureWindow
+                    : WonderlandCompletionPolicy.EndWindow),
+            [.. members.Select(ToInstanceRunEndMember)],
+            TransitionPartyMemberToAuthoritativeInstanceAsync,
+            cancellationToken);
+        if (transferred)
         {
-            lock (_gate) { if (!IsCurrentWonderlandMember(member, runtime.InstanceId)) continue; }
-            var targetMap = member.Character.Camp == GameDefaults.SpartaCamp
-                ? GameDefaults.SpartaCapitalMap : GameDefaults.AthensCapitalMap;
-            var target = GetOrCreateDefaultWorldInstance(targetMap);
-            var command = new AuthoritativeInstanceTransitionCommand(member.CharacterId,
-                runtime.InstanceId, WonderlandMapId, member.Ownership, target.InstanceId, targetMap,
-                GameDefaults.StartingPositionX, GameDefaults.StartingPositionZ);
-            if (!await TransitionPartyMemberToAuthoritativeInstanceAsync(member.Session, command, cancellationToken))
-                LogWonderlandDeferred(runtime.InstanceId, DateTimeOffset.UtcNow,
-                    new InvalidOperationException($"Exit deferred for character {member.CharacterId}."));
-            else
-                Console.WriteLine($"[wonderland] exit character={member.Character.Name} instance={runtime.InstanceId} " +
-                    $"reason={run.State} terminal={run.TerminalAt:O} hp={member.Character.CurrentHp} target-map={targetMap}");
+            Console.WriteLine($"[wonderland] exit instance={runtime.InstanceId} " +
+                $"reason={run.State} terminal={run.TerminalAt:O}");
         }
     }
 
@@ -198,6 +201,8 @@ internal sealed partial class GameSessionRegistry
         if (HasPendingWonderlandTitles(instanceId)) return;
         if (_wonderlandAdmissions.TryRemove(instanceId, out var admission))
             _wonderlandReservations.TryRemove(admission.ReservationId, out _);
+        ForgetInstanceRunEnd(instanceId);
+        ForgetInstanceRunMembership(instanceId);
         _wonderlandDepartures.TryRemove(instanceId, out _);
         _wonderlandRetirements.TryRemove(instanceId, out _);
         _wonderlandLastError.TryRemove(instanceId, out _);

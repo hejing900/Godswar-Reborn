@@ -14,10 +14,6 @@ internal sealed partial class GameSessionRegistry
     private const ushort MedusaRepetitionActiveState = 5;
     private static readonly TimeSpan MedusaCompletionExitDelay =
         TimeSpan.FromSeconds(30);
-    // An ended or timed-out run gives its members the same leave countdown a
-    // completed run shows.
-    private static readonly TimeSpan MedusaTerminationExitDelay =
-        TimeSpan.FromSeconds(30);
 
     private readonly ConcurrentDictionary<
         WorldInstanceId,
@@ -30,14 +26,13 @@ internal sealed partial class GameSessionRegistry
     private readonly ConcurrentDictionary<
         (WorldInstanceId Instance, ClientSession Session),
         MedusaLeaderUiRegistration> _medusaMemberUi = [];
-    private readonly ConcurrentDictionary<WorldInstanceId, byte>
-        _medusaCompletionExitRequested = [];
 
     internal bool TryRegisterMedusaLeaderUi(
         WorldInstanceId worldInstanceId,
         ClientSession session,
         int leaderCharacterId,
-        ushort dailyEntryLimit)
+        ushort dailyEntryLimit,
+        IReadOnlyList<InstanceRosterEntry>? roster = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         if (!worldInstanceId.IsValid ||
@@ -69,13 +64,30 @@ internal sealed partial class GameSessionRegistry
             return false;
         }
 
-        return _medusaLeaderUi.TryAdd(
+        var registered = _medusaLeaderUi.TryAdd(
             worldInstanceId,
             new(
+                this,
+                worldInstanceId,
                 session,
                 leaderCharacterId,
                 checked((ushort)clientSceneId),
-                dailyEntryLimit));
+                dailyEntryLimit,
+                roster ?? []));
+        if (registered)
+        {
+            // The run's own leader identity, in the one per-run leader store
+            // every dungeon shares. It is what the end control reads, so the
+            // leader keeps the control after a relog.
+            BeginInstanceRunLeader(worldInstanceId, leaderCharacterId);
+            // The one per-run member record the roster publishes from opens here,
+            // with the party this run was registered for.
+            BeginInstanceRunMembership(
+                worldInstanceId,
+                roster ?? []);
+        }
+
+        return registered;
     }
 
     /// <summary>
@@ -117,10 +129,68 @@ internal sealed partial class GameSessionRegistry
         return _medusaMemberUi.TryAdd(
             (worldInstanceId, session),
             new(
+                this,
+                worldInstanceId,
                 session,
                 context.CharacterId,
                 leaderUi.ClientSceneId,
                 leaderUi.DailyEntryLimit));
+    }
+    /// <summary>
+    /// Reopens a reconnecting member's Medusa progress panel.
+    /// </summary>
+    /// <remarks>
+    /// Medusa publishes its panel from per-session registrations rather than
+    /// from the run on every tick, so a login that puts a member back inside the
+    /// instance has to reopen his registration or the panel stays empty. A
+    /// returning leader whose own registration is still held by his dropped
+    /// session takes that registration back, so the panel and the native
+    /// end-instance control follow him exactly as they did on entry. If the run's
+    /// leader registration is already gone the run has no leader authority to
+    /// restore, and the member registration is opened instead.
+    /// </remarks>
+    internal void RestoreMedusaInstancePanelAfterReconnect(
+        ClientSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        if (!_sessions.TryGetValue(session, out var context) ||
+            context.Session.IsDisconnected)
+        {
+            return;
+        }
+
+        var worldInstanceId = context.WorldInstanceId;
+        if (_medusaLeaderUi.TryGetValue(worldInstanceId,
+                out var registration) &&
+            registration.CharacterId == context.CharacterId &&
+            (ReferenceEquals(registration.Session, session) ||
+             registration.Session.IsDisconnected))
+        {
+            if (!ReferenceEquals(registration.Session, session))
+            {
+                _medusaLeaderUi[worldInstanceId] =
+                    new MedusaLeaderUiRegistration(
+                        this,
+                        worldInstanceId,
+                        session,
+                        registration.CharacterId,
+                        registration.ClientSceneId,
+                        registration.DailyEntryLimit,
+                        registration.Roster);
+                Console.WriteLine(
+                    "[medusa] reconnected leader panel instance=" +
+                    $"{worldInstanceId} " +
+                    $"character={context.CharacterId}");
+            }
+            return;
+        }
+
+        if (TryRegisterMedusaMemberUi(session, worldInstanceId))
+        {
+            Console.WriteLine(
+                "[medusa] reconnected member panel instance=" +
+                $"{worldInstanceId} character={context.CharacterId}");
+        }
     }
 
     internal bool TryEndMedusaRunFromLeader(
@@ -130,14 +200,19 @@ internal sealed partial class GameSessionRegistry
         DateTimeOffset requestedAt)
     {
         ArgumentNullException.ThrowIfNull(session);
+        // Only the instance's own leader may end it, and the leader is the run's
+        // own mutable character id - never the session object that happened to
+        // register the panel, so a leader who drops and relogs keeps the control.
+        // Party leadership is an unrelated system: ANDing it here locked the
+        // control out whenever the instance leader was not the party leader.
         if (repetitionIndex != MedusaRepetitionIndex ||
             !_sessions.TryGetValue(session, out var context) ||
-            !_medusaLeaderUi.TryGetValue(
-                context.WorldInstanceId,
-                out var registration) ||
-            !ReferenceEquals(registration.Session, session) ||
-            registration.LeaderCharacterId != context.CharacterId ||
-            !context.WorldReady ||
+            !context.WorldReady || context.Session.IsDisconnected ||
+            !context.Ownership.IsValid ||
+            !IsCurrentAccountSession(context.AccountId, context.Session,
+                context.Ownership) ||
+            context.CharacterId !=
+                InstanceRunLeaderCharacterId(context.WorldInstanceId) ||
             !WorldInstances.TryFind(
                 context.WorldInstanceId,
                 out var runtime))
@@ -145,31 +220,23 @@ internal sealed partial class GameSessionRegistry
             return false;
         }
 
-        var run = InvokeWorldOwner(
+        var ownership = InvokeWorldOwner(
             runtime,
             static map => map.TryGetMedusaOwnershipSnapshot(
-                    out var ownership)
-                ? ownership.Run
+                    out var snapshot)
+                ? snapshot
                 : null);
-        if (run is { State: MedusaRunState.Completed })
+        if (ownership is null ||
+            !MedusaIslandRosterPolicy.TryResolveClientSceneIdByContentMap(
+                ownership.ContentMapId.Value, out var clientSceneId) ||
+            repetitionId != clientSceneId)
         {
-            _medusaCompletionExitRequested.TryAdd(
-                context.WorldInstanceId,
-                0);
-            _medusaLeaderUi.TryRemove(
-                new KeyValuePair<
-                    WorldInstanceId,
-                    MedusaLeaderUiRegistration>(
-                    context.WorldInstanceId,
-                    registration));
-            return true;
+            return false;
         }
-
-        // Only the instance's own leader may end it. Party leadership is an
-        // unrelated system: ANDing it here locked the control out whenever the
-        // instance leader was not the party leader and the party leader was not
-        // the instance leader.
-        if (repetitionId != registration.ClientSceneId)
+        // A terminal run is the shared end-of-run flow's: this same native
+        // control is then the member's own leave, which the dispatcher resolves
+        // before it reaches here, and it takes only the member who pressed it.
+        if (ownership.Run.State != MedusaRunState.Active)
         {
             return false;
         }
@@ -194,10 +261,9 @@ internal sealed partial class GameSessionRegistry
         }
 
         RequestMedusaTerminationExit(context.WorldInstanceId);
-        // The leader registration stays in place: it is what publishes the merge
-        // of the terminal panel and the native leave countdown to the leader, the
-        // same one a completed run shows. It is dropped by the delivery capture
-        // once the leader is no longer inside the instance.
+        // The leader registration stays in place: it is what publishes the
+        // running panel, and the shared end-of-run flow publishes the terminal
+        // one to every member inside.
         return true;
     }
 
@@ -207,18 +273,28 @@ internal sealed partial class GameSessionRegistry
     {
         ArgumentNullException.ThrowIfNull(session);
         if (!_sessions.TryGetValue(session, out var context) ||
-            !_medusaLeaderUi.TryGetValue(
-                context.WorldInstanceId,
-                out var registration) ||
-            !ReferenceEquals(registration.Session, session) ||
-            registration.LeaderCharacterId != context.CharacterId)
+            context.CharacterId !=
+                InstanceRunLeaderCharacterId(context.WorldInstanceId) ||
+            !WorldInstances.TryFind(context.WorldInstanceId, out var runtime))
+        {
+            return false;
+        }
+
+        short? contentMapId = InvokeWorldOwner(
+            runtime,
+            static map => map.TryGetMedusaOwnershipSnapshot(out var snapshot)
+                ? (short)snapshot.ContentMapId.Value
+                : (short?)null);
+        if (contentMapId is not { } mapId ||
+            !MedusaIslandRosterPolicy.TryResolveClientSceneIdByContentMap(mapId,
+                out var clientSceneId))
         {
             return false;
         }
 
         return TryEndMedusaRunFromLeader(
             session,
-            registration.ClientSceneId,
+            clientSceneId,
             MedusaRepetitionIndex,
             requestedAt);
     }
@@ -246,8 +322,7 @@ internal sealed partial class GameSessionRegistry
                     ReferenceEquals(
                         context.Session,
                         registration.Session) &&
-                    context.CharacterId ==
-                        registration.LeaderCharacterId);
+                    context.CharacterId == registration.CharacterId);
                 return (ownership, leader);
             });
         if (state.ownership is null ||
@@ -268,58 +343,14 @@ internal sealed partial class GameSessionRegistry
         }
 
         var run = state.ownership.Run;
-        if (run is
-            {
-                State: MedusaRunState.Completed,
-                CompletionMarker: { } completion
-            })
-        {
-            var completionRemainingSeconds = checked((int)Math.Clamp(
-                Math.Ceiling((completion.CompletedAt +
-                    MedusaCompletionExitDelay - now).TotalSeconds),
-                0d,
-                MedusaCompletionExitDelay.TotalSeconds));
-            var completionPackets = registration.CaptureCompletion(
-                completionRemainingSeconds,
-                run.TeamScore);
-            return completionPackets.Count == 0
-                ? null
-                : new(
-                    runtime.InstanceId,
-                    registration,
-                    completionPackets,
-                    RemoveAfterSend: false);
-        }
+        // A terminal run's panel is the shared end-of-run flow's to publish: the
+        // four native frames and the two countdowns every dungeon shows. The
+        // leader registration stays in place - it is what publishes the running
+        // panel - and the terminal run is published from the tick's own capture.
         if (run.State != MedusaRunState.Active)
         {
-            // The terminal batch is now the leave countdown, so its value is the
-            // end-of-run window, not the remaining run time.
-            var terminalAt = run.CompletionMarker?.CompletedAt ?? now;
-            var terminalRemainingSeconds = checked((int)Math.Clamp(
-                Math.Ceiling((terminalAt + MedusaTerminationExitDelay - now)
-                    .TotalSeconds),
-                0d,
-                MedusaTerminationExitDelay.TotalSeconds));
-            var terminalPackets = registration.CaptureTerminal(
-                terminalRemainingSeconds,
-                run.TeamScore);
-            if (terminalPackets.Count == 0)
-            {
-                _medusaLeaderUi.TryRemove(
-                    new KeyValuePair<
-                        WorldInstanceId,
-                        MedusaLeaderUiRegistration>(
-                        runtime.InstanceId,
-                        registration));
-                return null;
-            }
-            return new(
-                runtime.InstanceId,
-                registration,
-                terminalPackets,
-                RemoveAfterSend: true);
+            return null;
         }
-
         var remainingSeconds = checked((int)Math.Clamp(
             Math.Ceiling((run.Deadline - now).TotalSeconds),
             0d,
@@ -376,7 +407,7 @@ internal sealed partial class GameSessionRegistry
                 ReferenceEquals(
                     context.Session,
                     registration.Session) &&
-                context.CharacterId == registration.LeaderCharacterId);
+                context.CharacterId == registration.CharacterId);
             if (member is null || registration.Session.IsDisconnected)
             {
                 _medusaMemberUi.TryRemove(entry);
@@ -387,51 +418,10 @@ internal sealed partial class GameSessionRegistry
                 continue;
             }
 
-            if (run is
-                {
-                    State: MedusaRunState.Completed,
-                    CompletionMarker: { } completion
-                })
-            {
-                var completionRemainingSeconds = checked((int)Math.Clamp(
-                    Math.Ceiling((completion.CompletedAt +
-                        MedusaCompletionExitDelay - now).TotalSeconds),
-                    0d,
-                    MedusaCompletionExitDelay.TotalSeconds));
-                var completionPackets = registration.CaptureCompletion(
-                    completionRemainingSeconds,
-                    run.TeamScore);
-                if (completionPackets.Count != 0)
-                {
-                    deliveries.Add(new(
-                        runtime.InstanceId,
-                        registration,
-                        completionPackets,
-                        RemoveAfterSend: false));
-                }
-                continue;
-            }
+            // A terminal run's panel is the shared end-of-run flow's to publish,
+            // for every member exactly as for the leader.
             if (run.State != MedusaRunState.Active)
             {
-                var terminalAt = run.CompletionMarker?.CompletedAt ?? now;
-                var terminalRemainingSeconds = checked((int)Math.Clamp(
-                    Math.Ceiling((terminalAt + MedusaTerminationExitDelay - now)
-                        .TotalSeconds),
-                    0d,
-                    MedusaTerminationExitDelay.TotalSeconds));
-                var terminalPackets = registration.CaptureTerminal(
-                    terminalRemainingSeconds,
-                    run.TeamScore);
-                if (terminalPackets.Count == 0)
-                {
-                    _medusaMemberUi.TryRemove(entry);
-                    continue;
-                }
-                deliveries.Add(new(
-                    runtime.InstanceId,
-                    registration,
-                    terminalPackets,
-                    RemoveAfterSend: true));
                 continue;
             }
 
@@ -502,29 +492,55 @@ internal sealed partial class GameSessionRegistry
                     (delivery.WorldInstanceId, delivery.Registration.Session),
                     out _);
             }
+            else if (delivery.RemoveAfterSend)
+            {
+                ForgetInstanceRunMembership(delivery.WorldInstanceId);
+            }
         }
     }
 
     private sealed class MedusaLeaderUiRegistration(
+        GameSessionRegistry owner,
+        WorldInstanceId instanceId,
         ClientSession session,
-        int leaderCharacterId,
+        int characterId,
         ushort clientSceneId,
-        ushort dailyEntryLimit)
+        ushort dailyEntryLimit,
+        IReadOnlyList<InstanceRosterEntry>? roster = null)
     {
         private readonly object _gate = new();
         private bool _synchronized;
-        private bool _completionSynchronized;
-        private bool _reset;
         private int _lastRemainingSeconds = -1;
         private int _lastTeamScore = -1;
 
         public ClientSession Session { get; } = session;
 
-        public int LeaderCharacterId { get; } = leaderCharacterId;
+        /// <summary>
+        /// The character this registration publishes the panel for: the leader
+        /// for the run's own registration, and the member for a member's.
+        /// </summary>
+        public int CharacterId { get; } = characterId;
+
+        /// <summary>
+        /// The run's one leader identity, read from the shared per-run leader
+        /// store. The registration is not the leadership - it is only the object
+        /// that publishes a panel - so a leader who drops and relogs keeps the
+        /// run's own end control, and the panel republishes under the run's
+        /// current leader.
+        /// </summary>
+        public int LeaderCharacterId => owner.InstanceRunLeaderCharacterId(instanceId);
 
         public ushort ClientSceneId { get; } = clientSceneId;
 
         public ushort DailyEntryLimit { get; } = dailyEntryLimit;
+
+        /// <summary>
+        /// The party the run was admitted for. It is the run's own registration
+        /// record (the login reconnect reads it); the published member roster
+        /// comes from the one per-run membership record instead.
+        /// </summary>
+        public IReadOnlyList<InstanceRosterEntry> Roster { get; } =
+            roster ?? [];
 
         public IReadOnlyList<byte[]> CaptureUpdate(
             int remainingSeconds,
@@ -532,8 +548,7 @@ internal sealed partial class GameSessionRegistry
         {
             lock (_gate)
             {
-                if (_reset ||
-                    _synchronized &&
+                if (_synchronized &&
                     _lastRemainingSeconds == remainingSeconds &&
                     _lastTeamScore == teamScore)
                 {
@@ -564,84 +579,6 @@ internal sealed partial class GameSessionRegistry
             }
         }
 
-        public IReadOnlyList<byte[]> CaptureTerminal(
-            int remainingSeconds,
-            int teamScore)
-        {
-            lock (_gate)
-            {
-                if (_reset)
-                {
-                    return [];
-                }
-
-                // An ended or timed-out run shows the same native leave countdown
-                // a completed run shows, instead of hiding the panel: the client
-                // then counts the members down and carries them out.
-                var packets = new List<byte[]>(5);
-                if (!_synchronized)
-                {
-                    packets.Add(PacketBuilder.RepetitionSync(
-                        ClientSceneId,
-                        MedusaRepetitionIndex,
-                        MedusaRepetitionGroupIndex,
-                        MedusaRepetitionActiveState,
-                        DailyEntryLimit));
-                    _synchronized = true;
-                }
-                packets.Add(PacketBuilder.RepetitionFightInfo(
-                    remainingSeconds,
-                    teamScore));
-                packets.Add(PacketBuilder.RepetitionPanelCompletion());
-                packets.Add(PacketBuilder.RepetitionCompletionState(
-                    ClientSceneId,
-                    completed: true));
-                packets.Add(PacketBuilder.RepetitionCountdown(
-                    remainingSeconds));
-                _lastRemainingSeconds = remainingSeconds;
-                _lastTeamScore = teamScore;
-                _reset = true;
-                return packets;
-            }
-        }
-
-        public IReadOnlyList<byte[]> CaptureCompletion(
-            int remainingSeconds,
-            int teamScore)
-        {
-            lock (_gate)
-            {
-                if (_reset || _completionSynchronized)
-                {
-                    return [];
-                }
-
-                var packets = new List<byte[]>(5);
-                if (!_synchronized)
-                {
-                    packets.Add(PacketBuilder.RepetitionSync(
-                        ClientSceneId,
-                        MedusaRepetitionIndex,
-                        MedusaRepetitionGroupIndex,
-                        MedusaRepetitionActiveState,
-                        DailyEntryLimit));
-                    _synchronized = true;
-                }
-                packets.Add(PacketBuilder.RepetitionFightInfo(
-                    remainingSeconds,
-                    teamScore));
-                packets.Add(PacketBuilder.RepetitionPanelCompletion());
-                packets.Add(PacketBuilder.RepetitionCompletionState(
-                    ClientSceneId,
-                    completed: true));
-                packets.Add(PacketBuilder.RepetitionCountdown(
-                    remainingSeconds));
-                _lastRemainingSeconds = remainingSeconds;
-                _lastTeamScore = teamScore;
-                _completionSynchronized = true;
-                return packets;
-            }
-        }
     }
 
     private sealed record MedusaLeaderUiDelivery(
@@ -650,3 +587,4 @@ internal sealed partial class GameSessionRegistry
         IReadOnlyList<byte[]> Packets,
         bool RemoveAfterSend);
 }
+

@@ -149,6 +149,14 @@ internal static partial class MedusaIslandRosterPolicy
         return clientSceneId != default;
     }
 
+    /// <summary>
+    /// Whether a client scene id names 美杜莎之岛: 209 is the advanced run, 223 the
+    /// normal one. The pair is the reverse of
+    /// <see cref="TryResolveClientSceneIdByContentMap"/>.
+    /// </summary>
+    public static bool IsClientScene(int clientSceneId) =>
+        clientSceneId is EnhancedClientSceneId or NormalClientSceneId;
+
     public static bool TryResolveTemplate(
         MedusaEncounterDifficulty difficulty,
         string? templateAlias,

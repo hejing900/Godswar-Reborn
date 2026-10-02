@@ -79,16 +79,18 @@ internal sealed partial class GameClientHandler
     /// Refreshes the altar bonus and, when it moved, tells the client to redraw
     /// the player's status so the new numbers show.
     /// </summary>
-    private async Task PushAltarBonusAsync(CancellationToken cancellationToken)
+    /// <returns>Whether a status frame was sent.</returns>
+    private async Task<bool> PushAltarBonusAsync(CancellationToken cancellationToken)
     {
         if (!await RefreshAltarBonusAsync(cancellationToken))
         {
-            return;
+            return false;
         }
 
         await _session.SendAsync(
             BuildLocalPlayerStatusUpdate(),
             cancellationToken,
             "GuildAltarBonusStatus");
+        return true;
     }
 }

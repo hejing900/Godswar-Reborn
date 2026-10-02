@@ -19,6 +19,9 @@ internal static partial class InstanceCallerHandlerChecks
     public const string CheckName =
         "Instance Caller expiring destination page context";
 
+    public const string DuplicateEntryCheckName =
+        "Instance member confirmation that must queue exactly once";
+
     private static readonly MethodInfo HandlePacketMethod =
         FindHandlerMethod("HandlePacketAsync");
     private static readonly MethodInfo InstallNpcCatalogMethod =
@@ -68,7 +71,6 @@ internal static partial class InstanceCallerHandlerChecks
         await CheckLiveIslandSceneTransitionsAsync();
         await CheckCompletionCountdownAndLeaderTerminateAsync();
         await CheckSuccessfulMythicSoloEntryAsync();
-        await CheckLatePartyMemberEntryAsync();
         await CheckSuccessfulPartyEntryAsync();
         await CheckAuthoritativeDynamicDungeonTransitionsAsync();
         await CheckDecliningMemberLeavesLeaderInsideAsync();
@@ -77,6 +79,13 @@ internal static partial class InstanceCallerHandlerChecks
         await CheckAtlantisPartyAdmissionAsync();
         await CheckAtlantisOpalRetryAsync();
     }
+
+    /// <summary>
+    /// The duplicate-entry regression on its own, so the behaviour has a
+    /// registered check rather than riding on the page-context fixture.
+    /// </summary>
+    public static async Task RunDuplicateEntryAsync() =>
+        await CheckRepeatedConfirmationQueuesOnceAsync();
 
     private static async Task CheckSuccessfulSoloEntryAsync()
     {

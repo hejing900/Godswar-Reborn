@@ -30,6 +30,12 @@ internal sealed partial class GameClientHandler
             _character,
             advanceWorldRevision: false);
         var pets = _characterLoadSnapshot?.Pets ?? [];
+        _registry.UpdateSummonedPet(
+            _session,
+            pets.SingleOrDefault(
+                static pet => pet.IsCarried &&
+                    pet.IsSummoned &&
+                    !pet.ContributesToCharacter));
 
         // Opcode 10237 is not an inert detail refresh: the native client
         // rebuilds its active-pet selection from it and immediately emits a
@@ -552,6 +558,13 @@ internal sealed partial class GameClientHandler
                     cancellationToken))
             {
                 return false;
+            }
+            if (receipt.Succeeded)
+            {
+                await BroadcastPetWorldPresenceTransitionAsync(
+                    previousCarriedPet,
+                    pets.SingleOrDefault(static pet => pet.IsCarried),
+                    cancellationToken);
             }
             if (receipt.Succeeded &&
                 target is { ContributesToCharacter: false })

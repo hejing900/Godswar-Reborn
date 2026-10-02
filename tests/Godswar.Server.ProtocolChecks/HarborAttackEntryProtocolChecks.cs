@@ -86,13 +86,17 @@ internal static class HarborAttackEntryProtocolChecks
 
         var head = PostgresSchemaMigrationCatalog.All[^1];
         Check.True(
-            head.Id == "20260930_217_atlantis_partial_rewards" &&
+            head.Id == "20261002_219_guild_refuse_applications" &&
+            PostgresSchemaMigrationCatalog.All.Any(migration =>
+                migration.Id == "20261001_218_atlantis_completion_roster_constraint") &&
+            PostgresSchemaMigrationCatalog.All.Any(migration =>
+                migration.Id == "20260930_217_atlantis_partial_rewards") &&
             PostgresSchemaMigrationCatalog.All.Any(migration =>
                 migration.Id == "20260929_216_harbor_attack_daily_entry") &&
             PostgresSchemaMigrationCatalog.All.Any(migration =>
                 migration.Id == "20260901_132_legacy_instance_daily_entry"),
-            "the harbor daily-entry migration and the Atlantis partial-reward migration " +
-            "are in the catalog, newest last");
+            "the harbor daily-entry migration and the Atlantis reward " +
+            "migrations are in the catalog, newest last");
 
         return Task.CompletedTask;
     }

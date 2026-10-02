@@ -160,6 +160,12 @@ internal static class Opcodes
     public const ushort ConsortiaDuty = 10151;
     public const ushort ConsortiaMemberDel = 10152;
     public const ushort ConsortiaNote = 10154;
+    // The client's own "Refuse the application?" checkbox (Consortia.xml,
+    // RejectRequest) sends its state here as a lone dword: measured 2026-10-02,
+    // the guild window builds `length 8 / opcode 10155 / body = checked ? 1 : 0`
+    // (Origin.exe 0x5409e0). The client's receive table has no case for it, so it
+    // is a C2S-only opcode.
+    public const ushort ConsortiaRefuseApplications = 10155;
     public const ushort ConsortiaElementList = 10157;
     public const ushort ConsortiaAltarInfo = 10162;
     // The guild window's own refresh request. The client sends it with an empty

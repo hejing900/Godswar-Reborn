@@ -374,6 +374,62 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
+    public void UpdateSummonedPet(
+        ClientSession session,
+        PetBootstrapSnapshot? pet)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        while (_sessions.TryGetValue(session, out var observed))
+        {
+            using var mutation = AcquireMembershipMutation(
+                session,
+                targetMap: observed.MapId);
+            if (!_sessions.TryGetValue(session, out var existing))
+            {
+                return;
+            }
+            if (!ReferenceEquals(existing, observed))
+            {
+                continue;
+            }
+            if (existing.Ownership.IsValid &&
+                !IsCurrentAccountSession(
+                    existing.AccountId,
+                    session,
+                    existing.Ownership))
+            {
+                return;
+            }
+
+            PetBootstrapSnapshot? visiblePet = null;
+            if (pet is
+                    {
+                        IsCarried: true,
+                        IsSummoned: true,
+                        ContributesToCharacter: false
+                    } &&
+                pet.AccountId == existing.AccountId &&
+                pet.OwnerCharacterId == existing.CharacterId)
+            {
+                visiblePet = pet;
+            }
+            if (existing.SummonedPet == visiblePet)
+            {
+                return;
+            }
+
+            var updated = existing with
+            {
+                SummonedPet = visiblePet,
+                WorldRevision = checked(existing.WorldRevision + 1)
+            };
+            AddToMap(updated);
+            _sessions[session] = updated;
+            return;
+        }
+    }
+
     public bool TryMarkWorldReady(
         ClientSession session,
         IReadOnlyDictionary<uint, long> knownWorldRevisions,

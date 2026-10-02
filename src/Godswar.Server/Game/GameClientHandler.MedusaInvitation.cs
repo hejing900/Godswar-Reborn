@@ -322,6 +322,19 @@ internal sealed partial class GameClientHandler
                 $"instance={invitation.TargetWorldInstanceId}");
         }
 
+        // The member is inside the run now, so the run's one member record takes
+        // him in: from here on the record - not the invitation that just ended -
+        // is what keeps him on the published roster, inside or dropped.
+        _registry.RecordInstanceRunMemberEntry(
+            invitation.TargetWorldInstanceId,
+            new GameSessionRegistry.InstanceRosterEntry(
+                member.CharacterId,
+                member.CharacterName,
+                member.Level,
+                member.Profession,
+                member.AccountId,
+                member.Ownership));
+
         Console.WriteLine(
             "[instance-caller] Medusa member admitted " +
             $"character={member.CharacterName} " +

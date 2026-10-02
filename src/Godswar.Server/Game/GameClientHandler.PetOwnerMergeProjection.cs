@@ -68,6 +68,11 @@ internal sealed partial class GameClientHandler
         }
 
         _registry.SetPetOwnerMergePresentation(_session, active: false);
+        _registry.UpdateSummonedPet(
+            _session,
+            pet.IsCarried && pet.IsSummoned
+                ? pet
+                : null);
 
         await _session.SendAsync(
             PacketBuilder.PetEnergy(

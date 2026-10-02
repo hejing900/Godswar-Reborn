@@ -331,6 +331,15 @@ internal sealed partial class GameClientHandler
         Console.WriteLine(
             $"[game] ClientReady " +
             $"character={_character?.Name ?? "<none>"}");
+        // The status frame this bootstrap sends is the session's first 10166, so
+        // the panel's guild rows are read before it: measured with the login probe
+        // (2026-10-02), EnterUiReady alone is too late and that first frame carried
+        // the empty defaults.
+        if (_character is { } ready)
+        {
+            await RefreshGuildPanelStatusAsync(ready.Id, cancellationToken);
+        }
+
         await SendPostEnterBootstrapAsync(cancellationToken);
     }
 

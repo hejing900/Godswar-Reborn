@@ -133,8 +133,8 @@ internal static partial class InstanceCallerProtocolChecks
 
         var roster = PacketBuilder.RepetitionInstanceMembers(
         [
-            new(202, "-Alboz-", 139, true, 1),
-            new(203, "Perseus", 90, false, 3)
+            new(202, "-Alboz-", 139, RepetitionMemberState.Online, 1),
+            new(203, "Perseus", 90, RepetitionMemberState.Offline, 3)
         ]);
         Check.True(
             roster.Length == 96 &&
@@ -143,7 +143,7 @@ internal static partial class InstanceCallerProtocolChecks
             BinaryPrimitives.ReadInt32LittleEndian(roster.AsSpan(4)) == 2 &&
             BinaryPrimitives.ReadInt32LittleEndian(roster.AsSpan(8)) == 202 &&
             BinaryPrimitives.ReadInt32LittleEndian(roster.AsSpan(44)) == 139 &&
-            roster[48] == 1 &&
+            roster[48] == (byte)RepetitionMemberState.Online &&
             roster[49] == 1 &&
             BinaryPrimitives.ReadInt32LittleEndian(roster.AsSpan(52)) == 203 &&
             roster[92] == 0 &&

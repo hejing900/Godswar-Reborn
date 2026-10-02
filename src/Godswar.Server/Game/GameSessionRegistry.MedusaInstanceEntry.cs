@@ -85,6 +85,31 @@ internal sealed partial class GameSessionRegistry
             await sink(command, cancellationToken);
     }
 
+    /// <summary>
+    /// 美杜莎之岛's physical transfer, as the one shared end-of-run flow calls
+    /// it: the same sink its exits always used, wrapped in the run's own
+    /// command.
+    /// </summary>
+    private Task<bool> TransitionMedusaMemberHomeAsync(
+        ClientSession session,
+        AuthoritativeInstanceTransitionCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        return TransitionPartyMemberToInstanceAsync(
+            session,
+            new MedusaInstanceTransitionCommand(
+                command.CharacterId,
+                command.ExpectedSourceWorldInstanceId,
+                command.ExpectedSourceMapId,
+                command.ExpectedOwnership,
+                command.TargetWorldInstanceId,
+                command.TargetMapId,
+                command.TargetX,
+                command.TargetZ),
+            cancellationToken);
+    }
+
     internal MedusaPartyEntryStatus TryCaptureMedusaParty(
         ClientSession requestingSession,
         out MedusaInstancePartySnapshot snapshot)
@@ -153,6 +178,7 @@ internal sealed partial class GameSessionRegistry
                     member.CharacterId,
                     member.CharacterName,
                     member.Character.Level,
+                    member.Character.Profession,
                     member.RealmId,
                     member.WorldInstanceId,
                     member.MapId,

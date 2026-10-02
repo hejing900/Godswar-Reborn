@@ -158,6 +158,7 @@ internal sealed partial class GameSessionRegistry
                 member.CharacterId,
                 member.CharacterName,
                 member.Character.Level,
+                member.Character.Profession,
                 member.RealmId,
                 member.WorldInstanceId,
                 member.MapId,

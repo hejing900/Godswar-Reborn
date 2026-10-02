@@ -102,9 +102,12 @@ internal sealed partial class GameClientHandler
                 await _session.SendAsync(packet.Buffer, cancellationToken, "UiHeartbeatEcho");
                 break;
             case Opcodes.Talk:
+                // A recognised developer command is consumed locally and never
+                // reaches a chat channel; everything else is chat, which routes by
+                // the channel the client's own frame carries.
                 if (!await HandleDeveloperItemCommandAsync(packet, cancellationToken))
                 {
-                    await BroadcastToCurrentMapAsync(packet, cancellationToken);
+                    await HandleChatAsync(packet, cancellationToken);
                 }
 
                 break;
@@ -351,6 +354,15 @@ internal sealed partial class GameClientHandler
             case Opcodes.EnterUiReady:
                 _enterUiReadyReceived = true;
                 Console.WriteLine($"[game] EnterUiReady character={_character?.Name ?? "<none>"}");
+                // The panel's guild rows are read before the status bootstrap
+                // below, so the first 10166 of the session already carries the
+                // duty and contribution the character logs in with.
+                if (_character is { } entered)
+                {
+                    await RefreshGuildPanelStatusAsync(
+                        entered.Id,
+                        cancellationToken);
+                }
                 await SendPostEnterBootstrapAsync(cancellationToken);
                 // A guild member's client only knows its guild from the guild
                 // messages, so the roster is published here: the window then
@@ -375,6 +387,9 @@ internal sealed partial class GameClientHandler
             case Opcodes.ConsortiaInfoRequest:
                 Console.WriteLine(
                     $"[guild] window request character={_character?.Name ?? "<none>"}");
+                // The List tab's content is a separate message and is sent even to
+                // a character with no guild of its own.
+                await SendGuildListAsync(cancellationToken);
                 await SendGuildWindowAsync(cancellationToken);
                 break;
             // The client sells with 10060, not the known-but-unused 10053.
@@ -399,6 +414,25 @@ internal sealed partial class GameClientHandler
                 break;
             case GuildMemberActionProtocol.MemberDelRequest:
                 await HandleGuildMemberDelRequestAsync(packet, cancellationToken);
+                break;
+            // The guild window's "Refuse the application?" box, which sends its
+            // new state as a lone dword.
+            case Opcodes.ConsortiaRefuseApplications:
+                await HandleGuildRefuseApplicationsRequestAsync(
+                    packet,
+                    cancellationToken);
+                break;
+            // The List tab's Apply button: the selected guild's key is the body's
+            // leading dword.
+            case Opcodes.ConsortiaInviteConfirm:
+                await HandleGuildApplyRequestAsync(packet, cancellationToken);
+                break;
+            // An officer answering an application: the applicant's name is the
+            // body's string field and the leading dword was zero when measured.
+            case Opcodes.ConsortiaInvite:
+                await HandleGuildApplicationAnswerAsync(
+                    packet,
+                    cancellationToken);
                 break;
             // A member inside a running instance names another character, who
             // then receives the party's own Enter window.

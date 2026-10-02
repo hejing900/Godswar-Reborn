@@ -181,6 +181,8 @@ internal static partial class PostgresMigrationFoundationChecks
         "20260927_214_reward_item_attributes",
         "20260928_215_wonderland_unlimited_entries",
         "20260929_216_harbor_attack_daily_entry",
-        "20260930_217_atlantis_partial_rewards"
+        "20260930_217_atlantis_partial_rewards",
+        "20261001_218_atlantis_completion_roster_constraint",
+        "20261002_219_guild_refuse_applications"
     ];
 }

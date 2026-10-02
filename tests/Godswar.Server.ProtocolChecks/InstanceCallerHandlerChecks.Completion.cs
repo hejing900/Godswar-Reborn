@@ -78,6 +78,14 @@ internal static partial class InstanceCallerHandlerChecks
             "completion publishes captured state 10227 and a 30-second 10231 countdown without immediate egress");
 
         var sourceInstanceId = GetSourceInstanceId(fixture);
+        // 美杜莎's leader is the run's own mutable character id, kept in the one
+        // per-run leader store every dungeon shares. The end control never
+        // compares the session object that registered the panel, so a leader who
+        // dropped and relogged keeps the run's own end control.
+        Check.True(
+            fixture.Registry.InstanceRunLeaderCharacterId(sourceInstanceId) ==
+                fixture.Character.Id,
+            "Medusa keeps its leader as the run's own character id, not as a registration session");
         var beforeTerminate = fixture.ReadPackets().Count;
         await InvokeAsync(
             fixture.Handler,
@@ -88,10 +96,13 @@ internal static partial class InstanceCallerHandlerChecks
             .Skip(beforeTerminate)
             .ToArray();
         Check.True(
-            terminatePackets.Length == 1 &&
-            terminatePackets[0].SequenceEqual(
-                PacketBuilder.RepetitionReset()),
-            "the registered completion leader closes its countdown despite stale client scene state");
+            terminatePackets.Any(packet =>
+                packet.SequenceEqual(PacketBuilder.RepetitionReset())) &&
+            terminatePackets.Any(packet =>
+                ReadOpcode(packet) == Opcodes.SceneChange) &&
+            fixture.Character.CurrentMap != 200,
+            "the completion leader's own Leave carries only him out at once and clears his " +
+            "native list with the zero-second teardown");
 
         await fixture.Registry.AdvanceMonsterWorldOnceAsync(
             completionAt.AddMilliseconds(1),

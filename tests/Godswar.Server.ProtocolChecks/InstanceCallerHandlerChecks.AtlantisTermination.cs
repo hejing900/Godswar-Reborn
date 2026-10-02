@@ -186,8 +186,13 @@ internal static partial class InstanceCallerHandlerChecks
                     // Native 10231 carries the leave countdown when its seconds
                     // field is non-zero; zero is the plain teardown.
                     shown.Any(packet => ReadOpcode(packet) == Opcodes.RepetitionReset &&
-                        System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(packet.AsSpan(4)) == 30),
-                    "the ended run publishes the native leave countdown to every member");
+                        System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(packet.AsSpan(4)) == 30) &&
+                    // The leader who pressed Terminate gets the same countdown as
+                    // his party: a zero-second teardown in this batch used to wipe
+                    // his own panel and left him unable to leave.
+                    !shown.Any(packet => packet.SequenceEqual(PacketBuilder.RepetitionReset())),
+                    "the ended run publishes the native leave countdown to every member, " +
+                    "including the leader who ended it, and wipes nobody's panel");
             }
 
             // Once the countdown expires the ordinary egress carries them home,
@@ -245,7 +250,7 @@ internal static partial class InstanceCallerHandlerChecks
             Check.True(!registry.TryGetWorldInstance(instanceId, out _) &&
                 !registry.TryTerminateAtlantisRunFromLeader(leader.Session, DateTimeOffset.UtcNow),
                 "empty cancelled instance retires and replayed controls cannot target it from outside");
-            foreach (var field in new[] { "_atlantisLeaderCharacterIds", "_atlantisTerminationExitRequested",
+            foreach (var field in new[] { "_instanceRunLeaders", "_atlantisTerminationExitRequested",
                 "_atlantisTerminationEgressInFlight" })
             {
                 Check.Equal(0, AtlantisRegistryCacheCount(registry, field), "retirement clears " + field);

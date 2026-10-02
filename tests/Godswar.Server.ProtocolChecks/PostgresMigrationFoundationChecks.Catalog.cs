@@ -7,7 +7,7 @@ internal static partial class PostgresMigrationFoundationChecks
     private static void CheckForwardOnlyCatalog()
     {
         Check.Equal(
-            178,
+            180,
             PostgresSchemaMigrationCatalog.All.Count,
             "migration catalog entry count");
         var baseline = PostgresSchemaMigrationCatalog.All[0];
@@ -410,6 +410,25 @@ internal static partial class PostgresMigrationFoundationChecks
 
         CheckTransporterDialogueCatalogMigration();
         CheckDuelArenaCatalogMigrations();
+
+        var rosterConstraint = PostgresSchemaMigrationCatalog.All.Single(
+            migration => migration.Id ==
+                "20261001_218_atlantis_completion_roster_constraint");
+        Check.True(
+            rosterConstraint.Sql.Contains(
+                "DROP CONSTRAINT IF EXISTS ck_atlantis_completion_rewards_characters_admitted",
+                StringComparison.Ordinal) &&
+            rosterConstraint.Sql.Contains(
+                "CHECK (admitted_character_ids <@ character_ids)",
+                StringComparison.Ordinal) &&
+            // The reversed predicate 217 shipped is what refused a party
+            // settlement; it must not come back.
+            !rosterConstraint.Sql.Contains(
+                "CHECK (character_ids <@ admitted_character_ids)",
+                StringComparison.Ordinal),
+            "the Atlantis roster constraint requires every admitted member on " +
+            "the settlement roster instead of restricting the roster to the " +
+            "registered party");
     }
 
 }

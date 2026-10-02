@@ -133,6 +133,74 @@ internal static partial class PacketBuilder
     }
 
     /// <summary>
+    /// <c>MSG_PYTHON_NOTE</c> on the personal channel: the stock client's own
+    /// lower-right log line, carrying text in the client's ANSI code page.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="PersonalGameLog"/> is the ASCII face of this same frame. The
+    /// guild window's feedback has to print the client's <em>own</em> wording, and
+    /// those texts live in the client's tables in the player's language, so the
+    /// bytes are carried verbatim rather than transliterated: on this frame the
+    /// client converts the payload with its ANSI code page before the Lua side
+    /// prints it (<c>SrvMsg.lua</c>, <c>CHANNEL_PRESONAL</c> ->
+    /// <c>GameAPI:AddPersonalMessage_UTF8</c>, whose channel comment reads
+    /// 个人右下). The caller is responsible for the code page: the guild texts
+    /// below are the client's own bytes, taken from its shipped table.
+    /// </remarks>
+    public static byte[] PersonalNotice(ReadOnlySpan<byte> encodedText)
+    {
+        if (encodedText.Length == 0 ||
+            encodedText.Length > CenteredAnnouncementMaximumTextLength)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(encodedText),
+                $"Native personal notices carry 1..{CenteredAnnouncementMaximumTextLength} encoded bytes.");
+        }
+
+        var split = Math.Min(encodedText.Length, PythonNoteTextPartLength);
+        return ComposeNoteBytes(
+            PythonNoteDirectTextType,
+            PythonNotePersonalChannel,
+            encodedText[..split],
+            encodedText[split..]);
+    }
+
+    /// <summary>
+    /// One composed note whose two fixed fields are raw encoded bytes rather than
+    /// ASCII, so a text the client already owns can be sent without changing it.
+    /// </summary>
+    private static byte[] ComposeNoteBytes(
+        int noteType,
+        byte channel,
+        ReadOnlySpan<byte> first,
+        ReadOnlySpan<byte> second)
+    {
+        if (first.Length >= PythonNoteFieldLength ||
+            second.Length >= PythonNoteFieldLength)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(first),
+                "Native composed notes carry at most 63 bytes in each of their " +
+                "two fields.");
+        }
+
+        var packet = new byte[PythonNotePacketLength];
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet,
+            checked((ushort)PythonNotePacketLength));
+        BinaryPrimitives.WriteUInt16LittleEndian(
+            packet.AsSpan(2),
+            Opcodes.PythonNote);
+        BinaryPrimitives.WriteInt32LittleEndian(
+            packet.AsSpan(4),
+            noteType);
+        packet[8] = channel;
+        first.CopyTo(packet.AsSpan(9));
+        second.CopyTo(packet.AsSpan(73));
+        return packet;
+    }
+
+    /// <summary>
     /// One composed note: the type the client switches on, the channel it draws
     /// on, and the two fixed 64-byte fields it reads as the name and the note.
     /// </summary>

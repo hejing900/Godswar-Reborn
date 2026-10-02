@@ -52,8 +52,13 @@ internal sealed partial class GameSessionRegistry
         {
             Task? departureWrite = null;
             Task? wonderlandDepartureWrite = null;
+            Task? instanceRunDepartureWrite = null;
             try
             {
+                // The one clear of a finished run's native instance list, for
+                // every dungeon, enqueued in the same fence as the departure.
+                instanceRunDepartureWrite =
+                    registry.RecordCommittedInstanceRunDepartureLocked(previous);
                 departureWrite = registry.RecordCommittedAtlantisDepartureLocked(previous);
                 // A Wonderland run is cancelled once its last member leaves, so
                 // the departure has to be recorded inside this same membership
@@ -64,6 +69,10 @@ internal sealed partial class GameSessionRegistry
             {
                 Monitor.Exit(registry._gate);
                 Removal?.Dispose();
+            }
+            if (instanceRunDepartureWrite is not null)
+            {
+                _ = ObserveAtlantisDepartureWriteAsync(previous!.Session, instanceRunDepartureWrite);
             }
             if (departureWrite is not null)
             {

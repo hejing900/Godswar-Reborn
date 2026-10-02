@@ -6,8 +6,7 @@ namespace Godswar.Server.Packets;
 
 internal static partial class PacketBuilder
 {
-    public static byte[] LocalizedError(int errorCode)
-    {
+    public static byte[] LocalizedError(int errorCode)    {
         if (errorCode <= 3)
         {
             throw new ArgumentOutOfRangeException(
@@ -200,8 +199,19 @@ internal static partial class PacketBuilder
             BinaryPrimitives.WriteInt32LittleEndian(
                 packet.AsSpan(offset + 36),
                 member.Level);
-            packet[offset + 40] = member.IsOnline ? (byte)1 : (byte)0;
+            // +40 decides whether the client draws the row at all, in-game
+            // confirmed: 0 is offline, 1 draws the row (「在线」, and the operator
+            // reads 「在线(队长)」 for the run's leader), 2 draws 「等待中」, and any
+            // other value makes the client skip the row entirely. Only 0, 1 and 2
+            // are ever written; 「在线」 and 「在线(队长)」 deliberately share 1.
+            packet[offset + 40] = (byte)member.State;
             packet[offset + 41] = member.Profession;
+            // +42 and +43 are left untouched. They were tried for the 「(队长)」
+            // suffix and provably do not decide it (the suffix did not move), and
+            // the stock capture only ever shows zero, so nothing is written there.
+            // The suffix question itself is SUSPENDED: it needs client
+            // disassembly or an original-server frame as evidence, not another
+            // guess from this side.
         }
 
         return packet;
@@ -309,9 +319,50 @@ internal static partial class PacketBuilder
     }
 }
 
+/// <summary>
+/// The instance roster's per-member state byte at <c>+40</c>.
+/// </summary>
+/// <remarks>
+/// The stock client renders this single byte as one piece of text (「在线(队长)」
+/// 「等待中」…), and it also decides whether the client draws the row at all.
+/// <para>
+/// In-game confirmed, and the only values ever written: <c>0</c> is 「离线」,
+/// <c>1</c> draws the row (「在线」, read by the operator as 「在线(队长)」 for the
+/// run's leader), <c>2</c> is 「等待中」. Every other value - <c>3</c>, <c>4</c>
+/// and <c>5</c> were all tried on a live client - makes the client skip the row
+/// entirely, which is why 「在线」 and 「在线(队长)」 deliberately share <c>1</c>.
+/// </para>
+/// <para>
+/// Which byte carries the 「(队长)」 suffix is NOT settled and is SUSPENDED:
+/// <c>+42</c> and <c>+43</c> were both tried and provably do not move the
+/// suffix, so the answer needs client disassembly or an original-server frame
+/// rather than another guess. Nothing on this side changes until that evidence
+/// exists.
+/// </para>
+/// The value is decided once, by the one roster implementation every instance
+/// publishes from (<c>GameSessionRegistry.SnapshotInstanceRoster</c>); the packet
+/// builder only writes it.
+/// </remarks>
+internal enum RepetitionMemberState : byte
+{
+    Offline = 0,
+    // The leader and every other member inside share the one value that draws
+    // the row; the distinction between them is not this byte's to make.
+    OnlineLeader = 1,
+    Waiting = 2,
+    Online = OnlineLeader
+}
+
+/// <summary>
+/// One row of the native instance roster (opcode 10218).
+/// </summary>
+/// <remarks>
+/// <paramref name="State"/> is the single state byte the client reads at
+/// <c>+40</c>; see <see cref="RepetitionMemberState"/>.
+/// </remarks>
 internal readonly record struct RepetitionInstanceMember(
     int CharacterId,
     string Name,
     int Level,
-    bool IsOnline,
+    RepetitionMemberState State,
     byte Profession);

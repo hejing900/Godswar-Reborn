@@ -292,6 +292,11 @@ internal sealed partial class GameClientHandler
         {
             return;
         }
+        // The reconnect joins the run's instance before the world bootstrap
+        // resolves this session's own map runtime. A refused join leaves the
+        // character in the capital, which is what the checkpoint below then
+        // persists.
+        TryEnterReconnectedInstance();
         if (!await PersistUnavailableInstanceReconnectRecoveryAsync(
                 cancellationToken))
         {

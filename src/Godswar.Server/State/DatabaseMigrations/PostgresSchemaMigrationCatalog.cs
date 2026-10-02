@@ -361,6 +361,8 @@ internal static partial class PostgresSchemaMigrationCatalog
         CreateRewardItemAttributes(),
         CreateWonderlandUnlimitedEntries(),
         CreateHarborAttackDailyEntry(),
-        CreateAtlantisPartialRewards()
+        CreateAtlantisPartialRewards(),
+        CreateAtlantisCompletionRosterConstraint(),
+        CreateGuildRefuseApplications()
     ];
 }

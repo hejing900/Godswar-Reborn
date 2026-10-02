@@ -26,7 +26,8 @@ internal static partial class InstanceCallerHandlerChecks
             ScriptedLegacyInstanceDailyEntryStore? dailyEntries,
             ScriptedLegacyInstanceOpalPaymentStore? opalPayments,
             IReadOnlySet<int>? failedFollowerIndexes = null,
-            int partySize = 3)
+            int partySize = 3,
+            bool joinParty = true)
     {
         if (partySize is < 1 or > 5)
         {
@@ -183,6 +184,12 @@ internal static partial class InstanceCallerHandlerChecks
                     handler));
 
                 var now = DateTimeOffset.UtcNow.AddSeconds(index * 2);
+                if (!joinParty)
+                {
+                    // A follower who is online in the same realm but in no party:
+                    // what an instance's own "invite by name" picks up.
+                    continue;
+                }
                 var invited = leader.Registry.InvitePartyMember(
                     leader.Session,
                     leader.Character.Name,

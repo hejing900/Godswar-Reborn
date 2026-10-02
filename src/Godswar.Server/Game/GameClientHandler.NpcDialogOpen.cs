@@ -226,6 +226,7 @@ internal sealed partial class GameClientHandler
                 $"[npc] dialog open branch=guild-registrar " +
                 $"npc={npc.InteractionId} key={npc.NpcKey}",
                 []);
+            await SendGuildListAsync(cancellationToken);
             await SendGuildWindowAsync(cancellationToken);
             return;
         }

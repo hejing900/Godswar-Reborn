@@ -83,6 +83,27 @@ internal sealed partial class MapInstance
         lock (_atlantisEncounterGate) return _atlantisCompletionEvidence;
     }
 
+    /// <summary>
+    /// Whether this account and character are on the run's own admitted roster:
+    /// the registered party member who claimed and confirmed their entry.
+    /// </summary>
+    /// <remarks>
+    /// The same recorded admission the reward settlement and the pet capture
+    /// read, exposed for the login reconnect: only a member who actually came in
+    /// is put back inside a running Atlantis.
+    /// </remarks>
+    internal bool IsAdmittedAtlantisMember(int accountId, int characterId)
+    {
+        lock (_atlantisEncounterGate)
+        {
+            return _atlantisRewardReservation != Guid.Empty &&
+                _atlantisRewardAdmissions.Contains(characterId) &&
+                _atlantisRewardCandidates.TryGetValue(characterId,
+                    out var member) &&
+                member.AccountId == accountId;
+        }
+    }
+
     internal bool HasAdmittedAtlantisPetOwner(int accountId, int characterId)
     {
         lock (_atlantisEncounterGate)

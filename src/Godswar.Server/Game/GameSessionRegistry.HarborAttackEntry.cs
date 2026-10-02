@@ -26,6 +26,14 @@ internal sealed partial class GameSessionRegistry
         _memberEntryWindows = [];
 
     /// <summary>
+    /// How long a published Enter window stays live. It is the client's own
+    /// countdown - the same sixty seconds the leader's window gets - and with the
+    /// window it is what the member roster's 「等待中」 state expires on.
+    /// </summary>
+    private static readonly TimeSpan MemberEntryWindowLifetime =
+        GameClientHandler.InstanceEntryCountdownDuration;
+
+    /// <summary>
     /// Gives every other admitted member the leader's own Enter window.
     /// </summary>
     internal async Task PublishMemberEntryWindowsAsync(
@@ -50,7 +58,9 @@ internal sealed partial class GameSessionRegistry
             {
                 CloseMemberEntryWindowLocked(previous);
             }
-            window = new(leaderSession, clientSceneId, kind, party.Members.ToArray());
+            window = new(leaderSession, clientSceneId, kind,
+                party.Members.ToArray(), DateTimeOffset.UtcNow +
+                MemberEntryWindowLifetime);
             _memberEntryWindows[leaderSession] = window;
             foreach (var member in party.Members)
             {
@@ -112,15 +122,54 @@ internal sealed partial class GameSessionRegistry
     }
 
     /// <summary>
+    /// The instance a session's own open window points at, for the one question
+    /// that has to be asked before the gate: whether that character is already on
+    /// the way in.
+    /// </summary>
+    private WorldInstanceId ResolveMemberEntryWindowTarget(
+        ClientSession session,
+        int clientSceneId)
+    {
+        lock (_gate)
+        {
+            return _memberEntryWindows.TryGetValue(
+                    session,
+                    out var window) &&
+                !window.Closed &&
+                window.ClientSceneId == clientSceneId &&
+                !ReferenceEquals(window.LeaderSession, session)
+                ? window.TargetInstanceId ?? default
+                : default;
+        }
+    }
+
+    /// <summary>
     /// Records a member's confirmation, and reports the running instance they
     /// must join when the leader has already committed one.
     /// </summary>
+    /// <remarks>
+    /// A member's client can resend the confirmation while the first one is still
+    /// being admitted. The first confirmation already minted the reservation he
+    /// enters on, so a repeat is acknowledged and otherwise ignored: without this
+    /// the same character was queued once per frame, each queue entry carrying its
+    /// own daily-entry reservation.
+    /// </remarks>
     internal bool TryConfirmMemberEntryWindow(
         ClientSession session,
         int clientSceneId,
         out MemberEntryJoin join)
     {
         join = default;
+        // The admission answers this before the gate is taken: the in-flight
+        // record is claimed under the same gate, so asking from here cannot
+        // deadlock with it.
+        if (IsMemberEntryJoinInFlight(session, ResolveMemberEntryWindowTarget(
+                session,
+                clientSceneId)))
+        {
+            return false;
+        }
+
         lock (_gate)
         {
             if (!_memberEntryWindows.TryGetValue(
@@ -160,6 +209,30 @@ internal sealed partial class GameSessionRegistry
                 context.Ownership,
                 context.RealmId);
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Records a member's answer of "no" to their own Enter window. The window
+    /// itself stays open for the rest of the party, but that member is no longer
+    /// waiting on it and leaves the published member roster.
+    /// </summary>
+    internal void RecordMemberEntryDeclined(ClientSession session)
+    {
+        lock (_gate)
+        {
+            if (_memberEntryWindows.TryGetValue(
+                    session,
+                    out var window) &&
+                !window.Closed)
+            {
+                var member = window.Members.FirstOrDefault(candidate =>
+                    ReferenceEquals(candidate.Session, session));
+                if (member is not null)
+                {
+                    window.Declined.Add(member.CharacterId);
+                }
+            }
         }
     }
 
@@ -284,11 +357,26 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
+    /// <summary>
+    /// Drops one session's own Enter window once that session's entry is over -
+    /// admitted, released or refused. A member admitted into someone else's run
+    /// kept his window record otherwise, and his next entry into a run of his own
+    /// was then matched against that stale record and misread as a member
+    /// confirmation: the click queued a member join that could never transfer,
+    /// while his real entry waited for his own window to count down.
+    /// </summary>
+    internal void ForgetMemberEntryWindow(ClientSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        _memberEntryWindows.TryRemove(session, out _);
+    }
+
     private sealed class MemberEntryWindow(
         ClientSession leaderSession,
         int clientSceneId,
         InstanceCallerEntryKind kind,
-        LegacyInstancePartyMember[] members)
+        LegacyInstancePartyMember[] members,
+        DateTimeOffset expiresAt)
     {
         public ClientSession LeaderSession { get; } = leaderSession;
         public int ClientSceneId { get; } = clientSceneId;
@@ -296,6 +384,13 @@ internal sealed partial class GameSessionRegistry
         public LegacyInstancePartyMember[] Members { get; } = members;
         public List<ClientSession> Sessions { get; } = [];
         public HashSet<int> Confirmed { get; } = [];
+        // Members who answered "no": still in the party, no longer waiting on this
+        // window, so the member roster leaves them out.
+        public HashSet<int> Declined { get; } = [];
+        // The window the client is counting down. Once it is past, a member who
+        // never confirmed is no longer waiting and leaves the roster; the entry
+        // rules themselves are unchanged.
+        public DateTimeOffset ExpiresAt { get; } = expiresAt;
         public bool Closed { get; set; }
         public WorldInstanceId? TargetInstanceId { get; set; }
         public byte TargetMapId { get; set; }

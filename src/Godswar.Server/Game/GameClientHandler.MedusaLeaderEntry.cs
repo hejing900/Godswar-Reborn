@@ -146,7 +146,18 @@ internal sealed partial class GameClientHandler
                 targetInstanceId.Value,
                 _session,
                 leader.CharacterId,
-                dailyEntryLimit.Value))
+                dailyEntryLimit.Value,
+                // The party the run is registered for, as the run's one member
+                // record: it is what keeps a member who drops on the list as
+                // offline instead of removing them.
+                [.. eligibleMembers.Select(static member =>
+                    new GameSessionRegistry.InstanceRosterEntry(
+                        member.CharacterId,
+                        member.CharacterName,
+                        member.Level,
+                        member.Profession,
+                        member.AccountId,
+                        member.Ownership))]))
         {
             Console.Error.WriteLine(
                 "[instance-caller] Medusa leader UI registration failed " +

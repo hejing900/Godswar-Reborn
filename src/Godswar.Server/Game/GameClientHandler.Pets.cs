@@ -66,6 +66,65 @@ internal sealed partial class GameClientHandler
         }
     }
 
+    private async Task BroadcastPetWorldPresenceTransitionAsync(
+        PetBootstrapSnapshot? previousCarriedPet,
+        PetBootstrapSnapshot? currentCarriedPet,
+        CancellationToken cancellationToken)
+    {
+        if (_character is null ||
+            !_worldPresenceAnnounced ||
+            !RevalidateCurrentWorldEffectOwnership(
+                "pet_world_presence"))
+        {
+            return;
+        }
+
+        var previousWorldPet = previousCarriedPet is
+            {
+                IsCarried: true,
+                IsSummoned: true,
+                ContributesToCharacter: false
+            }
+            ? previousCarriedPet
+            : null;
+        var currentWorldPet = currentCarriedPet is
+            {
+                IsCarried: true,
+                IsSummoned: true,
+                ContributesToCharacter: false
+            }
+            ? currentCarriedPet
+            : null;
+
+        if (previousWorldPet is not null &&
+            (currentWorldPet is null ||
+             previousWorldPet.PetId != currentWorldPet.PetId))
+        {
+            await _registry.BroadcastToCurrentWorldInstanceAsync(
+                _session,
+                PacketBuilder.PetOperationResult(
+                    checked((uint)previousWorldPet.PetId),
+                    PetOperationResultCode.RecallSucceeded),
+                cancellationToken,
+                includeRoutingSession: false,
+                label: "PetWorldRecall");
+        }
+
+        if (currentWorldPet is not null &&
+            (previousWorldPet is null ||
+             previousWorldPet != currentWorldPet))
+        {
+            await _registry.BroadcastToCurrentWorldInstanceAsync(
+                _session,
+                PacketBuilder.PetWorldPresence(
+                    currentWorldPet,
+                    CurrentPlayerObjectId),
+                cancellationToken,
+                includeRoutingSession: false,
+                label: "PetWorldCallOut");
+        }
+    }
+
     private async Task RestorePersistedPetPresenceAsync(
         CancellationToken cancellationToken)
     {

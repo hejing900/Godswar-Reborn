@@ -16,6 +16,22 @@ internal static partial class PacketBuilder
     // float here can therefore make every NPC unselectable client-side.
     private const int PlayerStatusInteractionIdentityOffset = 60;
     private const int PlayerStatusCampOffset = 62;
+    // MSG_SYN_GAMEDATA copies wire offset 8 to GameData+0x25C (the block copy at
+    // 0x5B5545 pushes GameData+0x25C), so the character panel's two guild rows
+    // read these slots:
+    //   wire 76 -> GameData+0x2A0, ONE byte: the PersonalInfoUI DutyText row
+    //              (公会职位). The panel reads it with `movzx edx, byte ptr` and
+    //              formats it "G%d"; the attribute writer 0x4A8A00 fills it for
+    //              attribute id 0x0A (`mov byte ptr [ebx+0x2A0], cl`).
+    //   wire 80 -> GameData+0x2A4, a dword: the ContributeText row (公会贡献),
+    //              formatted "%"; the same writer fills it for id 0x0B.
+    // GameData+0x2A8 (wire 84) is written for id 0x0C, but the panel never reads
+    // it, so the captured template's 40 there is left alone.
+    // Measured 2026-10-02 in the client: the first attempt wrote the duty to +80,
+    // and the client showed it in the CONTRIBUTION row with the position row
+    // empty - which is what sent this back to the disassembly.
+    private const int PlayerStatusGuildDutyOffset = 76;
+    private const int PlayerStatusGuildContributionOffset = 80;
     private const int PlayerStatusSilverOffset = 120;
     private const int PlayerStatusGoldOffset = 124;
     private const int PlayerStatusMedusaHonorOffset = 128;
@@ -196,8 +212,19 @@ internal static partial class PacketBuilder
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.AsSpan(PlayerStatusAttackIntervalDwordOffset, 4),
             attackInterval);
+        var guildPanel = GuildPanelStatusCache.For(character.Id);
+        // Both the local panel and TargetInfoWnd read the same object byte at
+        // GameData+0x2A0. A remote status frame follows PlayerTitleInfo in the
+        // visibility bundle, so it must preserve the duty instead of replacing
+        // it with the template's zero.
+        packet[PlayerStatusGuildDutyOffset] = guildPanel.Duty;
         if (objectId == LocalPlayerObjectId)
         {
+            // Remaining contribution is private to the character's own panel;
+            // only that local GameData block receives the contribution value.
+            BinaryPrimitives.WriteInt32LittleEndian(
+                packet.AsSpan(PlayerStatusGuildContributionOffset, 4),
+                Math.Max(0, guildPanel.Contribution));
             // MSG_SYN_GAMEDATA copies wire offset 8 to GameData+0x25C.
             // Money/Stone/Honor/BindingGold at
             // +0x2CC/+0x2D0/+0x2D4/+0x2DC therefore map to physical wire

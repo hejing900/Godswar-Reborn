@@ -53,6 +53,16 @@ internal sealed partial class GameClientHandler
             PacketBuilder.PlayerAppearanceExtras(player.Character, player.ObjectId),
             cancellationToken,
             "VisiblePlayerAppearanceExtras");
+        if (!player.PetOwnerMergeActive &&
+            player.SummonedPet is { } summonedPet)
+        {
+            await _session.SendAsync(
+                PacketBuilder.PetWorldPresence(
+                    summonedPet,
+                    player.ObjectId),
+                cancellationToken,
+                "VisiblePlayerSummonedPet");
+        }
         await _session.SendAsync(
             PacketBuilder.PlayerTitleInfo(player.Character, player.ObjectId),
             cancellationToken,
@@ -297,12 +307,17 @@ internal sealed partial class GameClientHandler
 
         var inspectDetailObjectId = target.ObjectId;
         await RefreshCharacterStatsAsync(target.Character, target.AccountId, "inspect-target", cancellationToken);
+        await RefreshGuildPanelStatusAsync(target.Character.Id, cancellationToken);
         var statusSnapshot = await _registry.GetStatusSnapshotAsync(
             target.Session,
             DateTimeOffset.UtcNow,
             cancellationToken);
         Console.WriteLine(
             $"[inspect] sending target equipment requester={_character.Name} target={target.CharacterName} targetObject={target.ObjectId} equipment={PacketBuilder.EnterEquipmentSummary(target.Character)}");
+        await _session.SendAsync(
+            PacketBuilder.PlayerTitleInfo(target.Character, inspectDetailObjectId),
+            cancellationToken,
+            "PlayerInspectGuildProfile");
         await _session.SendAsync(
             PacketBuilder.PlayerInspectEquipmentRemoteStatusBundle(
                 target.Character,

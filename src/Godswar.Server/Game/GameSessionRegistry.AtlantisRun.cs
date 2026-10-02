@@ -13,10 +13,17 @@ internal sealed partial class GameSessionRegistry
     private const ushort AtlantisClientSceneId = 224;
     private readonly ConcurrentDictionary<WorldInstanceId, ushort> _atlantisDailyLimits = [];
     private readonly ConcurrentDictionary<ClientSession, AtlantisUiStamp> _atlantisUi = [];
+    // The party this run was admitted for. The panel publishes it instead of the
+    // connected sessions, so a member who drops stays on the roster as offline.
+    private readonly ConcurrentDictionary<
+        WorldInstanceId,
+        LegacyInstancePartyMember[]> _atlantisRunRosters = [];
 
     private void ForgetAtlantisRun(WorldInstanceId instanceId)
     {
         _atlantisDailyLimits.TryRemove(instanceId, out _);
+        _atlantisRunRosters.TryRemove(instanceId, out _);
+        ForgetInstanceRunMembership(instanceId);
         ForgetAtlantisTermination(instanceId);
         ForgetAtlantisCompletion(instanceId);
         ForgetAtlantisCompletionRewards(instanceId);
@@ -60,6 +67,14 @@ internal sealed partial class GameSessionRegistry
             }
             _atlantisDailyLimits.TryAdd(instanceId, dailyEntryLimit);
             _atlantisLeaderCharacterIds.TryAdd(instanceId, admittedParty[0].CharacterId);
+            if (admissionMembers is not null)
+            {
+                _atlantisRunRosters[instanceId] = [.. admissionMembers];
+                // The one per-run member record the roster publishes from opens
+                // here, with the party this run was registered for.
+                BeginInstanceRunMembership(instanceId,
+                    [.. admissionMembers.Select(ToRosterEntry)]);
+            }
         }
         return started;
     }

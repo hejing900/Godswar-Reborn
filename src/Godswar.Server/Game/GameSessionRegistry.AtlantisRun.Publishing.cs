@@ -23,16 +23,27 @@ internal sealed partial class GameSessionRegistry
         }
         if (delivery.Run.State is AtlantisRunState.Cancelled or AtlantisRunState.TimedOut)
         {
-            // An ended or timed-out run behaves like a completed one for its
-            // members: the panel becomes the native leave countdown, a member may
-            // leave immediately, and the remaining members are carried out when
-            // the thirty seconds expire. It also pays the tier its score reached:
-            // the settlement is attempted first and retried by later ticks, but it
-            // never holds the egress hostage - the runtime is kept alive until it
-            // settles, so no result is lost and nobody is stranded.
-            _ = await SettleAtlantisCompletionRewardsAsync(delivery, cancellationToken);
-            await PublishAtlantisTerminationUiAsync(delivery, cancellationToken);
-            if (!IsAtlantisTerminationExitWindowOpen(delivery.Run, delivery.ObservedAt))
+            // An ended or timed-out run enters the one shared terminal flow: the
+            // same four native frames, the same thirty-second countdown and the
+            // same clicker-only leave a completed run shows. It also pays the tier
+            // its score reached: the settlement is attempted first and retried by
+            // later ticks, but it never holds the egress hostage - the runtime is
+            // kept alive until it settles, so no result is lost and nobody is
+            // stranded.
+            var ending = BeginInstanceRunEnd(delivery.Runtime.InstanceId,
+                InstanceRunKind.Atlantis, "Atlantis",
+                DynamicDungeonContentMapPolicy.AtlantisPortalMapId,
+                AtlantisClientSceneId, delivery.DailyEntryLimit,
+                delivery.Run.TeamPoints,
+                delivery.Run.TerminalAt ?? delivery.ObservedAt);
+            await PublishInstanceRunEndAsync(
+                ending,
+                [.. delivery.Members.Select(static member => new InstanceRunEndMember(
+                    member.Session, member.CharacterId, member.Ownership, member.Camp))],
+                delivery.ObservedAt,
+                settle: token => SettleAtlantisCompletionRewardsAsync(delivery, token),
+                cancellationToken);
+            if (!IsInstanceRunEndWindowOpen(ending, delivery.ObservedAt))
             {
                 await PublishAtlantisTerminationEgressAsync(delivery, cancellationToken);
             }
@@ -42,10 +53,10 @@ internal sealed partial class GameSessionRegistry
         var remaining = checked((int)Math.Clamp(Math.Ceiling(
             (delivery.Run.Deadline - delivery.Run.LastObservedAt).TotalSeconds),
             0, AtlantisEncounterPolicy.TimeLimit.TotalSeconds));
-        var roster = delivery.Members.Select(static member => new RepetitionInstanceMember(
-            member.CharacterId, member.Name, member.Level, true, member.Profession)).ToArray();
-        var signature = string.Join('|', roster.Select(static member =>
-            $"{member.CharacterId}:{member.Name}:{member.Level}:{member.Profession}"));
+        var roster = SnapshotInstanceRoster(
+            delivery.Runtime.InstanceId, InstanceRunKind.Atlantis,
+            delivery.ObservedAt);
+        var signature = InstanceRosterSignature(roster);
         var stamp = new AtlantisUiStamp(delivery.Runtime.InstanceId, delivery.Run.State,
             remaining, delivery.Run.TeamPoints, signature);
 
@@ -79,15 +90,9 @@ internal sealed partial class GameSessionRegistry
                     packets.Add(PacketBuilder.RepetitionInstanceMembers(roster));
                 }
                 packets.Add(PacketBuilder.RepetitionFightInfo(remaining, stamp.Points));
-                if (stamp.State != AtlantisRunState.Active)
-                {
-                    if (stamp.State == AtlantisRunState.Completed)
-                    {
-                        packets.Add(PacketBuilder.RepetitionPanelCompletion());
-                    }
-                    packets.Add(PacketBuilder.RepetitionCompletionState(
-                        AtlantisClientSceneId, stamp.State == AtlantisRunState.Completed));
-                }
+                // A terminal state never reaches this active-run publisher: the
+                // panel-completion state and the leave countdown belong to the
+                // one shared end-of-run flow.
                 // Admission and exact membership validation share the registry
                 // fence. Physical writes complete after that fence is released.
                 if (member.Session.TryAdmitExactBatch(packets, out var admitted))
@@ -122,3 +127,4 @@ internal sealed partial class GameSessionRegistry
         current.Character.CurrentMap == current.MapId &&
         IsCurrentAccountSession(member.AccountId, member.Session, member.Ownership);
 }
+

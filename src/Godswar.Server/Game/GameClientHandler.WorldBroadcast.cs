@@ -303,6 +303,20 @@ internal sealed partial class GameClientHandler
                 PacketBuilder.PlayerAppearanceExtras(_character, objectId),
                 cancellationToken,
                 _session);
+            var summonedPet = _characterLoadSnapshot?.Pets.SingleOrDefault(
+                static pet => pet.IsCarried &&
+                    pet.IsSummoned &&
+                    !pet.ContributesToCharacter);
+            if (!_registry.IsPetOwnerMergePresentationActive(_session) &&
+                summonedPet is not null)
+            {
+                await _registry.BroadcastToMapAsync(
+                    _character.CurrentMap,
+                    PacketBuilder.PetWorldPresence(summonedPet, objectId),
+                    cancellationToken,
+                    _session,
+                    "NewPlayerSummonedPet");
+            }
             await _registry.BroadcastToMapAsync(
                 _character.CurrentMap,
                 PacketBuilder.PlayerTitleInfo(_character, objectId),

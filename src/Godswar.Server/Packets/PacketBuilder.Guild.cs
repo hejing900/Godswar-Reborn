@@ -195,10 +195,16 @@ internal static partial class PacketBuilder
             PacketText.WriteFixedAscii(
                 record[..GuildMemberNameLength],
                 member.Name);
-            // +0x20 is the one member-record field still unaccounted for: the
-            // level lives in the byte at +0x23, so this word is written as zero
-            // until a reading of the live client names it.
-            BinaryPrimitives.WriteInt16LittleEndian(record[0x20..], 0);
+            // +0x20 is the member's own state word. The client reads it with
+            // `movsx ecx, word ptr [esi+0x20]` (MEMBER_LIST 0x4edbdf) and its row
+            // renderer branches on the value being -1 (`0x540cf4 cmp dword
+            // [esi+0x34], -1`, where the row's data comes from this record), so
+            // an offline member is written as -1 and an online one as 0.
+            // Measured 2026-10-02: while every row carried 0, the client drew an
+            // offline fixture as online - which is what this field is for.
+            BinaryPrimitives.WriteInt16LittleEndian(
+                record[0x20..],
+                member.Online ? (short)0 : (short)-1);
             record[0x22] = member.Duty;
             // +0x23 is the member's level as a byte, not a flag: writing 1 here
             // made the row read "level 1" while the character was 140. The
@@ -324,6 +330,30 @@ internal static partial class PacketBuilder
         PacketText.WriteFixedAscii(
             body.Slice(0x04, GuildMemberNameLength),
             memberName);
+        return packet;
+    }
+
+    /// <summary>
+    /// <c>MSG_CONSORTIA_INVITE</c> (<c>10146</c>): tells a guild's officers that
+    /// somebody applied to join.
+    /// </summary>
+    /// <remarks>
+    /// The client's case for this opcode (<c>0x4ed3dc</c>) reads one string, at
+    /// <c>body+4</c>, and prints it with its own <c>"RequestJoinCon"</c> text (a
+    /// notice plus a chat line); it reads nothing else, so the leading dword is
+    /// written as zero and the width matches the request the window itself sends
+    /// for the same action (104 bytes, measured 2026-10-02 at <c>0x540502</c>).
+    /// </remarks>
+    public static byte[] GuildJoinApplicationNotice(string applicantName)
+    {
+        ArgumentNullException.ThrowIfNull(applicantName);
+        var packet = new byte[4 + 0x64];
+        WriteGuildHeader(packet, Opcodes.ConsortiaInviteConfirm);
+        var body = packet.AsSpan(4);
+        WriteUInt32(body, 0x00, 0);
+        PacketText.WriteFixedAscii(
+            body.Slice(0x04, GuildNameLength),
+            applicantName);
         return packet;
     }
 

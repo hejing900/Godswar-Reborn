@@ -23,12 +23,22 @@ internal sealed record LegacyInstancePartySnapshot(
     int LeaderCharacterId,
     IReadOnlyList<LegacyInstancePartyMember> Members);
 
+/// <summary>
+/// One member of the party an exact instance was admitted for.
+/// </summary>
+/// <remarks>
+/// The instance's roster panel publishes this record for a member whose session
+/// is gone, so it carries the presentation values that outlive the session -
+/// including <paramref name="Profession"/>, which the old live-session-only
+/// roster read from the character itself.
+/// </remarks>
 internal sealed record LegacyInstancePartyMember(
     ClientSession Session,
     int AccountId,
     int CharacterId,
     string CharacterName,
     int Level,
+    byte Profession,
     RealmId RealmId,
     WorldInstanceId SourceWorldInstanceId,
     byte SourceMapId,

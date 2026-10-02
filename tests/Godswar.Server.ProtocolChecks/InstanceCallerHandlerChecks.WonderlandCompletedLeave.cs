@@ -22,8 +22,8 @@ internal static partial class InstanceCallerHandlerChecks
         var chests = new RecordingWonderlandChestStore();
         registry.ConfigureWonderlandChests(chests);
         var runtime = await EnterWonderlandHandlerAsync(fixture);
-        Check.True(!registry.TryResolveCompletedWonderlandLeave(leader.Session, 227, 0, out _) &&
-            !registry.TryResolveCompletedWonderlandLeave(follower.Session, null, 0, out _),
+        Check.True(!registry.TryResolveInstanceRunEndLeave(leader.Session, 227, 0, WonderlandNow(runtime), out _) &&
+            !registry.TryResolveInstanceRunEndLeave(follower.Session, null, 0, WonderlandNow(runtime), out _),
             "completed Leave cannot bypass an active encounter or its leader-only cancellation policy");
         for (var island = 1; island <= 7; island++)
             await ClearWonderlandHandlerIslandAsync(fixture, runtime);
@@ -53,8 +53,8 @@ internal static partial class InstanceCallerHandlerChecks
         await using (var replacement = new ClientSession(new FactionCrierCaptureTransport()))
         {
             registry.ReplaceAccountSession(leader.Character.AccountId, replacement);
-            Check.True(!registry.TryResolveCompletedWonderlandLeave(leader.Session, 227, 0, out _) &&
-                !registry.TryResolveCompletedWonderlandLeave(replacement, 227, 0, out _),
+            Check.True(!registry.TryResolveInstanceRunEndLeave(leader.Session, 227, 0, WonderlandNow(runtime), out _) &&
+                !registry.TryResolveInstanceRunEndLeave(replacement, 227, 0, WonderlandNow(runtime), out _),
                 "replaced ownership and an unadmitted replacement cannot resolve a completed departure");
             GameHandlerOwnershipTestFences.Bind(registry, leader.Session, leader.Character.AccountId, leader.Character);
         }

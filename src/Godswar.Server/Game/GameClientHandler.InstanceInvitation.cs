@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using Godswar.Server.Application.WorldInstances;
 using Godswar.Server.Domain.World.Content;
 using Godswar.Server.Protocol;
 using Godswar.Server.Packets;
@@ -13,6 +14,16 @@ internal sealed partial class GameClientHandler
     /// member who is already inside names another character, who then receives
     /// the party's own Enter window.
     /// </summary>
+    /// <remarks>
+    /// 美杜莎之岛 is the one instance whose confirmation is not that Enter window:
+    /// its client scene (209 advanced, 223 normal) belongs to the run's native
+    /// invitation, which carries an invitation identity and is answered on 10217.
+    /// The shared handler claimed 10224 for every instance and dropped those
+    /// scenes as malformed, so a Medusa member could no longer invite anyone by
+    /// name. This routes them back to the run's own invitation instead; the
+    /// scenes the Enter window serves, and the unknown scenes that are still
+    /// refused, are unchanged.
+    /// </remarks>
     private async Task HandleInstanceInvitationRequestAsync(
         GamePacket packet,
         CancellationToken cancellationToken)
@@ -34,16 +45,26 @@ internal sealed partial class GameClientHandler
             packet.Payload);
         var inviteeName = ReadInvitationName(
             packet.Payload.Slice(sizeof(int) * 2, 32));
-        if (clientSceneId <= 0 ||
-            inviteeName.Length == 0 ||
-            !InstanceCallerProtocol.TryResolveInvitedInstance(
+        if (clientSceneId <= 0 || inviteeName.Length == 0)
+        {
+            LogRefusedInstanceInvitation(clientSceneId, inviteeName);
+            return;
+        }
+
+        if (MedusaIslandRosterPolicy.IsClientScene(clientSceneId))
+        {
+            await HandleMedusaInvitationByNameAsync(
+                checked((short)clientSceneId),
+                inviteeName,
+                cancellationToken);
+            return;
+        }
+
+        if (!InstanceCallerProtocol.TryResolveInvitedInstance(
                 clientSceneId,
                 out var destination))
         {
-            Console.Error.WriteLine(
-                "[instance-invite] rejected malformed request character=" +
-                $"{_character.Name} scene={clientSceneId} " +
-                $"name='{inviteeName}'");
+            LogRefusedInstanceInvitation(clientSceneId, inviteeName);
             return;
         }
 
@@ -57,6 +78,58 @@ internal sealed partial class GameClientHandler
                 "[instance-invite] refused character=" + _character.Name +
                 $" invitee={inviteeName} scene={clientSceneId}");
         }
+    }
+
+    /// <summary>
+    /// The 美杜莎之岛 name invitation: the requester must be inside an active run
+    /// of the scene he named, and the invitee then receives that run's own
+    /// confirmation, exactly as a party member's automatic one.
+    /// </summary>
+    private async Task HandleMedusaInvitationByNameAsync(
+        short clientSceneId,
+        string inviteeName,
+        CancellationToken cancellationToken)
+    {
+        if (!_registry.TryBeginManualMedusaInvitation(
+                _session,
+                inviteeName,
+                clientSceneId,
+                DateTimeOffset.UtcNow,
+                out var invitation))
+        {
+            Console.WriteLine(
+                "[instance-invite] refused Medusa invitation character=" +
+                $"{_character?.Name ?? "<none>"} invitee={inviteeName} " +
+                $"scene={clientSceneId}");
+            return;
+        }
+
+        if (!await PublishMedusaInvitationNoticeAsync(
+                invitation,
+                cancellationToken))
+        {
+            _registry.CancelMedusaInvitation(invitation.InvitationId);
+            return;
+        }
+
+        _ = MonitorMedusaInvitationTimeoutAsync(
+            invitation,
+            CancellationToken.None);
+        Console.WriteLine(
+            "[instance-invite] invited invitee=" + inviteeName +
+            $" character={invitation.Invitee.CharacterId} " +
+            $"scene={clientSceneId} destination=Medusa instances=" +
+            $"{invitation.TargetWorldInstanceId}");
+    }
+
+    private void LogRefusedInstanceInvitation(
+        int clientSceneId,
+        string inviteeName)
+    {
+        Console.Error.WriteLine(
+            "[instance-invite] rejected malformed request character=" +
+            $"{_character?.Name ?? "<none>"} scene={clientSceneId} " +
+            $"name='{inviteeName}'");
     }
 
     /// <summary>

@@ -295,12 +295,20 @@ internal static partial class InstanceCallerHandlerChecks
                     ReadOpcode(packet) ==
                         Opcodes.RepetitionInstanceMembers &&
                     BinaryPrimitives.ReadInt32LittleEndian(
-                        packet.AsSpan(4)) == 2) &&
+                        packet.AsSpan(4)) == 2 &&
+                    // The run's leader is 「在线(队长)」 and the member who came in
+                    // with him is 「在线」, in character-id order.
+                    RosterState(packet, 0) == 1 &&
+                    RosterState(packet, 1) ==
+                        (byte)RepetitionMemberState.Online) &&
                 memberPackets.Any(packet =>
                     ReadOpcode(packet) ==
                         Opcodes.RepetitionInstanceMembers &&
                     BinaryPrimitives.ReadInt32LittleEndian(
-                        packet.AsSpan(4)) == 2) &&
+                        packet.AsSpan(4)) == 2 &&
+                    RosterState(packet, 0) == 1 &&
+                    RosterState(packet, 1) ==
+                        (byte)RepetitionMemberState.Online) &&
                 // Every admitted member reads the instance's own progress panel,
                 // not just the leader: the run timer and score are instance
                 // scoped, so a member joining a running instance sees its
@@ -312,8 +320,9 @@ internal static partial class InstanceCallerHandlerChecks
                 leader.Registry.GetWorldInstanceSessions(
                     targetInstanceId).Count == 2,
                 "Medusa party entry publishes both players and sends the " +
-                "run timer and the instance roster to the leader and to every " +
-                "admitted member");
+                "run timer and the instance roster, with the run's leader " +
+                "「在线(队长)」 and the member who entered with him 「在线」, to " +
+                "the leader and to every admitted member");
 
             var leaderBeforeMonsterAoi = leader.ReadPackets().Count;
             await InvokeAsync(

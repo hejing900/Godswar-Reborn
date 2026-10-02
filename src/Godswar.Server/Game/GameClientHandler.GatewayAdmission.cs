@@ -33,6 +33,13 @@ internal sealed partial class GameClientHandler
                 worldReady);
         }
 
+        _registry.UpdateSummonedPet(
+            _session,
+            _characterLoadSnapshot?.Pets.SingleOrDefault(
+                static pet => pet.IsCarried &&
+                    pet.IsSummoned &&
+                    !pet.ContributesToCharacter));
+
         _registry.RegisterPveMonsterKillRewardPreparer(
             _session,
             PreparePveDerivedKillRewardAsync);

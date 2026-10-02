@@ -19,18 +19,35 @@ internal sealed partial class GameSessionRegistry
         // An ended or timed-out run shows the same native leave countdown a
         // completed run does, and members are carried out when it expires.
         var ending = !completed && WonderlandCompletionPolicy.IsEndWindowOpen(run, now);
-        var remaining = checked((int)Math.Clamp(Math.Ceiling(completed
-            ? (run.TerminalAt!.Value + WonderlandCompletionPolicy.TreasureWindow - now).TotalSeconds
-            : ending
-                ? (run.TerminalAt!.Value + WonderlandCompletionPolicy.EndWindow - now).TotalSeconds
-                : (run.Deadline - run.LastObservedAt).TotalSeconds), 0,
-            completed ? WonderlandCompletionPolicy.TreasureWindow.TotalSeconds
-                : ending ? WonderlandCompletionPolicy.EndWindow.TotalSeconds
-                : 2400));
-        var roster = members.Select(member => new RepetitionInstanceMember(member.CharacterId,
-            member.Character.Name, member.Character.Level, true, member.Character.Profession)).ToArray();
-        var signature = string.Join('|', roster.Select(member =>
-            $"{member.CharacterId}:{member.Name}:{member.Level}:{member.Profession}"));
+        if (completed || ending)
+        {
+            // The one end-of-run flow every dungeon shares: the same four
+            // native frames, the same thirty-second countdown, the same
+            // clicker-only leave and the same automatic exit. 飘渺 hands it its
+            // own scene, its cleared islands and its own leave rule.
+            await PublishInstanceRunEndAsync(
+                BeginInstanceRunEnd(runtime.InstanceId, InstanceRunKind.Wonderland,
+                    "Wonderland", WonderlandMapId, WonderlandClientSceneId,
+                    admission.DailyLimit, run.CompletedIslands,
+                    run.TerminalAt!.Value,
+                    // A completed run keeps 飘渺's own five-minute treasure
+                    // window; an ended or timed-out run uses the shared thirty
+                    // seconds, exactly as the other three dungeons do.
+                    window: completed
+                        ? WonderlandCompletionPolicy.TreasureWindow
+                        : WonderlandCompletionPolicy.EndWindow,
+                    canLeave: () => !HasPendingWonderlandTitles(runtime.InstanceId)),
+                [.. members.Select(ToInstanceRunEndMember)],
+                now,
+                settle: null,
+                cancellationToken);
+            return;
+        }
+        var remaining = checked((int)Math.Clamp(Math.Ceiling(
+            (run.Deadline - run.LastObservedAt).TotalSeconds), 0, 2400));
+        var roster = SnapshotInstanceRoster(
+            runtime.InstanceId, InstanceRunKind.Wonderland, now);
+        var signature = InstanceRosterSignature(roster);
         var stamp = new WonderlandUiStamp(runtime.InstanceId, run.State, run.CurrentIsland,
             run.CompletedIslands, remaining, signature);
         foreach (var member in members)
@@ -50,22 +67,14 @@ internal sealed partial class GameSessionRegistry
                      previous.State == WonderlandRunState.Completed && completed ||
                      ending && previous.State == stamp.State)) continue;
                 var packets = new List<ReadOnlyMemory<byte>>();
-                // Nonzero10231 only opens its native countdown while the
-                // client's repetition state is5/6. Reassert state5 in the
-                // completion batch instead of relying on its entry-time sync.
-                if (completed || ending || previous?.InstanceId != stamp.InstanceId)
+                if (previous?.InstanceId != stamp.InstanceId)
                     packets.Add(PacketBuilder.RepetitionSync(WonderlandClientSceneId, 0, 0, 5, admission.DailyLimit));
                 if (previous?.InstanceId != stamp.InstanceId || previous.Roster != signature)
                     packets.Add(PacketBuilder.RepetitionInstanceMembers(roster));
                 packets.Add(PacketBuilder.RepetitionFightInfo(remaining, run.CompletedIslands));
-                if (completed || ending)
-                {
-                    packets.Add(PacketBuilder.RepetitionPanelCompletion());
-                    packets.Add(PacketBuilder.RepetitionCompletionState(WonderlandClientSceneId, true));
-                    packets.Add(PacketBuilder.RepetitionCountdown(remaining));
-                }
-                else if (run.State != WonderlandRunState.Active)
-                    packets.Add(PacketBuilder.RepetitionCompletionState(WonderlandClientSceneId, false));
+                // A terminal state never reaches this active-run publisher: the
+                // panel-completion state and the leave countdown belong to the
+                // one shared end-of-run flow.
                 if (member.Session.TryAdmitExactBatch(packets, out var admitted)) _wonderlandUi[member.Session] = stamp;
                 write = admitted;
             }
@@ -74,10 +83,6 @@ internal sealed partial class GameSessionRegistry
                 try
                 {
                     await write;
-                    if (completed || ending)
-                        Console.WriteLine($"[wonderland] {(ending ? "end" : "completion")} countdown published " +
-                            $"instance={runtime.InstanceId} character={member.CharacterId} seconds={remaining} " +
-                            $"state={run.State}");
                 }
                 catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 { member.Session.Disconnect(); }
@@ -88,3 +93,4 @@ internal sealed partial class GameSessionRegistry
     private sealed record WonderlandUiStamp(WorldInstanceId InstanceId, WonderlandRunState State,
         int Island, int CompletedIslands, int RemainingSeconds, string Roster);
 }
+

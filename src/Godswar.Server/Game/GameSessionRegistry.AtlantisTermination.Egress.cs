@@ -1,3 +1,4 @@
+using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game.WorldInstances;
 using Godswar.Server.State;
 
@@ -11,43 +12,33 @@ internal sealed partial class GameSessionRegistry
         var instanceId = delivery.Runtime.InstanceId;
         // A completion exit must pass durable reward settlement, including a
         // leader's manual Finish/Leave request during the completion countdown.
+        // The end-window expiry alone is the trigger: the leader's own click took
+        // only the leader out through the shared clicker-only leave. It is
+        // deliberately not gated on the leader having asked to end the run, so a
+        // run that merely ran out of time still brings its members home when the
+        // countdown expires.
         if (delivery.Run.State is AtlantisRunState.Active or AtlantisRunState.Completed ||
-            !_atlantisTerminationExitRequested.ContainsKey(instanceId) ||
             !_atlantisTerminationEgressInFlight.TryAdd(instanceId, 0))
         {
             return;
         }
         try
         {
-            foreach (var member in delivery.Members)
+            // The one automatic exit every dungeon shares.
+            var transferred = await EgressInstanceRunEndAsync(
+                BeginInstanceRunEnd(instanceId, InstanceRunKind.Atlantis, "Atlantis",
+                    DynamicDungeonContentMapPolicy.AtlantisPortalMapId,
+                    AtlantisClientSceneId, delivery.DailyEntryLimit,
+                    delivery.Run.TeamPoints,
+                    delivery.Run.TerminalAt ?? DateTimeOffset.UtcNow),
+                [.. delivery.Members.Select(static member => new InstanceRunEndMember(
+                    member.Session, member.CharacterId, member.Ownership, member.Camp))],
+                TransitionPartyMemberToAuthoritativeInstanceAsync,
+                cancellationToken);
+            if (!transferred)
             {
-                lock (_gate)
-                {
-                    if (!IsCurrentAtlantisMember(delivery, member))
-                    {
-                        continue;
-                    }
-                }
-                var targetMap = member.Camp == GameDefaults.SpartaCamp
-                    ? GameDefaults.SpartaCapitalMap : GameDefaults.AthensCapitalMap;
-                try
-                {
-                    var target = GetOrCreateDefaultWorldInstance(targetMap);
-                    var command = new AuthoritativeInstanceTransitionCommand(member.CharacterId,
-                        instanceId, 205, member.Ownership, target.InstanceId, targetMap,
-                        GameDefaults.StartingPositionX, GameDefaults.StartingPositionZ);
-                    if (!await TransitionPartyMemberToAuthoritativeInstanceAsync(
-                            member.Session, command, cancellationToken))
-                    {
-                        Console.WriteLine($"[atlantis] termination exit deferred character={member.CharacterId}");
-                    }
-                }
-                catch (Exception error) when (error is not OperationCanceledException ||
-                    !cancellationToken.IsCancellationRequested)
-                {
-                    Console.WriteLine($"[atlantis] termination exit failed character={member.CharacterId} " +
-                        $"reason={error.GetType().Name}");
-                }
+                Console.WriteLine(
+                    $"[atlantis] termination exit will retry instance={instanceId}");
             }
             // Keep the request until retirement: a member who is still loading
             // or whose fenced transfer failed must exit on a later world tick.

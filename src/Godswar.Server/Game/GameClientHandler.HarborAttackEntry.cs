@@ -40,6 +40,9 @@ internal sealed partial class GameClientHandler
 
         if (response == 0)
         {
+            // The member is not coming: the window stays open for the rest of the
+            // party, and the published roster stops showing him as waiting.
+            _registry.RecordMemberEntryDeclined(_session);
             await _session.SendAsync(
                 PacketBuilder.RepetitionReset(),
                 cancellationToken,
@@ -140,6 +143,12 @@ internal sealed partial class GameClientHandler
                 join,
                 reservationId))
         {
+            // Whether the queue refused the join or the character is already on
+            // the way in, the reservation this confirmation just minted is not
+            // the one he travels on, so it is given straight back.
+            _registry.ForgetMemberEntryJoinInFlight(
+                _session,
+                join.TargetInstanceId);
             await ReleaseLegacyInstanceDailyEntryAsync(reservationId);
             Console.Error.WriteLine(
                 "[instance-entry] member join refused character=" +

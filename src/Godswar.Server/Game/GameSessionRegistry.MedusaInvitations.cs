@@ -261,43 +261,80 @@ internal sealed partial class GameSessionRegistry
         MedusaInstanceInvitation invitation)
     {
         var member = invitation.Invitee;
-        if (invitation.Party.PartyId is not { } partyId ||
-            !_partiesByCharacter.TryGetValue(
-                member.CharacterId,
-                out var party))
+        if (invitation.Party.PartyId is { } partyId)
         {
-            return false;
+            if (!_partiesByCharacter.TryGetValue(
+                    member.CharacterId,
+                    out var party))
+            {
+                return false;
+            }
+            NormalizePartyLocked(party);
+            if (!_partiesByCharacter.TryGetValue(
+                    member.CharacterId,
+                    out party) ||
+                party.Id != partyId ||
+                party.MemberCharacterIds.Count < 2 ||
+                party.MemberCharacterIds[0] !=
+                    invitation.Party.LeaderCharacterId ||
+                !party.MemberCharacterIds.Contains(member.CharacterId))
+            {
+                return false;
+            }
         }
-        NormalizePartyLocked(party);
-        if (!_partiesByCharacter.TryGetValue(
-                member.CharacterId,
-                out party) ||
-            party.Id != partyId ||
-            party.MemberCharacterIds.Count < 2 ||
-            party.MemberCharacterIds[0] !=
-                invitation.Party.LeaderCharacterId ||
-            !party.MemberCharacterIds.Contains(member.CharacterId))
-        {
-            return false;
-        }
+        // A null party identity is the manual invitation an in-instance member
+        // sent by name: there is no party to re-validate, and the inviter's own
+        // presence inside the target run is the whole authority for it. The
+        // invitation is only valid while that member is still inside the run he
+        // invited from.
 
-        return TryFindCurrentContextLocked(
+        // Every check below reports which one refused, because an invitation the
+        // client is waiting on that silently expires is the hardest kind of
+        // instance fault to read off a log.
+        var invalid = !TryFindCurrentContextLocked(
                 invitation.Party.LeaderCharacterId,
-                out var leader) &&
-            !leader.Session.IsDisconnected &&
-            leader.WorldInstanceId == invitation.TargetWorldInstanceId &&
-            leader.MapId is 200 or 204 &&
-            _sessions.TryGetValue(member.Session, out var current) &&
-            IsEntryReady(current) &&
-            current.AccountId == member.AccountId &&
-            current.CharacterId == member.CharacterId &&
-            current.RealmId == invitation.Party.RealmId &&
-            current.RealmId == member.RealmId &&
-            current.WorldInstanceId == member.SourceWorldInstanceId &&
-            current.MapId == member.SourceMapId &&
-            current.Ownership == member.Ownership &&
-            current.Character.Level >= MedusaIslandPolicy.MinimumLevel &&
-            _instanceTransitionSinks.ContainsKey(member.Session);
+                out var leader)
+            ? "inviter-missing"
+            : leader.Session.IsDisconnected
+                ? "inviter-dropped"
+                : leader.WorldInstanceId != invitation.TargetWorldInstanceId
+                    ? "inviter-left-the-run"
+                    : leader.MapId is not (200 or 204)
+                        ? "inviter-not-in-medusa"
+                        : !_sessions.TryGetValue(member.Session, out var current)
+                            ? "invitee-session-missing"
+                            : !IsEntryReady(current)
+                                ? "invitee-not-entry-ready"
+                                : current.AccountId != member.AccountId ||
+                                  current.CharacterId != member.CharacterId
+                                    ? "invitee-identity-changed"
+                                    : current.RealmId != invitation.Party.RealmId ||
+                                      current.RealmId != member.RealmId
+                                        ? "invitee-realm-changed"
+                                        : current.WorldInstanceId !=
+                                          member.SourceWorldInstanceId ||
+                                          current.MapId != member.SourceMapId
+                                            ? "invitee-moved"
+                                            : current.Ownership !=
+                                              member.Ownership
+                                                ? "invitee-ownership-changed"
+                                                : current.Character.Level <
+                                                  MedusaIslandPolicy.MinimumLevel
+                                                    ? "invitee-below-level"
+                                                    : !_instanceTransitionSinks
+                                                        .ContainsKey(
+                                                            member.Session)
+                                                        ? "invitee-not-transferable"
+                                                        : null;
+        if (invalid is not null)
+        {
+            Console.WriteLine(
+                "[instance-caller] Medusa invitation invalid reason=" +
+                $"{invalid} invitee={member.CharacterName} " +
+                $"invitation={invitation.InvitationId}");
+            return false;
+        }
+        return true;
     }
 
     private int NextMedusaInvitationIdLocked()

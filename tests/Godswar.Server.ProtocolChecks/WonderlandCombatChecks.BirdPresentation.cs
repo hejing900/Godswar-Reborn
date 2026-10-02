@@ -142,9 +142,11 @@ internal static partial class WonderlandCombatChecks
             registry.JoinWorldInstance(observer, viewer.AccountId, viewer, WorldObjectIds.ForPlayer(viewer.Id),
                 runtime.InstanceId, joinedAt: now);
             Check.True(registry.TryStartWonderlandEncounter(runtime.InstanceId, dailyLimit: 3,
-                [new(session, character.AccountId, character.Id, character.Name, character.Level, RealmId.Tempest,
+                [new(session, character.AccountId, character.Id, character.Name, character.Level,
+                    character.Profession, RealmId.Tempest,
                     runtime.InstanceId, 207, targetFence),
-                 new(observer, viewer.AccountId, viewer.Id, viewer.Name, viewer.Level, RealmId.Tempest,
+                 new(observer, viewer.AccountId, viewer.Id, viewer.Name, viewer.Level,
+                    viewer.Profession, RealmId.Tempest,
                     runtime.InstanceId, 207, viewerFence)], now, reservation),
                 "both target and observer belong to the frozen Wonderland admission roster");
             registry.RecordWonderlandAdmissions(reservation, [character.Id, viewer.Id]);

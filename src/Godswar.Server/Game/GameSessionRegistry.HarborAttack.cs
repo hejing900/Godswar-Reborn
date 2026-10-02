@@ -78,13 +78,18 @@ internal sealed partial class GameSessionRegistry
                 }
             }
 
-            _harborAttackAdmissions[instanceId] = new(
+            _harborAttackAdmissions[instanceId] = new(this, instanceId,
                 reservationId,
                 dailyLimit,
-                members[0].CharacterId,
                 members[0].Session,
                 members.ToArray(),
                 startedAt.ToUniversalTime());
+            // 港湾's leader is the run's own mutable character id, the same one
+            // every dungeon keeps in the shared per-run leader store.
+            BeginInstanceRunLeader(instanceId, members[0].CharacterId);
+            // The one per-run member record the roster publishes from opens here,
+            // with the party this run was registered for.
+            BeginInstanceRunMembership(instanceId, [.. members.Select(ToRosterEntry)]);
             _harborAttackReservations[reservationId] = instanceId;
             return true;
         }
@@ -261,20 +266,15 @@ internal sealed partial class GameSessionRegistry
                             admission.Entrants.Add(member.CharacterId);
                         }
                         // A run whose registered leader has left keeps an ending
-                        // authority: the earliest present entrant takes over.
-                        var present = OrderInstanceMembers(
+                        // authority: the earliest present entrant takes over,
+                        // through the one leader-transfer implementation every
+                        // dungeon shares.
+                        MaintainInstanceRunLeader(
+                            instanceId,
+                            "HarborAttack",
                             [.. admission.OriginalMembers.Select(
                                 static member => member.CharacterId)],
                             [.. members.Select(static member => member.CharacterId)]);
-                        if (TryResolveInstanceLeaderSuccessor(
-                                instanceId,
-                                "HarborAttack",
-                                admission.LeaderId,
-                                present,
-                                out var successor))
-                        {
-                            admission.LeaderId = successor;
-                        }
                     }
 
                     var expired = now >= admission.Deadline;
@@ -283,32 +283,34 @@ internal sealed partial class GameSessionRegistry
                         out var terminatedAt);
                     if (expired || terminated)
                     {
-                        // A run that was ended or ran out of time behaves like a
-                        // completed one: the panel becomes the native leave
-                        // countdown, every member may leave immediately, and the
-                        // rest are carried home when the thirty seconds expire.
+                        // A run that was ended or ran out of time enters the one
+                        // shared terminal flow: the same four native frames, the
+                        // same thirty-second countdown and the same clicker-only
+                        // leave, and the rest are carried home when the thirty
+                        // seconds expire.
                         var endStartedAt = terminated ? terminatedAt : admission.Deadline;
-                        var endRemaining = checked((int)Math.Clamp(
-                            Math.Ceiling((endStartedAt + HarborAttackPolicy.EndExitDelay - now)
-                                .TotalSeconds),
-                            0,
-                            (int)HarborAttackPolicy.EndExitDelay.TotalSeconds));
-                        if (endRemaining > 0 && members.Length != 0)
+                        var ending = BeginInstanceRunEnd(instanceId,
+                            InstanceRunKind.HarborAttack, "HarborAttack",
+                            runtime.MapId,
+                            checked((ushort)HarborAttackClientSceneId(runtime.MapId)),
+                            admission.DailyLimit, 0, endStartedAt);
+                        if (members.Length != 0)
                         {
-                            await PublishHarborAttackEndUiAsync(
-                                runtime,
-                                admission,
-                                members,
-                                endRemaining,
+                            await PublishInstanceRunEndAsync(
+                                ending,
+                                [.. members.Select(ToInstanceRunEndMember)],
+                                now,
+                                settle: null,
                                 cancellationToken);
                         }
-                        else
+                        if (!IsInstanceRunEndWindowOpen(ending, now))
                         {
                             await ExitHarborAttackMembersAsync(
                                 runtime,
                                 admission,
                                 members,
                                 terminated ? "terminated" : "deadline",
+                                endStartedAt,
                                 cancellationToken);
                         }
                     }
@@ -351,99 +353,6 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
-    /// <summary>
-    /// Publishes the native leave countdown to every member still inside a run
-    /// that was ended or timed out, exactly as a completed run does: the same
-    /// panel-completion state, the same countdown packet, and the same thirty
-    /// seconds.
-    /// </summary>
-    private async Task PublishHarborAttackEndUiAsync(
-        WorldInstanceRuntime runtime,
-        HarborAttackAdmission admission,
-        IReadOnlyList<GameSessionContext> members,
-        int remainingSeconds,
-        CancellationToken cancellationToken)
-    {
-        var sceneId = HarborAttackClientSceneId(runtime.MapId);
-        var roster = members
-            .Select(member => new RepetitionInstanceMember(
-                member.CharacterId,
-                member.Character.Name,
-                member.Character.Level,
-                true,
-                member.Character.Profession))
-            .ToArray();
-        var signature = string.Join('|', roster.Select(member =>
-            $"{member.CharacterId}:{member.Name}:{member.Level}:{member.Profession}"));
-        var stamp = new HarborAttackUiStamp(
-            runtime.InstanceId,
-            remainingSeconds,
-            signature,
-            Ending: true);
-
-        foreach (var member in members)
-        {
-            if (!member.WorldReady)
-            {
-                continue;
-            }
-            Task? write = null;
-            lock (_gate)
-            {
-                if (!IsCurrentHarborAttackMember(member, runtime.InstanceId))
-                {
-                    continue;
-                }
-                _harborAttackUi.TryGetValue(member.Session, out var previous);
-                // The native countdowns locally from the published value, so the
-                // batch is sent once per member: resending would restart it.
-                if (previous?.InstanceId == stamp.InstanceId && previous.Ending)
-                {
-                    continue;
-                }
-                var packets = new List<ReadOnlyMemory<byte>>();
-                packets.Add(PacketBuilder.RepetitionSync(
-                    checked((ushort)sceneId),
-                    0,
-                    0,
-                    5,
-                    admission.DailyLimit));
-                if (previous?.InstanceId != stamp.InstanceId ||
-                    previous.Roster != signature)
-                {
-                    packets.Add(PacketBuilder.RepetitionInstanceMembers(roster));
-                }
-                packets.Add(PacketBuilder.RepetitionFightInfo(remainingSeconds, 0));
-                packets.Add(PacketBuilder.RepetitionPanelCompletion());
-                packets.Add(PacketBuilder.RepetitionCompletionState(sceneId, true));
-                packets.Add(PacketBuilder.RepetitionCountdown(remainingSeconds));
-                if (member.Session.TryAdmitExactBatch(packets, out var admitted))
-                {
-                    _harborAttackUi[member.Session] = stamp;
-                }
-                write = admitted;
-            }
-
-            if (write is not null)
-            {
-                try
-                {
-                    await write;
-                    Console.WriteLine(
-                        "[harbor] end countdown published instance=" +
-                        $"{runtime.InstanceId} character={member.CharacterId} " +
-                        $"seconds={remainingSeconds}");
-                }
-                catch (Exception error) when (
-                    error is not OperationCanceledException ||
-                    !cancellationToken.IsCancellationRequested)
-                {
-                    member.Session.Disconnect();
-                }
-            }
-        }
-    }
-
     private async Task PublishHarborAttackRunUiAsync(
         WorldInstanceRuntime runtime,
         HarborAttackAdmission admission,
@@ -461,16 +370,9 @@ internal sealed partial class GameSessionRegistry
             Math.Ceiling((admission.Deadline - now).TotalSeconds),
             0,
             HarborAttackPolicy.TimeLimitSeconds));
-        var roster = members
-            .Select(member => new RepetitionInstanceMember(
-                member.CharacterId,
-                member.Character.Name,
-                member.Character.Level,
-                true,
-                member.Character.Profession))
-            .ToArray();
-        var signature = string.Join('|', roster.Select(member =>
-            $"{member.CharacterId}:{member.Name}:{member.Level}:{member.Profession}"));
+        var roster = SnapshotInstanceRoster(
+            runtime.InstanceId, InstanceRunKind.HarborAttack, now);
+        var signature = InstanceRosterSignature(roster);
         var stamp = new HarborAttackUiStamp(
             runtime.InstanceId,
             remaining,
@@ -542,74 +444,12 @@ internal sealed partial class GameSessionRegistry
         }
     }
 
-    /// <summary>
-    /// A member's own leave during the end-of-run countdown: the run is already
-    /// terminal, so this returns the transition that carries that member home
-    /// immediately instead of waiting for the countdown to expire.
-    /// </summary>
-    internal bool TryResolveHarborAttackEndLeave(
-        ClientSession session,
-        int repetitionId,
-        int repetitionIndex,
-        DateTimeOffset now,
-        out AuthoritativeInstanceTransitionCommand command)
-    {
-        command = default;
-        ArgumentNullException.ThrowIfNull(session);
-        if (repetitionIndex != 0)
-        {
-            return false;
-        }
-        lock (_gate)
-        {
-            if (!_sessions.TryGetValue(session, out var actor) ||
-                !DynamicDungeonContentMapPolicy.IsHarborAttackMap(actor.MapId) ||
-                actor.Character.CurrentMap != actor.MapId ||
-                repetitionId != HarborAttackClientSceneId(actor.MapId) ||
-                !_harborAttackAdmissions.TryGetValue(
-                    actor.WorldInstanceId,
-                    out var admission) ||
-                !IsCurrentHarborAttackMember(actor, actor.WorldInstanceId) ||
-                !IsCurrentAccountSession(
-                    actor.AccountId,
-                    actor.Session,
-                    actor.Ownership))
-            {
-                return false;
-            }
-            var endStartedAt = _harborAttackTerminations.TryGetValue(
-                actor.WorldInstanceId,
-                out var terminatedAt)
-                    ? terminatedAt
-                    : admission.Deadline;
-            if (now < endStartedAt ||
-                now - endStartedAt >= HarborAttackPolicy.EndExitDelay)
-            {
-                return false;
-            }
-
-            var targetMap = actor.Character.Camp == GameDefaults.SpartaCamp
-                ? GameDefaults.SpartaCapitalMap
-                : GameDefaults.AthensCapitalMap;
-            var target = GetOrCreateDefaultWorldInstance(targetMap);
-            command = new AuthoritativeInstanceTransitionCommand(
-                actor.CharacterId,
-                actor.WorldInstanceId,
-                actor.MapId,
-                actor.Ownership,
-                target.InstanceId,
-                targetMap,
-                GameDefaults.StartingPositionX,
-                GameDefaults.StartingPositionZ);
-            return true;
-        }
-    }
-
     private async Task ExitHarborAttackMembersAsync(
         WorldInstanceRuntime runtime,
         HarborAttackAdmission admission,
         IReadOnlyList<GameSessionContext> members,
         string reason,
+        DateTimeOffset endedAt,
         CancellationToken cancellationToken)
     {
         if (members.Count == 0)
@@ -617,52 +457,22 @@ internal sealed partial class GameSessionRegistry
             return;
         }
 
-        foreach (var member in members)
-        {
-            lock (_gate)
-            {
-                if (!IsCurrentHarborAttackMember(member, runtime.InstanceId))
-                {
-                    Console.WriteLine(
-                        "[harbor] exit skipped character=" +
-                        $"{member.Character.Name} " +
-                        $"instance={runtime.InstanceId} reason=stale");
-                    continue;
-                }
-            }
-
-            var targetMap = member.Character.Camp == GameDefaults.SpartaCamp
-                ? GameDefaults.SpartaCapitalMap
-                : GameDefaults.AthensCapitalMap;
-            var target = GetOrCreateDefaultWorldInstance(targetMap);
-            var command = new AuthoritativeInstanceTransitionCommand(
-                member.CharacterId,
-                runtime.InstanceId,
-                runtime.MapId,
-                member.Ownership,
-                target.InstanceId,
-                targetMap,
-                GameDefaults.StartingPositionX,
-                GameDefaults.StartingPositionZ);
-            if (!await TransitionPartyMemberToAuthoritativeInstanceAsync(
-                    member.Session,
-                    command,
-                    cancellationToken))
-            {
-                LogHarborAttackDeferred(
-                    runtime.InstanceId,
-                    DateTimeOffset.UtcNow,
-                    new InvalidOperationException(
-                        $"Exit deferred for character {member.CharacterId}."));
-                continue;
-            }
-
-            Console.WriteLine(
-                "[harbor] exit " +
-                $"character={member.Character.Name} " +
-                $"instance={runtime.InstanceId} reason={reason} " +
-                $"leader={admission.LeaderId} target-map={targetMap}");
-        }
+        // The one automatic exit every dungeon shares: the countdown expired, so
+        // whoever is still inside is carried home. A member who pressed leave
+        // during the countdown left on his own, through the shared clicker-only
+        // leave.
+        var transferred = await EgressInstanceRunEndAsync(
+            BeginInstanceRunEnd(runtime.InstanceId, InstanceRunKind.HarborAttack,
+                "HarborAttack", runtime.MapId,
+                checked((ushort)HarborAttackClientSceneId(runtime.MapId)),
+                admission.DailyLimit, 0, endedAt),
+            [.. members.Select(ToInstanceRunEndMember)],
+            TransitionPartyMemberToAuthoritativeInstanceAsync,
+            cancellationToken);
+        Console.WriteLine(
+            "[harbor] exit instance=" + runtime.InstanceId +
+            $" reason={reason} leader={admission.LeaderId} " +
+            $"transferred={transferred}");
     }
 
     private async Task TryRetireHarborAttackRuntimeAsync(
@@ -789,9 +599,11 @@ internal sealed partial class GameSessionRegistry
                 out _);
             CloseMemberEntryWindow(admission.LeaderSession);
         }
+        ForgetInstanceRunEnd(instanceId);
         _harborAttackTerminations.TryRemove(instanceId, out _);
         _harborAttackRetirements.TryRemove(instanceId, out _);
         _harborAttackLastError.TryRemove(instanceId, out _);
+        ForgetInstanceRunMembership(instanceId);
         foreach (var cached in _harborAttackUi
                      .Where(pair => pair.Value.InstanceId == instanceId))
         {
@@ -820,17 +632,22 @@ internal sealed partial class GameSessionRegistry
     }
 
     private sealed class HarborAttackAdmission(
+        GameSessionRegistry owner,
+        WorldInstanceId instanceId,
         Guid reservationId,
         ushort dailyLimit,
-        int leaderId,
         ClientSession leaderSession,
         LegacyInstancePartyMember[] originalMembers,
-        DateTimeOffset startedAt)    {
+        DateTimeOffset startedAt)
+    {
         public Guid ReservationId { get; } = reservationId;
         public ushort DailyLimit { get; } = dailyLimit;
-        // Transferable: the run's leader moves to the earliest still-present
-        // entrant when the registered leader leaves or drops.
-        public int LeaderId { get; set; } = leaderId;
+        /// <summary>
+        /// The run's one leader identity: the shared per-run leader store, read
+        /// here because the shared roster implementation publishes from this
+        /// record. Transferable, and written only through the shared transfer.
+        /// </summary>
+        public int LeaderId => owner.InstanceRunLeaderCharacterId(instanceId);
         public ClientSession LeaderSession { get; } = leaderSession;
         public LegacyInstancePartyMember[] OriginalMembers { get; } =
             originalMembers;
@@ -847,3 +664,4 @@ internal sealed partial class GameSessionRegistry
         string Roster,
         bool Ending = false);
 }
+

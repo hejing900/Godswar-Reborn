@@ -24,6 +24,9 @@ NPC对话链路技术文档以总结（后续可添加所有NPC对话链路根�
 修复第五属性无法显示.
 修复宠物收回会影响祭坛的BUG.
 新增港湾副本（未刷怪未配置掉落），所有副本现在都可以组队进入，并且可以使用邀请功能.
+完全恢复工会系统所有功能（入会申请与审批、工会列表与简介、成员与职务管理、退出与解散、公告与工会文本、捐献与资金、工会建筑、祭坛供奉与加成结算）.
+
+All guild system features are fully restored (join applications and approval, guild list and profile, member and duty management, leaving and disbanding, proclamation and guild text, donations and funds, guild buildings, and altar worship with bonus settlement).
 
 The Harbor Attack instance is added (no monster spawning and no drop configuration yet), and all instances can now be entered as a party with the invite function.
 
@@ -295,6 +298,7 @@ Implemented:
 - Items: fixed the fifth attribute not displaying
 - Harbor Attack: the instance entry route is implemented (no monster spawning and no drop configuration yet) ([record](docs/harbor-attack-entry-20260929.md))
 - Instances: all instances can now be entered as a party, and the invite function works
+- Guilds: all guild system features are fully restored, including join applications and approval, guild list and profile, member and duty management, leaving and disbanding, proclamation and guild text, donations and funds, guild buildings, and altar worship with bonus settlement ([record](docs/工会系统技术文档.md))
 
 The multiplayer, NPC, and captured-monster synchronization above is server-side. It does not require game client code changes; a client already configured to connect to this server can use it as-is. The patches below cover separate extended-grade, rank, aura, talent, and native client-stability work.
 

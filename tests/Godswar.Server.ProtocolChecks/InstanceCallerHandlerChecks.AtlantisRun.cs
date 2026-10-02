@@ -130,10 +130,12 @@ internal static partial class InstanceCallerHandlerChecks
         }
         else
         {
-            Check.True(fixture.Characters.All(static character => character.CurrentMap == 205) &&
-                AllSessionsShareCurrentInstance(fixture) && GetSourceInstanceId(leader) == instanceId &&
-                leader.Registry.TryGetWorldInstance(instanceId, out _),
-                "the timeout result preserves the current manual termination behavior");
+            Check.True(fixture.Characters.All(character => character.CurrentMap ==
+                    (character.Camp == GameDefaults.SpartaCamp
+                        ? GameDefaults.SpartaCapitalMap : GameDefaults.AthensCapitalMap)) &&
+                runtime.Map.Population == 0,
+                "a timed-out run enters the same terminal flow: its countdown expires and " +
+                "every member is carried home, exactly as a completed run");
         }
         Check.True(fixture.Characters.Select(AtlantisRewardState).SequenceEqual(rewardsBefore) &&
             fixture.ReadAllPackets().All(packets => packets.All(packet =>
@@ -202,10 +204,19 @@ internal static partial class InstanceCallerHandlerChecks
     private static void AssertAtlantisInitialPanel(AtlantisOpalFixture fixture, int[] before)
     {
         var allPackets = fixture.ReadAllPackets();
+        // The published roster is the run's own admitted party, ordered by
+        // character id, with the run's leader marked: the party leader who
+        // committed the entry is the instance's leader. Every member is inside, so
+        // every row is online, and the packet's single state byte is 1 for all of
+        // them - 「在线」 and 「在线(队长)」 share the one byte the client draws.
         var expectedRoster = PacketBuilder.RepetitionInstanceMembers(
             fixture.Characters.OrderBy(static character => character.Id)
-                .Select(static character => new RepetitionInstanceMember(
-                    character.Id, character.Name, character.Level, true, character.Profession))
+                .Select(character => new RepetitionInstanceMember(
+                    character.Id, character.Name, character.Level,
+                    character.Id == fixture.Leader.Character.Id
+                        ? RepetitionMemberState.OnlineLeader
+                        : RepetitionMemberState.Online,
+                    character.Profession))
                 .ToArray());
         for (var index = 0; index < allPackets.Count; index++)
         {

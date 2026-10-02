@@ -43,6 +43,13 @@ internal sealed record GameSessionContext(
 
     public short PetOwnerMergeCompletedRebirths { get; init; }
 
+    /// <summary>
+    /// The pet currently visible beside this player in the world. This is an
+    /// AOI snapshot only; recalled and owner-merged pets have no separate
+    /// world model.
+    /// </summary>
+    public PetBootstrapSnapshot? SummonedPet { get; init; }
+
     public Func<MonsterDamageResult,
         Task<PreparedPveMonsterKillReward?>>?
         PreparePveMonsterKillReward { get; init; }

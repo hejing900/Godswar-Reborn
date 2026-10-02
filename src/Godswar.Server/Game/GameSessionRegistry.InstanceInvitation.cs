@@ -14,6 +14,23 @@ internal sealed partial class GameSessionRegistry
         _pendingMemberEntryJoins = [];
 
     /// <summary>
+    /// The characters one instance is already admitting, so a repeated entry
+    /// request cannot queue the same character twice.
+    /// </summary>
+    /// <remarks>
+    /// The client resends its confirmation, and (for an invitation) follows the
+    /// same scene frame again, so this is the one place that has to answer "is
+    /// this character already on the way into this instance?" before a second
+    /// reservation is minted for him. The entry is claimed under the registry
+    /// gate and released by whichever of the three exits ends the join, so it
+    /// lives exactly as long as the queued admission does and never blocks the
+    /// retry an instance can legitimately demand afterwards.
+    /// </remarks>
+    private readonly ConcurrentDictionary<
+        (int CharacterId, WorldInstanceId InstanceId), byte>
+        _memberEntryJoinsInFlight = [];
+
+    /// <summary>
     /// Accepts a member's confirmed Enter window and defers the transfer to the
     /// world tick, which performs it exactly the way a registered party member is
     /// admitted: the registry pulls the member in through its session sink.
@@ -29,12 +46,18 @@ internal sealed partial class GameSessionRegistry
         {
             return false;
         }
+        (int CharacterId, WorldInstanceId InstanceId) inFlight;
         lock (_gate)
         {
             if (!_sessions.TryGetValue(session, out var context) ||
                 context.Session.IsDisconnected ||
                 context.WorldInstanceId != join.SourceWorldInstanceId ||
                 context.WorldInstanceId == join.TargetInstanceId)
+            {
+                return false;
+            }
+            inFlight = (context.CharacterId, join.TargetInstanceId);
+            if (!_memberEntryJoinsInFlight.TryAdd(inFlight, 0))
             {
                 return false;
             }
@@ -67,6 +90,7 @@ internal sealed partial class GameSessionRegistry
             }
 
             AuthoritativeInstanceTransitionCommand command;
+            InstanceRosterEntry member;
             lock (_gate)
             {
                 if (!_sessions.TryGetValue(join.Session, out var context) ||
@@ -86,6 +110,11 @@ internal sealed partial class GameSessionRegistry
                     join.Join.TargetMapId,
                     join.Join.ArrivalX,
                     join.Join.ArrivalZ);
+                member = new InstanceRosterEntry(
+                    context.CharacterId,
+                    context.CharacterName,
+                    context.Character.Level,
+                    context.Character.Profession);
             }
 
             bool moved;
@@ -124,10 +153,66 @@ internal sealed partial class GameSessionRegistry
                 join.ReservationId,
                 command.CharacterId,
                 cancellationToken);
+            // The member is inside the run now, so the run's one member record
+            // takes him in: from here on the record - not the entry window - is
+            // what keeps him on the roster, inside or dropped.
+            RecordInstanceRunMemberEntry(join.Join.TargetInstanceId, member);
+            // He is inside now, and the run's member record keeps him on the
+            // roster; the admission no longer holds the seat.
+            ForgetMemberEntryJoinInFlight(join.Session, join.Join.TargetInstanceId);
+            // His window is spent: leaving it behind made his next entry of his
+            // own look like a member confirmation for this finished run.
+            ForgetMemberEntryWindow(join.Session);
             Console.WriteLine(
                 "[instance-entry] member admitted character=" +
                 $"{command.CharacterId} instance={join.Join.TargetInstanceId} " +
                 $"map={join.Join.TargetMapId}");
+        }
+    }
+
+    /// <summary>
+    /// Reports whether this character is already on the way into that instance,
+    /// so the same member's repeated confirmation does not spend a second
+    /// reservation.
+    /// </summary>
+    internal bool IsMemberEntryJoinInFlight(
+        ClientSession session,
+        WorldInstanceId targetInstanceId)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        if (!targetInstanceId.IsValid)
+        {
+            return false;
+        }
+        lock (_gate)
+        {
+            return _sessions.TryGetValue(session, out var context) &&
+                _memberEntryJoinsInFlight.ContainsKey(
+                    (context.CharacterId, targetInstanceId));
+        }
+    }
+
+    /// <summary>
+    /// Drops the in-flight claim of a join that never reached the queue, so a
+    /// refused enqueue leaves the member free to confirm again.
+    /// </summary>
+    internal void ForgetMemberEntryJoinInFlight(
+        ClientSession session,
+        WorldInstanceId targetInstanceId)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        if (!targetInstanceId.IsValid)
+        {
+            return;
+        }
+        lock (_gate)
+        {
+            if (_sessions.TryGetValue(session, out var context))
+            {
+                _memberEntryJoinsInFlight.TryRemove(
+                    (context.CharacterId, targetInstanceId),
+                    out _);
+            }
         }
     }
 
@@ -164,6 +249,11 @@ internal sealed partial class GameSessionRegistry
         {
             ReleaseLocalLegacyInstanceDailyEntry(join.ReservationId);
         }
+        // The join is over, so the character may be admitted again.
+        ForgetMemberEntryJoinInFlight(join.Session, join.Join.TargetInstanceId);
+        // A released join also ends the window it came from: a stale record would
+        // make this member's next entry of his own look like a confirmation here.
+        ForgetMemberEntryWindow(join.Session);
         Console.Error.WriteLine(
             "[instance-entry] member join released reason=" + reason +
             $" reservation={join.ReservationId}");
@@ -228,6 +318,7 @@ internal sealed partial class GameSessionRegistry
                 invitee.CharacterId,
                 invitee.CharacterName,
                 invitee.Character.Level,
+                invitee.Character.Profession,
                 invitee.RealmId,
                 invitee.WorldInstanceId,
                 invitee.MapId,
@@ -242,7 +333,8 @@ internal sealed partial class GameSessionRegistry
                 inviterSession,
                 destination.ClientSceneId,
                 destination.Kind,
-                [member])
+                [member],
+                DateTimeOffset.UtcNow + MemberEntryWindowLifetime)
             {
                 TargetInstanceId = instanceId,
                 TargetMapId = destination.TargetMapId,

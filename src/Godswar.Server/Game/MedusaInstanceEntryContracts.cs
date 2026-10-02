@@ -39,6 +39,7 @@ internal sealed record MedusaInstancePartyMember(
     int CharacterId,
     string CharacterName,
     int Level,
+    byte Profession,
     RealmId RealmId,
     WorldInstanceId SourceWorldInstanceId,
     byte SourceMapId,

@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using Godswar.Server.Domain.World.Instances;
 using Godswar.Server.Game.WorldInstances;
 using Godswar.Server.Networking;
-using Godswar.Server.Packets;
 
 namespace Godswar.Server.Game;
 
@@ -31,22 +30,12 @@ internal sealed partial class GameSessionRegistry
             _atlantisUi.TryRemove(new KeyValuePair<ClientSession, AtlantisUiStamp>(previous.Session, stamp));
         }
         // A player may leave before the first UI tick, or after retirement
-        // has dropped the cache. Teardown must not depend on that cache.
-        if (current is null || previous.Session.IsDisconnected)
-        {
-            return null;
-        }
-
-        // Enqueue under the same fence as membership publication, so stale
-        // world deliveries cannot reopen this panel after its clear packet.
-        previous.Session.TryAdmitExactBatch(AtlantisDeparturePackets(), out var completion);
-        return completion;
+        // has dropped the cache. Teardown must not depend on that cache, and the
+        // native list clear is not sent here: the shared end-of-run flow sends
+        // the one 10231 with zero seconds when a member leaves any of the four
+        // runs.
+        return null;
     }
-
-    private static IReadOnlyList<ReadOnlyMemory<byte>> AtlantisDeparturePackets() =>
-        // Native 10231 with zero hides RepQueUI and clears repetition state.
-        // A state-zero 10232 sync instead creates another pending icon.
-        [PacketBuilder.RepetitionReset()];
 
     private static async Task ObserveAtlantisDepartureWriteAsync(ClientSession session, Task completion)
     {

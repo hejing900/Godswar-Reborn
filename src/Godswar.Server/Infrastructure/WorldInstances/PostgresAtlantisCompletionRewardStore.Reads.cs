@@ -46,7 +46,12 @@ internal sealed partial class PostgresAtlantisCompletionRewardStore
             ORDER BY id FOR UPDATE;
             """, connection, transaction);
         command.Parameters.AddWithValue("realm", checked((short)request.RealmId.Value));
-        command.Parameters.AddWithValue("characters", request.AdmittedCharacterIds.ToArray());
+        // Every recipient is locked, not only the registered party: a member who
+        // joined the run by invitation holds his own reservation and is named by
+        // the recipient list alone, so locking the admitted ids alone left him out
+        // of the settlement entirely and he was never paid.
+        command.Parameters.AddWithValue("characters",
+            request.CharacterIds.Concat(request.AdmittedCharacterIds).Distinct().ToArray());
         var characters = new List<LockedCharacter>();
         await using var reader = await command.ExecuteReaderAsync(token);
         while (await reader.ReadAsync(token))

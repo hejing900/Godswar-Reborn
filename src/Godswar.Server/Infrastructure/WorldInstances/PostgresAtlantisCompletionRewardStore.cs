@@ -33,9 +33,14 @@ internal sealed partial class PostgresAtlantisCompletionRewardStore(NpgsqlDataSo
             await transaction.CommitAsync(cancellationToken);
             return existing;
         }
-        if (characters.Count != request.AdmittedMembers.Count || characters.Where((character, index) =>
-            character.CharacterId != request.AdmittedMembers[index].CharacterId ||
-            character.AccountId != request.AdmittedMembers[index].AccountId).Any())
+        // Every registered member must still be present with the same identity.
+        // The loaded set may legitimately be larger: a member who joined the run
+        // by invitation is a recipient without holding a seat in the party the run
+        // was registered for, and the old exact-count check threw him away - which
+        // is why a party run paid nobody but its leader.
+        if (request.AdmittedMembers.Any(admitted => !characters.Any(character =>
+            character.CharacterId == admitted.CharacterId &&
+            character.AccountId == admitted.AccountId)))
         {
             return Failed(request, AtlantisCompletionRewardStatus.CharacterUnavailable);
         }

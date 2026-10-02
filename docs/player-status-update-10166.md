@@ -69,6 +69,17 @@ Unknown/template fields and current local values:
 224-227 i32    1500         hex DC050000
 ```
 
+Guild panel projection (this server, 2026-10-02, confirmed in the client): wire 76
+is overwritten with the character's guild duty as **one byte** (`GameData+0x2A0`,
+the `PersonalInfoUI` `DutyText` row; the client reads it with
+`movzx edx, byte ptr` and formats it `"G%d"`), and wire 80 with the remaining
+guild contribution as a **dword** (`GameData+0x2A4`, the `ContributeText` row).
+Both are local-status only; remote status packets keep the captured template.
+Wire 84 (`GameData+0x2A8`) is written by the attribute writer for id 0x0C but is
+never read by the panel, so its captured value stands. The first attempt wrote
+the duty to +80 and the client showed it in the contribution row - see
+`docs/工会系统技术文档.md` §6.10-6.11.
+
 Working-server comparison target:
 
 ```text

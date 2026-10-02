@@ -568,6 +568,13 @@ internal sealed partial class GameClientHandler
                     _character.Silver = result.CharacterBalance;
                 }
 
+                // The donation also raised the character's own contribution
+                // balance, which the same status frame carries into the panel's
+                // Contributepro row.
+                await RefreshGuildPanelStatusAsync(
+                    _character.Id,
+                    cancellationToken);
+
                 // The purse moved, so the client's own wallet readout has to be
                 // told. This is the packet the rest of the server uses after a
                 // money change (the NPC shop sale sends the same one); a player
@@ -663,8 +670,22 @@ internal sealed partial class GameClientHandler
                     "GuildWorshipOutcome");
                 // The points just offered are the member's own layer of the altar
                 // bonus, so the projection is re-read and the client's status
-                // repainted now that the balance moved.
-                await PushAltarBonusAsync(cancellationToken);
+                // repainted now that the balance moved. The offering also spent
+                // guild contribution, which the panel prints, so that is re-read
+                // first and repainted if the altar's own repaint did not already
+                // carry it.
+                var panelChanged = await RefreshGuildPanelStatusAsync(
+                    _character.Id,
+                    cancellationToken);
+                var altarStatusSent =
+                    await PushAltarBonusAsync(cancellationToken);
+                if (panelChanged && !altarStatusSent)
+                {
+                    await _session.SendAsync(
+                        BuildLocalPlayerStatusUpdate(),
+                        cancellationToken,
+                        "GuildWorshipContributionStatus");
+                }
                 break;
         }
 

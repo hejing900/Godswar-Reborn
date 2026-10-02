@@ -14,7 +14,8 @@ internal sealed partial class GameSessionRegistry
 
     private IReadOnlyList<MedusaInstanceRosterDelivery>
         CaptureMedusaInstanceRosterDeliveries(
-            WorldInstanceRuntime runtime)
+            WorldInstanceRuntime runtime,
+            DateTimeOffset now)
     {
         if (!_medusaLeaderUi.ContainsKey(runtime.InstanceId))
         {
@@ -54,19 +55,17 @@ internal sealed partial class GameSessionRegistry
             }
         }
 
-        var roster = state.members
-            .Select(static member => new RepetitionInstanceMember(
-                member.CharacterId,
-                member.Character.Name,
-                member.Character.Level,
-                IsOnline: true,
-                member.Character.Profession))
-            .ToArray();
-        var signature = string.Join(
-            '|',
-            roster.Select(static member =>
-                $"{member.CharacterId}:{member.Name}:{member.Level}:" +
-                $"{member.IsOnline}:{member.Profession}"));
+        var roster = SnapshotInstanceRoster(
+            runtime.InstanceId, InstanceRunKind.Medusa, now);
+        if (roster.Length == 0)
+        {
+            // The native 10218 handler reads a first member even when the count is
+            // zero, so an empty roster is never published; the run's own teardown
+            // is what clears a panel.
+            return [];
+        }
+
+        var signature = InstanceRosterSignature(roster);
         var stamp = new MedusaInstanceRosterStamp(
             runtime.InstanceId,
             signature);

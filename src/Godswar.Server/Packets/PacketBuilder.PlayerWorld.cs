@@ -186,6 +186,28 @@ internal static partial class PacketBuilder
         return BuildPetWorldPresence(petId, ownerObjectId);
     }
 
+    public static byte[] PetWorldPresence(
+        PetBootstrapSnapshot pet,
+        uint ownerObjectId)
+    {
+        ArgumentNullException.ThrowIfNull(pet);
+        if (!pet.IsCarried || !pet.IsSummoned || pet.ContributesToCharacter)
+        {
+            throw new ArgumentException(
+                "Only a separately summoned pet has a world presence.",
+                nameof(pet));
+        }
+
+        var packet = BuildPetWorldPresence(
+            checked((uint)pet.PetId),
+            ownerObjectId);
+        packet[12] = checked((byte)pet.SpeciesId);
+        packet[13] = pet.Sex;
+        packet[14] = checked((byte)pet.Level);
+        PacketText.WriteFixedAscii(packet.AsSpan(32, 32), pet.Name);
+        return packet;
+    }
+
     private static byte[] BuildPetWorldPresence(
         uint petId,
         uint ownerObjectId)
@@ -198,9 +220,9 @@ internal static partial class PacketBuilder
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.AsSpan(8, 4),
             ownerObjectId);
-        // The native 0x2808 handler consumes only pet and owner IDs before
-        // selecting and calling out the already-loaded owned-pet record.
-        // Preserve the remaining captured neutral body.
+        // Captured 10248 remote-presence packets put species, sex, level, and
+        // the fixed pet name at +12, +13, +14, and +32 respectively. Unmodeled
+        // bytes retain the neutral baseline; +64 is the captured presence flag.
         packet[64] = 1;
         return packet;
     }
@@ -211,9 +233,27 @@ internal static partial class PacketBuilder
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(0, 2), (ushort)packet.Length);
         BinaryPrimitives.WriteUInt16LittleEndian(packet.AsSpan(2, 2), 0x27D7);
         BinaryPrimitives.WriteUInt32LittleEndian(packet.AsSpan(4, 4), objectId);
-        // The stock 10199/0x27D7 body is not an ownership list. Offsets 8-71
-        // are a 64-byte guild/legion-like auxiliary field (not title text),
-        // 72-75 remain opaque, and 76-79 carry the selected title ID.
+        var guildPanel = GuildPanelStatusCache.For(character.Id);
+        // The client's case for this opcode (0x4ecc94, "_MSG_CD_INFO") resolves the
+        // object id at body+0 to a player object and then copies, from the body:
+        //   body+0x04 (64 bytes) -> object+0xB35, the guild name the target window
+        //                           reads for its Union row;
+        //   body+0x44 (byte)     -> object+0xA34, the "this player is in a guild"
+        //                           flag;
+        //   body+0x45 (byte)     -> object+0x9A0;
+        //   body+0x46 (byte)     -> object+0x2A0, the duty the target window prints
+        //                           as "G%d";
+        //   body+0x48 (dword)    -> object+0x99C, the selected title id.
+        // The flag is not optional: the target window's fill code starts with
+        // `cmp byte [edi+0xa34], 0 ; je <clear both rows>` (0x62c432), so without it
+        // the guild name and the duty are both erased again - measured 2026-10-02,
+        // when the name and duty travelled but the two rows stayed empty.
+        var hasGuild = guildPanel.Duty != 0 ||
+            !string.IsNullOrEmpty(guildPanel.GuildName);
+        PacketText.WriteFixedAscii(packet.AsSpan(8, 64), guildPanel.GuildName);
+        packet[72] = hasGuild ? (byte)1 : (byte)0;
+        packet[74] = guildPanel.Duty;
+        // The selected title ID is the final dword in this 80-byte packet.
         BinaryPrimitives.WriteUInt32LittleEndian(
             packet.AsSpan(76, sizeof(uint)),
             character.SelectedTitleId);

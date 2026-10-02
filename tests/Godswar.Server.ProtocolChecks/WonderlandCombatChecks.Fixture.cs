@@ -42,7 +42,8 @@ internal static partial class WonderlandCombatChecks
                 runtime.InstanceId, joinedAt: runtime.Descriptor.CreatedAt);
             var reservation = Guid.NewGuid();
             Check.True(registry.TryStartWonderlandEncounter(runtime.InstanceId, 3,
-                [new(session, character.AccountId, character.Id, character.Name, character.Level, RealmId.Tempest,
+                [new(session, character.AccountId, character.Id, character.Name, character.Level,
+                    character.Profession, RealmId.Tempest,
                     runtime.InstanceId, 207, fence)], runtime.Descriptor.CreatedAt, reservation),
                 "combat fixture starts a real admitted Wonderland runtime");
             registry.RecordWonderlandAdmissions(reservation, [character.Id]);

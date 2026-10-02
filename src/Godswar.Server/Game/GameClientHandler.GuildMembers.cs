@@ -122,6 +122,20 @@ internal sealed partial class GameClientHandler
             duty,
             DateTimeOffset.UtcNow,
             cancellationToken);
+        // The order matters and is not cosmetic. The line under a character's
+        // name is not drawn live: the client materialises it as text when it
+        // handles MSG_CONSORTIA_BASE_INFO - 0x4eda66 -> 0x4a8220 -> 0x4a7820
+        // sprintf(obj+0xA35, "[%s-%s]", guild name, GetText("G"+obj+0x2A0)) - so
+        // the member's own duty byte has to be on their client *before* the guild
+        // info that triggers that sprintf. Measured 2026-10-02: with the notice
+        // and the window push first, the promoted member's own client kept the
+        // previous rank under its name (567-主管 while the roster and everybody
+        // else showed 567-副会长), because the tag had been composed from the
+        // old byte and nothing recomposed it - the 10199 map copy is dropped by
+        // the member's own client, which addresses itself as 0x1448.
+        await RefreshCharacterGuildPresenceAsync(
+            target!.CharacterId,
+            cancellationToken);
         await BroadcastGuildMemberActionAsync(
             guild,
             PacketBuilder.GuildDutyChanged(
@@ -215,6 +229,13 @@ internal sealed partial class GameClientHandler
                 member.CharacterId,
                 cancellationToken);
         }
+
+        // The removed member keeps no guild panel rows: their own duty and
+        // contribution were cleared in the same transaction. The players around
+        // them are told the same thing, or the nameplate keeps the old guild.
+        await RefreshCharacterGuildPresenceAsync(
+            target.CharacterId,
+            cancellationToken);
 
         await _guilds.UpdateOnlineCountAsync(
             guild.GuildId,

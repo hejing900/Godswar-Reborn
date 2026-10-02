@@ -94,13 +94,11 @@ internal sealed partial class GameClientHandler
         await PublishPartyDeliveriesAsync(
             result.Deliveries,
             cancellationToken);
-        if (packet.Opcode == Opcodes.PartyAccept)
-        {
-            await TryOfferLateMedusaEntryAsync(
-                action.FirstName,
-                now,
-                cancellationToken);
-        }
+        // Joining a party no longer offers 美杜莎之岛 entry. The operator's rule is
+        // that being in a party is not being invited into the run: a member who
+        // should come in is named from inside the instance (the 10224 invitation
+        // this same handler serves), and a party member who merely accepted an
+        // invitation keeps his own daily attempt and stays outside.
         return true;
     }
 
