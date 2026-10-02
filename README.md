@@ -40,6 +40,11 @@ All pet skills and all pet features are implemented; guild building creation, wo
 
 如果你愿意支持我，请添加我的企鹅502890055.
 
+修复宠物召回.
+修复更换装备没有删除旧世界呈现的问题.
+
+Pet recall is fixed. Replacing equipment no longer leaves the old world presence behind.
+
 ![工会系统界面：人物属性、装备面板与工会列表](docs/images/guild-system.png)
 
 
@@ -301,6 +306,8 @@ Implemented:
 - Harbor Attack: the instance entry route is implemented (no monster spawning and no drop configuration yet) ([record](docs/harbor-attack-entry-20260929.md))
 - Instances: all instances can now be entered as a party, and the invite function works
 - Guilds: all guild system features are fully restored, including join applications and approval, guild list and profile, member and duty management, leaving and disbanding, proclamation and guild text, donations and funds, guild buildings, and altar worship with bonus settlement ([record](docs/工会系统技术文档.md))
+- Pets: pet recall is fixed
+- Equipment: replacing equipment now removes the previous world presence instead of leaving it behind
 
 The multiplayer, NPC, and captured-monster synchronization above is server-side. It does not require game client code changes; a client already configured to connect to this server can use it as-is. The patches below cover separate extended-grade, rank, aura, talent, and native client-stability work.
 

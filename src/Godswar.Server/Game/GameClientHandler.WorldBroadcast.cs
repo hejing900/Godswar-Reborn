@@ -27,6 +27,20 @@ internal sealed partial class GameClientHandler
                 objectId,
                 statusSnapshot.Effects,
                 pkMode: _registry.TrainingDummySpawnPkMode(_character));
+        // 0x2725 is a create frame, not an update: the client's handler (0x472ff0)
+        // attaches a player object (0x4a6b00) and builds a whole new presentation
+        // without ever looking an existing object up by id. Re-announcing without
+        // retiring the old one therefore leaves a copy standing - measured
+        // 2026-10-02, one mirror per equipment change. Every other re-announce in
+        // this codebase pairs the two (training dummy 0x2728 first, map/scene/
+        // instance transitions, the leave paths), and the removal is not sent to
+        // the owner, whose own client keeps drawing itself.
+        var removalRecipients = await _registry.BroadcastToMapAsync(
+            _character.CurrentMap,
+            PacketBuilder.RemoveWorldObjects(objectId),
+            cancellationToken,
+            _session,
+            "PlayerWorldSpawnRefreshRemove");
         var recipients =
             await _registry.TryBroadcastMedusaWorldSpawnRefreshAsync(
                 _session,
@@ -87,7 +101,7 @@ internal sealed partial class GameClientHandler
         if (recipients > 0)
         {
             Console.WriteLine(
-                $"[world] broadcast equipment refresh reason={reason} map={_character.CurrentMap} character={_character.Name} object={objectId} recipients={recipients} equipment={PacketBuilder.EnterEquipmentSummary(_character)}");
+                $"[world] broadcast equipment refresh reason={reason} map={_character.CurrentMap} character={_character.Name} object={objectId} removed={removalRecipients} recipients={recipients} equipment={PacketBuilder.EnterEquipmentSummary(_character)}");
         }
     }
 

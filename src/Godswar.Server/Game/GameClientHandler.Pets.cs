@@ -100,6 +100,21 @@ internal sealed partial class GameClientHandler
             (currentWorldPet is null ||
              previousWorldPet.PetId != currentWorldPet.PetId))
         {
+            // The companion is not a world object of its own. Measured
+            // 2026-10-02: removing the id the presence frame carries (0x2808 +4)
+            // took nothing away - the other clients kept the companion - and the
+            // client's receive tables carry no case for 10248 at all (0x4ee900
+            // covers 10001..10199, 0x4eea40 covers 10328..10358, and 10245 is the
+            // single exception between them). The pet rides on the owner's
+            // presentation, which is why it follows without the server ever
+            // sending its position. What retires it is therefore rebuilding the
+            // owner's presentation: the same announce the equipment path uses,
+            // which retires the old model (0x2728) before rebuilding it (0x2725),
+            // and the rebuilt model carries no companion. This runs before the
+            // 0x2808 below, which re-attaches the new pet when one is called out.
+            await BroadcastEquipmentRefreshAsync(
+                currentWorldPet is null ? "pet-recall" : "pet-swap",
+                cancellationToken);
             await _registry.BroadcastToCurrentWorldInstanceAsync(
                 _session,
                 PacketBuilder.PetOperationResult(
