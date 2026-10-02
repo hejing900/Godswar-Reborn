@@ -1,5 +1,10 @@
 #本基础项目来自于https://github.com/p5y-Ph3R/Godswar-Reborn.
 
+
+If you're willing to help me, please contact hejing900@outlook.com
+
+如果你愿意帮助我，请联系hejing900@outlook.com
+
 任务系统以实现（可能存在BUG.
 
 技能书许愿以实现.
@@ -38,12 +43,14 @@ All pet skills and all pet features are implemented; guild building creation, wo
 
 更多内容请参照https://github.com/p5y-Ph3R/Godswar-Reborn.
 
-如果你愿意支持我，请添加我的企鹅502890055.
 
 修复宠物召回.
 修复更换装备没有删除旧世界呈现的问题.
 
 Pet recall is fixed. Replacing equipment no longer leaves the old world presence behind.
+
+
+
 
 ![工会系统界面：人物属性、装备面板与工会列表](docs/images/guild-system.png)
 
